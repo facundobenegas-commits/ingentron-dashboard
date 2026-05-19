@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ingentron Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo-container">
+                <div class="logo-icon"><i class="fas fa-chart-pie"></i></div>
+                <h1 class="logo-text">Ingentron</h1>
+            </div>
+            <nav class="nav-menu">
+                <div class="nav-item active" data-view="dashboard">
+                    <i class="fas fa-home"></i> Resumen
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-header">
+                <div class="header-title">
+                    <h2 id="view-title">Dashboard</h2>
+                    <p id="view-subtitle">Resumen de cuentas corrientes</p>
+                </div>
+                <div class="header-actions">
+                    <div id="loading-indicator" style="display: flex; align-items: center; gap: 8px; color: var(--accent-color); font-weight: 500;">
+                        <i class="fas fa-spinner fa-spin"></i> Cargando datos...
+                    </div>
+                    <div class="selector-group" id="filters-container" style="display: none;">
+                        <div class="origin-selector-container">
+                            <label for="origin-select"><i class="fas fa-building"></i> Unidad:</label>
+                            <select id="origin-select" class="glass-select">
+                                <option value="">Todas las unidades</option>
+                            </select>
+                        </div>
+                        <div class="week-selector-container">
+                            <label for="week-select"><i class="fas fa-calendar-week"></i> Semana:</label>
+                            <select id="week-select" class="glass-select">
+                                <!-- Options injected via JS -->
+                            </select>
+                        </div>
+                        <div class="status-selector-container" id="status-selector-container">
+                            <label for="status-select"><i class="fas fa-exclamation-circle"></i> Estado:</label>
+                            <select id="status-select" class="glass-select">
+                                <option value="">Todos los estados</option>
+                                <option value="OK">OK</option>
+                                <option value="Vencido">Vencido</option>
+                                <option value="Más de 30 días">Más de 30 días</option>
+                            </select>
+                        </div>
+                        <div class="situacion-selector-container" id="situacion-selector-container">
+                            <label for="situacion-select"><i class="fas fa-info-circle"></i> Situación:</label>
+                            <select id="situacion-select" class="glass-select">
+                                <option value="">Todas las situaciones</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <div class="content-area">
+                <!-- Dashboard View -->
+                <div id="dashboard-view" class="view-section" style="display: none;">
+                    
+                    <!-- KPI Cards -->
+                    <div class="kpi-grid">
+                        <div class="kpi-card glass-card">
+                            <div class="kpi-icon blue"><i class="fas fa-wallet"></i></div>
+                            <div class="kpi-info">
+                                <h4>Saldo Total</h4>
+                                <h2 id="kpi-total">$0.00</h2>
+                            </div>
+                        </div>
+                        <div class="kpi-card glass-card">
+                            <div class="kpi-icon green"><i class="fas fa-users"></i></div>
+                            <div class="kpi-info">
+                                <h4>Clientes con Deuda</h4>
+                                <h2 id="kpi-clients">0</h2>
+                            </div>
+                        </div>
+                        <div class="kpi-card glass-card">
+                            <div class="kpi-icon purple"><i class="fas fa-file-invoice-dollar"></i></div>
+                            <div class="kpi-info">
+                                <h4>Facturas Pendientes</h4>
+                                <h2 id="kpi-invoices">0</h2>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Trend Chart Area (Middle) -->
+                    <div class="trend-section glass-card mt-4">
+                        <div class="section-header">
+                            <h3><i class="fas fa-chart-line"></i> Evolución de Saldos por Semana</h3>
+                        </div>
+                        <div class="trend-chart-container" style="position: relative; height: 300px; margin-top: 15px;">
+                            <canvas id="trend-bar-chart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Dashboard Layout Grid -->
+                    <div class="dashboard-grid mt-4">
+                        <!-- Client List Area (Left) -->
+                        <div class="data-section glass-card" style="margin-top: 0;">
+                            <div class="section-header">
+                                <h3><i class="fas fa-list"></i> Detalle por Cliente</h3>
+                                <div class="search-box">
+                                    <i class="fas fa-search"></i>
+                                    <input type="text" id="search-client" placeholder="Buscar cliente..." class="glass-input">
+                                </div>
+                            </div>
+                            
+                            <div class="table-container">
+                                <table class="data-table" id="clients-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Cliente</th>
+                                            <th>Origen</th>
+                                            <th>Estado</th>
+                                            <th>Situación</th>
+                                            <th class="text-right">Saldo Total</th>
+                                            <th class="text-center">Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="clients-tbody">
+                                        <!-- Rows will be injected here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- Status Distribution Chart (Right) -->
+                        <div class="chart-section glass-card" style="display: flex; flex-direction: column; justify-content: space-between;">
+                            <div class="section-header" style="position: relative;">
+                                <h3><i class="fas fa-chart-pie"></i> Estado de Cuentas</h3>
+                                <button id="reset-status-filter" title="Ver todos los estados" onclick="resetStatusFilter()" style="
+                                    position: absolute; top: 50%; right: 0; transform: translateY(-50%);
+                                    background: rgba(255,255,255,0.07);
+                                    border: 1px solid rgba(255,255,255,0.15);
+                                    border-radius: 50%;
+                                    width: 32px; height: 32px;
+                                    display: flex; align-items: center; justify-content: center;
+                                    cursor: pointer;
+                                    color: rgba(255,255,255,0.6);
+                                    font-size: 13px;
+                                    transition: all 0.25s ease;
+                                    backdrop-filter: blur(8px);
+                                    -webkit-backdrop-filter: blur(8px);
+                                    opacity: 0;
+                                    pointer-events: none;
+                                ">
+                                    <i class="fas fa-rotate-left"></i>
+                                </button>
+                            </div>
+                            <div class="chart-container-wrapper" style="position: relative; height: 240px; margin: 15px 0; display: flex; justify-content: center; align-items: center;">
+                                <canvas id="status-pie-chart" style="max-height: 240px; max-width: 240px;"></canvas>
+                            </div>
+                            <div id="chart-legend" class="chart-legend-container" style="display: flex; flex-direction: column; gap: 8px; padding: 10px 5px 0 5px; border-top: 1px solid rgba(255, 255, 255, 0.05);">
+                                <!-- Custom legend -->
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal for Invoice Details -->
+    <div id="invoice-modal" class="modal">
+        <div class="modal-content glass-card">
+            <div class="modal-header" style="align-items: flex-start;">
+                <div style="display:flex; flex-direction:column; gap:12px; flex: 1;">
+                    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                        <h3 id="modal-client-name" style="font-size: 1.5rem; margin:0;">Nombre del Cliente</h3>
+                        <div id="modal-client-codes" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;"></div>
+                        <div id="modal-client-situacion" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;"></div>
+                    </div>
+                    <div id="modal-origin-filters" style="display:flex; gap:8px; flex-wrap: wrap;"></div>
+                </div>
+                <div class="glass-card" style="padding: 12px 24px; text-align: right; margin-right: 20px; background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255,255,255,0.05);">
+                    <div style="font-size: 11px; opacity: 0.7; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Total Seleccionado</div>
+                    <div id="modal-total-amount" style="font-size: 28px; font-weight: 700; color: var(--accent-color); margin: 0; line-height: 1;">$ 0,00</div>
+                </div>
+                <span class="close-modal" style="margin-top: 5px;">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="table-anim-wrapper" style="overflow: hidden; transition: height 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);">
+                    <table class="invoice-table" id="invoices-table">
+                    <thead>
+                        <tr>
+                            <th>Comprobante</th>
+                            <th>Fecha</th>
+                            <th>Estado</th>
+                            <th class="text-right">Importe</th>
+                        </tr>
+                    </thead>
+                    <tbody id="invoices-tbody">
+                        <!-- Invoice rows -->
+                    </tbody>
+
+                </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button id="back-to-top" class="back-to-top" title="Volver al inicio">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <!-- Custom Processing Overlay -->
+    <div id="processing-overlay" class="processing-overlay" style="display: none;">
+        <div class="processing-card glass-card">
+            <i class="fas fa-spinner fa-spin processing-spinner"></i>
+            <span>Procesando datos...</span>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
