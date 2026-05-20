@@ -1283,3 +1283,19 @@ if (sidebarToggleBtn) {
     });
 }
 
+// Mobile Device Detection & Adaptability
+function detectMobile() {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
+        || (window.innerWidth <= 768);
+    
+    if (isMobile) {
+        document.body.classList.add('is-mobile');
+    } else {
+        document.body.classList.remove('is-mobile');
+    }
+}
+window.addEventListener('resize', detectMobile);
+window.addEventListener('DOMContentLoaded', detectMobile);
+detectMobile();
+
+

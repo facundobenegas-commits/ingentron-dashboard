@@ -989,4 +989,161 @@ tbody tr:hover {
     }
 }
 
+/* Mobile Table to Card Transformation & Touch Optimizations */
+@media (max-width: 640px) {
+    /* Hide native table headers */
+    .data-table thead,
+    .invoice-table thead {
+        display: none !important;
+    }
+    
+    /* Make each row act as a card */
+    .data-table tbody tr {
+        display: flex !important;
+        flex-direction: column !important;
+        background: rgba(255, 255, 255, 0.02) !important;
+        border: 1px solid rgba(255, 255, 255, 0.06) !important;
+        border-radius: 16px !important;
+        padding: 16px !important;
+        margin-bottom: 14px !important;
+        gap: 8px !important;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
+        transition: transform 0.2s ease, background-color 0.2s ease !important;
+        width: 100% !important;
+    }
+    
+    .data-table tbody tr:hover {
+        background: rgba(255, 255, 255, 0.04) !important;
+        transform: translateY(-2px) !important;
+    }
+    
+    /* Style table cells as flexible rows with labels */
+    .data-table tbody td {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        padding: 8px 0 !important;
+        border-bottom: none !important;
+        font-size: 14px !important;
+        text-align: left !important;
+        width: 100% !important;
+    }
+    
+    /* The first cell (Cliente) takes full width, gets separator and bold */
+    .data-table tbody td:first-child {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+        padding-bottom: 12px !important;
+        margin-bottom: 6px !important;
+        gap: 6px !important;
+    }
+    
+    /* Add labels on mobile */
+    .data-table tbody td:nth-child(2)::before { content: "Origen:"; font-weight: 600; color: var(--text-secondary); }
+    .data-table tbody td:nth-child(3)::before { content: "Estado:"; font-weight: 600; color: var(--text-secondary); }
+    .data-table tbody td:nth-child(4)::before { content: "Situación:"; font-weight: 600; color: var(--text-secondary); }
+    .data-table tbody td:nth-child(5)::before { content: "Saldo Total:"; font-weight: 600; color: var(--text-secondary); font-size: 14px; }
+    .data-table tbody td:nth-child(6)::before { content: "Acciones:"; font-weight: 600; color: var(--text-secondary); }
+
+    /* Client name alignment and size */
+    .data-table tbody td:first-child div {
+        width: 100% !important;
+        justify-content: space-between !important;
+        display: flex !important;
+        align-items: center !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+    }
+    
+    .data-table tbody td:first-child span {
+        font-size: 16px !important;
+    }
+
+    /* Accion button alignment */
+    .data-table tbody td.text-center {
+        justify-content: space-between !important;
+    }
+    
+    .data-table tbody td .btn-icon {
+        margin: 0 !important;
+    }
+
+    /* Modal invoice table card transformation */
+    .invoice-table tbody tr {
+        display: flex !important;
+        flex-direction: column !important;
+        background: rgba(255, 255, 255, 0.01) !important;
+        border: 1px solid rgba(255, 255, 255, 0.05) !important;
+        border-radius: 12px !important;
+        padding: 12px !important;
+        margin-bottom: 10px !important;
+        gap: 6px !important;
+        width: 100% !important;
+    }
+    
+    .invoice-table tbody td {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        padding: 6px 0 !important;
+        border-bottom: none !important;
+        font-size: 13px !important;
+        width: 100% !important;
+    }
+    
+    .invoice-table tbody td:first-child {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+        padding-bottom: 8px !important;
+        font-weight: 700 !important;
+        flex-wrap: wrap !important;
+        gap: 6px !important;
+    }
+    
+    .invoice-table tbody td:nth-child(2)::before { content: "Fecha:"; font-weight: 600; color: var(--text-secondary); }
+    .invoice-table tbody td:nth-child(3)::before { content: "Estado:"; font-weight: 600; color: var(--text-secondary); }
+    .invoice-table tbody td:nth-child(4)::before { content: "Importe:"; font-weight: 600; color: var(--text-secondary); }
+
+    /* Modal header responsive adjustments */
+    .modal-header {
+        padding: 16px !important;
+        flex-direction: column !important;
+        gap: 16px !important;
+        align-items: stretch !important;
+    }
+    
+    .modal-header .glass-card {
+        margin-right: 0 !important;
+        text-align: center !important;
+        padding: 8px 16px !important;
+        width: 100% !important;
+    }
+    
+    .modal-body {
+        padding: 16px !important;
+    }
+}
+
+/* Touch-friendly optimizations for mobile devices */
+.is-mobile {
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.is-mobile * {
+    -webkit-tap-highlight-color: transparent !important;
+}
+
+.is-mobile .btn-icon,
+.is-mobile .modal-filter-btn,
+.is-mobile .mac-select-trigger,
+.is-mobile .nav-item {
+    min-height: 44px; /* standard mobile touch target */
+}
+
+.is-mobile .nav-item {
+    padding: 14px 16px !important;
+}
+
+
 
