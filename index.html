@@ -32,9 +32,7 @@
                     <p id="view-subtitle">Resumen de cuentas corrientes</p>
                 </div>
                 <div class="header-actions">
-                    <div id="loading-indicator" style="display: flex; align-items: center; gap: 8px; color: var(--accent-color); font-weight: 500;">
-                        <i class="fas fa-spinner fa-spin"></i> Cargando datos...
-                    </div>
+                    <!-- Removed loading-indicator -->
                     <div class="selector-group" id="filters-container" style="display: none;">
                         <div class="origin-selector-container">
                             <label for="origin-select"><i class="fas fa-building"></i> Unidad:</label>
@@ -218,7 +216,7 @@
     </button>
 
     <!-- Custom Processing Overlay -->
-    <div id="processing-overlay" class="processing-overlay" style="display: none;">
+    <div id="processing-overlay" class="processing-overlay show">
         <div class="processing-card glass-card">
             <i class="fas fa-spinner fa-spin processing-spinner"></i>
             <span>Procesando datos...</span>

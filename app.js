@@ -18,7 +18,7 @@ const statusSelect = document.getElementById('status-select');
 const situacionSelect = document.getElementById('situacion-select');
 const filtersContainer = document.getElementById('filters-container');
 const searchInput = document.getElementById('search-client');
-const loadingIndicator = document.getElementById('loading-indicator');
+const loadingIndicator = document.getElementById('processing-overlay');
 
 // Auto Load Data on Startup
 document.addEventListener('DOMContentLoaded', async () => {
@@ -30,14 +30,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         processWorkbook(workbook);
         
-        loadingIndicator.style.display = 'none';
+        loadingIndicator.classList.remove('show');
         dashboardView.style.display = 'block';
         filtersContainer.style.display = 'flex';
         
     } catch (error) {
         console.error(error);
-        loadingIndicator.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Error al cargar datos: ${error.message}`;
-        loadingIndicator.style.color = 'var(--danger-color)';
+        loadingIndicator.querySelector('span').innerHTML = `<i class="fas fa-exclamation-triangle"></i> Error al cargar datos: ${error.message}`;
+        loadingIndicator.querySelector('span').style.color = 'var(--danger-color)';
+        loadingIndicator.querySelector('.processing-spinner').style.display = 'none';
     }
 });
 
