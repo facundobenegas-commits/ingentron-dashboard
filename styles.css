@@ -937,3 +937,21 @@ tbody tr:hover {
     max-width: 100vw !important;
 }
 
+/* Header Logo container */
+.header-logo-container {
+    display: flex;
+    align-items: center;
+    transition: opacity 0.3s ease;
+}
+
+/* On desktop, hide header logo when sidebar is open */
+@media (min-width: 641px) {
+    .header-logo-container {
+        display: none;
+    }
+    .sidebar.collapsed ~ .main-content .header-logo-container {
+        display: flex;
+    }
+}
+
+
