@@ -921,3 +921,19 @@ tbody tr:hover {
         width: 100%;
     }
 }
+
+/* Sidebar Toggle Styles */
+.sidebar {
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}
+.sidebar.collapsed {
+    transform: translateX(-100%);
+}
+.main-content {
+    transition: margin-left 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), max-width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}
+.main-content.expanded {
+    margin-left: 0 !important;
+    max-width: 100vw !important;
+}
+

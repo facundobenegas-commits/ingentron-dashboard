@@ -173,6 +173,20 @@ function parseSaldosNuevo(rows, originName) {
     let currentClientCode = "";
     let currentWeek = "Sin Semana";
     
+    let situacionCol = -1;
+    for (let i = 0; i < Math.min(rows.length, 30); i++) {
+        if (!rows[i]) continue;
+        rows[i].forEach((cell, index) => {
+            if (cell) {
+                const h = String(cell).toLowerCase().trim();
+                if (h.includes('situacion') || h.includes('situación')) {
+                    situacionCol = index;
+                }
+            }
+        });
+        if (situacionCol > -1) break;
+    }
+    
     for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         if (!row || row.length < 2) continue;
@@ -208,6 +222,9 @@ function parseSaldosNuevo(rows, originName) {
                 
                 availableWeeks.add(currentWeek);
                 
+                let situacionVal = (situacionCol > -1 && row[situacionCol] !== undefined) ? String(row[situacionCol]).trim() : 'Sin Especificar';
+                if (!situacionVal) situacionVal = 'Sin Especificar';
+                
                 globalData.push({
                     origin: originName,
                     client: String(currentClient).trim(),
@@ -217,7 +234,7 @@ function parseSaldosNuevo(rows, originName) {
                     invoice: invoiceStr,
                     date: dateVal,
                     dueDate: dueDateVal,
-                    situacion: 'Sin Especificar'
+                    situacion: situacionVal
                 });
             }
         }
@@ -1251,3 +1268,18 @@ function updateTrendChart(weeks, balances) {
         }
     });
 }
+
+
+// Sidebar Toggle Logic
+const sidebarToggleBtn = document.getElementById('sidebar-toggle');
+if (sidebarToggleBtn) {
+    sidebarToggleBtn.addEventListener('click', () => {
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.getElementById('main-content');
+        if (sidebar && mainContent) {
+            sidebar.classList.toggle('collapsed');
+            mainContent.classList.toggle('expanded');
+        }
+    });
+}
+

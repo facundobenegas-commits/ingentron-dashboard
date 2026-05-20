@@ -13,7 +13,7 @@
 <body>
     <div class="app-container">
         <!-- Sidebar -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
             <div class="logo-container">
                 <img src="logo.png" alt="Ingentron S.R.L." style="max-height: 45px; width: auto; object-fit: contain;">
             </div>
@@ -25,11 +25,16 @@
         </aside>
 
         <!-- Main Content -->
-        <main class="main-content">
+        <main class="main-content" id="main-content">
             <header class="top-header">
-                <div class="header-title">
-                    <h2 id="view-title">Dashboard</h2>
-                    <p id="view-subtitle">Resumen de cuentas corrientes</p>
+                <div class="header-title" style="display: flex; align-items: center; gap: 16px;">
+                    <button id="sidebar-toggle" class="btn-icon" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); font-size: 18px; color: var(--text-primary); cursor: pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 12px; transition: all 0.2s;">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <div>
+                        <h2 id="view-title">Dashboard</h2>
+                        <p id="view-subtitle">Resumen de cuentas corrientes</p>
+                    </div>
                 </div>
                 <div class="header-actions">
                     <!-- Removed loading-indicator -->
