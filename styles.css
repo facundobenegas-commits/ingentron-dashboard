@@ -422,7 +422,7 @@ body {
 /* Data Section */
 .mt-4 { margin-top: 32px; }
 
-.data-section {
+.data-section, .trend-section {
     padding: 24px;
 }
 
