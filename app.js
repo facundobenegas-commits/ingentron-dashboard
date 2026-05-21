@@ -1225,12 +1225,7 @@ function downloadClientPDF() {
         doc.setLineWidth(0.4);
         doc.line(15, 280, 195, 280);
 
-        // Footer disclaimer
-        doc.setFont('helvetica', 'italic');
-        doc.setFontSize(7.5);
-        doc.setTextColor(148, 163, 184);
-        const footnoteStr = "Este documento es un resumen de cuenta provisorio e informativo. Para conciliaciones, contactar a administración.";
-        doc.text(footnoteStr, 15, 285);
+
         
         // Page numbers
         doc.setFont('helvetica', 'normal');
