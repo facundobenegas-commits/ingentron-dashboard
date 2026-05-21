@@ -428,6 +428,23 @@ function updateDashboard() {
 function performDashboardUpdate() {
     const searchTerm = searchInput.value.toLowerCase();
     
+    // Pre-compute the single "latest" week across applicable data
+    // so that LATEST always equals manually selecting the last week
+    let resolvedLatestWeek = '';
+    if (currentWeekFilter === 'LATEST') {
+        const applicableWeeks = new Set();
+        globalData.forEach(item => {
+            if (currentEmpresaFilter !== '') {
+                const allowed = empresaToOrigins[currentEmpresaFilter] || [];
+                if (!allowed.includes(item.origin)) return;
+            }
+            if (currentOriginFilter !== '' && item.origin !== currentOriginFilter) return;
+            if (item.week && item.week !== 'undefined') applicableWeeks.add(item.week);
+        });
+        const sorted = Array.from(applicableWeeks).sort();
+        resolvedLatestWeek = sorted[sorted.length - 1] || '';
+    }
+
     // Filter Data
     const filteredData = globalData.filter(item => {
         // Empresa filter
@@ -440,9 +457,7 @@ function performDashboardUpdate() {
         
         let matchWeek = false;
         if (currentWeekFilter === 'LATEST') {
-            const originWeeks = Array.from(new Set(globalData.filter(d => d.origin === item.origin).map(d => d.week))).sort();
-            const latestForThisOrigin = originWeeks[originWeeks.length - 1];
-            matchWeek = item.week === latestForThisOrigin;
+            matchWeek = item.week === resolvedLatestWeek;
         } else {
             matchWeek = currentWeekFilter === '' || item.week === currentWeekFilter;
         }
