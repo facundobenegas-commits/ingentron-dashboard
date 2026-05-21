@@ -1,6 +1,7 @@
 // Global State
 let globalData = [];
 let availableWeeks = new Set();
+let currentEmpresaFilter = '';
 let currentWeekFilter = '';
 let currentOriginFilter = '';
 let currentStatusFilter = '';
@@ -8,11 +9,18 @@ let currentSituacionFilter = '';
 let statusChart = null;
 let trendChart = null;
 
+// Empresa → Unidades mapping
+const empresaToOrigins = {
+    'Ingentron': ['Aguas', 'PepsiCo'],
+    'Gruya': ['Trenque Lauquen', 'Salliquelo']
+};
+
 // DOM Elements
 const dashboardView = document.getElementById('dashboard-view');
 const viewTitle = document.getElementById('view-title');
 const weekSelectorContainer = document.getElementById('week-selector-container');
 const weekSelect = document.getElementById('week-select');
+const empresaSelect = document.getElementById('empresa-select');
 const originSelect = document.getElementById('origin-select');
 const statusSelect = document.getElementById('status-select');
 const situacionSelect = document.getElementById('situacion-select');
@@ -242,18 +250,36 @@ function parseSaldosNuevo(rows, originName) {
 }
 
 // UI Updating
-function populateFilters() {
-    originSelect.innerHTML = '<option value="">Todas las unidades</option>';
+function updateOriginOptionsForEmpresa() {
+    const oSelect = document.getElementById('origin-select');
+    oSelect.innerHTML = '<option value="">Todas las unidades</option>';
     
-    const origins = new Set(globalData.map(item => item.origin));
-    Array.from(origins).sort().forEach(origin => {
-        if(origin) {
+    const allOrigins = new Set(globalData.map(item => item.origin));
+    let filteredOrigins;
+    
+    if (currentEmpresaFilter !== '') {
+        const allowed = empresaToOrigins[currentEmpresaFilter] || [];
+        filteredOrigins = Array.from(allOrigins).filter(o => allowed.includes(o)).sort();
+    } else {
+        filteredOrigins = Array.from(allOrigins).sort();
+    }
+    
+    filteredOrigins.forEach(origin => {
+        if (origin) {
             const option = document.createElement('option');
             option.value = origin;
             option.textContent = origin;
-            originSelect.appendChild(option);
+            oSelect.appendChild(option);
         }
     });
+    
+    oSelect.value = currentOriginFilter;
+}
+
+function populateFilters() {
+    // Populate Origin select based on empresa filter
+    updateOriginOptionsForEmpresa();
+
 
     // Populate Situación select options dynamically!
     const situSelect = document.getElementById('situacion-select');
@@ -275,6 +301,10 @@ function populateFilters() {
     });
     
     // Clone nodes to remove old event listeners safely if this is called multiple times
+    const empresaSelectEl = document.getElementById('empresa-select');
+    const newEmpresaSelect = empresaSelectEl.cloneNode(true);
+    empresaSelectEl.parentNode.replaceChild(newEmpresaSelect, empresaSelectEl);
+
     const newOriginSelect = originSelect.cloneNode(true);
     originSelect.parentNode.replaceChild(newOriginSelect, originSelect);
     const newWeekSelect = weekSelect.cloneNode(true);
@@ -289,10 +319,25 @@ function populateFilters() {
     situacionSelectEl.parentNode.replaceChild(newSituacionSelect, situacionSelectEl);
     
     // Re-assign references
+    const empresaEl = document.getElementById('empresa-select');
     const originEl = document.getElementById('origin-select');
     const weekEl = document.getElementById('week-select');
     const statusEl = document.getElementById('status-select');
     const situacionEl = document.getElementById('situacion-select');
+
+    empresaEl.addEventListener('change', (e) => {
+        currentEmpresaFilter = e.target.value;
+        currentOriginFilter = ''; // reset origin when empresa changes
+        updateOriginOptionsForEmpresa();
+        const oEl = document.getElementById('origin-select');
+        if (oEl._macRebuild) {
+            oEl._macRebuild();
+            syncMacSelect('origin-select');
+        } else {
+            syncMacSelect('origin-select');
+        }
+        updateWeekSelectorForCurrentOrigin();
+    });
     
     originEl.addEventListener('change', (e) => {
         currentOriginFilter = e.target.value;
@@ -315,6 +360,7 @@ function populateFilters() {
     });
     
     updateWeekSelectorForCurrentOrigin();
+    syncMacSelect('empresa-select');
     syncMacSelect('origin-select');
     syncMacSelect('status-select');
     syncMacSelect('situacion-select');
@@ -326,6 +372,11 @@ function updateWeekSelectorForCurrentOrigin() {
     
     let weeksForOrigin = new Set();
     globalData.forEach(item => {
+        // Respect empresa filter
+        if (currentEmpresaFilter !== '') {
+            const allowedOrigins = empresaToOrigins[currentEmpresaFilter] || [];
+            if (!allowedOrigins.includes(item.origin)) return;
+        }
         if (currentOriginFilter === '' || item.origin === currentOriginFilter) {
             weeksForOrigin.add(item.week);
         }
@@ -379,6 +430,12 @@ function performDashboardUpdate() {
     
     // Filter Data
     const filteredData = globalData.filter(item => {
+        // Empresa filter
+        if (currentEmpresaFilter !== '') {
+            const allowedOrigins = empresaToOrigins[currentEmpresaFilter] || [];
+            if (!allowedOrigins.includes(item.origin)) return false;
+        }
+
         const matchOrigin = currentOriginFilter === '' || item.origin === currentOriginFilter;
         
         let matchWeek = false;
@@ -440,7 +497,13 @@ function performDashboardUpdate() {
     updateStatusPieChart(okCount, vencidoCount, criticoCount);
     
     // Group weekly balances for the trend chart depending on selected origin
-    const dataForOrigin = globalData.filter(item => currentOriginFilter === '' || item.origin === currentOriginFilter);
+    const dataForOrigin = globalData.filter(item => {
+        if (currentEmpresaFilter !== '') {
+            const allowedOrigins = empresaToOrigins[currentEmpresaFilter] || [];
+            if (!allowedOrigins.includes(item.origin)) return false;
+        }
+        return currentOriginFilter === '' || item.origin === currentOriginFilter;
+    });
     const weeklyBalances = {};
     dataForOrigin.forEach(item => {
         const w = item.week || 'Sin Semana';
