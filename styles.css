@@ -1168,5 +1168,66 @@ tbody tr:hover {
     padding: 14px 16px !important;
 }
 
+/* Custom premium checkbox for 'Ocultar cuentas a compensar' */
+.compensar-checkbox-wrapper {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+}
+
+.compensar-checkbox-wrapper label {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    color: var(--text-secondary) !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+    cursor: pointer !important;
+    user-select: none !important;
+    transition: color 0.2s ease;
+}
+
+.compensar-checkbox-wrapper label:hover {
+    color: var(--text-primary) !important;
+}
+
+.compensar-checkbox-wrapper input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 15px;
+    height: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    outline: none;
+    margin: 0;
+}
+
+.compensar-checkbox-wrapper input[type="checkbox"]:checked {
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+    box-shadow: 0 0 10px rgba(10, 132, 255, 0.3);
+}
+
+.compensar-checkbox-wrapper input[type="checkbox"]:checked::before {
+    content: "\f00c";
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    font-size: 9px;
+    color: #ffffff;
+}
+
+.compensar-checkbox-wrapper input[type="checkbox"]:hover {
+    border-color: rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.08);
+}
+
 
 

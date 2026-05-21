@@ -530,6 +530,26 @@ searchInput.addEventListener('input', () => {
     _dashboardDebounce = setTimeout(() => updateDashboard(), 120);
 });
 
+const ACCOUNTS_TO_HIDE = new Set([
+    '524', '20116', '2110', '17', '1593', '1840', '1707', '1722', '1708', 
+    '1804', '1815', '841', '1698', '2671', '2698', '882', '20214', '20667', '172'
+]);
+
+function shouldHideAccount(clientCode) {
+    const checkbox = document.getElementById('hide-compensar-checkbox');
+    const isChecked = checkbox ? checkbox.checked : true;
+    if (!isChecked) return false;
+    if (!clientCode) return false;
+    return ACCOUNTS_TO_HIDE.has(clientCode);
+}
+
+const hideCompensarCheckbox = document.getElementById('hide-compensar-checkbox');
+if (hideCompensarCheckbox) {
+    hideCompensarCheckbox.addEventListener('change', () => {
+        updateDashboard();
+    });
+}
+
 function updateDashboard() {
     // Cancel any pending debounced call
     clearTimeout(_dashboardDebounce);
@@ -545,6 +565,7 @@ function performDashboardUpdate() {
     if (currentWeekFilter === 'LATEST') {
         const applicableWeeks = new Set();
         globalData.forEach(item => {
+            if (shouldHideAccount(item.clientCode)) return;
             if (currentEmpresaFilter !== '') {
                 const allowed = empresaToOrigins[currentEmpresaFilter] || [];
                 if (!allowed.includes(item.origin)) return;
@@ -558,6 +579,8 @@ function performDashboardUpdate() {
 
     // Filter Data
     const filteredData = globalData.filter(item => {
+        if (shouldHideAccount(item.clientCode)) return false;
+        
         // Empresa filter
         if (currentEmpresaFilter !== '') {
             const allowedOrigins = empresaToOrigins[currentEmpresaFilter] || [];
@@ -624,6 +647,7 @@ function performDashboardUpdate() {
     
     // Group weekly balances for the trend chart depending on selected origin
     const dataForOrigin = globalData.filter(item => {
+        if (shouldHideAccount(item.clientCode)) return false;
         if (currentEmpresaFilter !== '') {
             const allowedOrigins = empresaToOrigins[currentEmpresaFilter] || [];
             if (!allowedOrigins.includes(item.origin)) return false;
@@ -807,12 +831,16 @@ window.showInvoices = function(clientName) {
     // Filter invoices for this client with current dashboard filters
     const invoices = globalData.filter(item => {
         if (item.client !== clientName) return false;
+        if (shouldHideAccount(item.clientCode)) return false;
         
         // Apply global origin filter if any
         if (currentOriginFilter !== '' && item.origin !== currentOriginFilter) return false;
         
         if (currentWeekFilter === 'LATEST') {
-            const originWeeks = Array.from(new Set(globalData.filter(d => d.origin === item.origin).map(d => d.week))).sort();
+            const originWeeks = Array.from(new Set(globalData.filter(d => {
+                if (shouldHideAccount(d.clientCode)) return false;
+                return d.origin === item.origin;
+            }).map(d => d.week))).sort();
             const latestForThisOrigin = originWeeks[originWeeks.length - 1];
             return item.week === latestForThisOrigin;
         }
