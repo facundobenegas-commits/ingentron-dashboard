@@ -11,7 +11,7 @@
     --purple-color: #bf5af2;
     
     --sidebar-width: 260px;
-    --header-height: 80px;
+    --header-height: 96px;
     --border-radius: 20px;
 }
 
@@ -1205,6 +1205,21 @@ tbody tr:hover {
     display: flex;
     align-items: center;
     margin-left: 4px;
+}
+
+@media (min-width: 641px) {
+    .situacion-selector-container {
+        position: relative;
+    }
+    .compensar-checkbox-wrapper {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        margin-top: 6px;
+        margin-left: 0;
+        white-space: nowrap;
+        z-index: 2;
+    }
 }
 
 
