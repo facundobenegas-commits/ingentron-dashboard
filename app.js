@@ -28,8 +28,119 @@ const filtersContainer = document.getElementById('filters-container');
 const searchInput = document.getElementById('search-client');
 const loadingIndicator = document.getElementById('processing-overlay');
 
+// Corporate Logo Assets (Processed)
+window.logoIngentronObj = null;
+window.logoGruyaObj = null;
+
+function processLogo(imgSrc, isGruya, callback) {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = imgSrc;
+    img.onload = function() {
+        const canvasDark = document.createElement('canvas');
+        canvasDark.width = img.width;
+        canvasDark.height = img.height;
+        const ctxDark = canvasDark.getContext('2d');
+        ctxDark.drawImage(img, 0, 0);
+        
+        const canvasLight = document.createElement('canvas');
+        canvasLight.width = img.width;
+        canvasLight.height = img.height;
+        const ctxLight = canvasLight.getContext('2d');
+        ctxLight.drawImage(img, 0, 0);
+        
+        try {
+            const imgDataDark = ctxDark.getImageData(0, 0, canvasDark.width, canvasDark.height);
+            const dataDark = imgDataDark.data;
+            
+            const imgDataLight = ctxLight.getImageData(0, 0, canvasLight.width, canvasLight.height);
+            const dataLight = imgDataLight.data;
+            
+            for (let i = 0; i < dataDark.length; i += 4) {
+                const r = dataDark[i];
+                const g = dataDark[i+1];
+                const b = dataDark[i+2];
+                const a = dataDark[i+3];
+                
+                if (a === 0) continue;
+                
+                // Identify white or near-white background pixels
+                const isWhite = (r > 215 && g > 215 && b > 215) || 
+                                (r > 200 && g > 200 && b > 200 && Math.abs(r-g) < 15 && Math.abs(g-b) < 15 && Math.abs(r-b) < 15);
+                
+                if (isWhite) {
+                    dataDark[i+3] = 0;
+                    dataLight[i+3] = 0;
+                } else {
+                    // Dark theme adjustments
+                    if (isGruya) {
+                        const isOrange = r > 180 && g > 100 && b < 80;
+                        if (!isOrange) {
+                            const brightness = (r + g + b) / 3;
+                            if (brightness < 160) {
+                                dataDark[i] = 240;
+                                dataDark[i+1] = 244;
+                                dataDark[i+2] = 255;
+                            }
+                        }
+                    } else {
+                        const isRed = r > 150 && g < 80 && b < 80;
+                        if (!isRed) {
+                            dataDark[i] = 240;
+                            dataDark[i+1] = 244;
+                            dataDark[i+2] = 255;
+                        }
+                    }
+                }
+            }
+            ctxDark.putImageData(imgDataDark, 0, 0);
+            ctxLight.putImageData(imgDataLight, 0, 0);
+            
+            callback({
+                dark: canvasDark.toDataURL('image/png'),
+                light: canvasLight.toDataURL('image/png'),
+                width: img.width,
+                height: img.height
+            });
+        } catch (e) {
+            console.error("Error processing images on canvas:", e);
+            callback({
+                dark: imgSrc,
+                light: imgSrc,
+                width: img.width,
+                height: img.height
+            });
+        }
+    };
+    img.onerror = function() {
+        console.error("Failed to load logo image:", imgSrc);
+        callback({
+            dark: imgSrc,
+            light: imgSrc,
+            width: 100,
+            height: 30
+        });
+    };
+}
+
 // Auto Load Data on Startup
 document.addEventListener('DOMContentLoaded', async () => {
+    // Process logos for both themes
+    processLogo('logo_ingentron.png', false, (res) => {
+        window.logoIngentronObj = res;
+        const sidebarImg = document.getElementById('sidebar-logo-ingentron');
+        const headerImg = document.getElementById('header-logo-ingentron');
+        if (sidebarImg) sidebarImg.src = res.dark;
+        if (headerImg) headerImg.src = res.dark;
+    });
+
+    processLogo('logo_gruya.jpg', true, (res) => {
+        window.logoGruyaObj = res;
+        const sidebarImg = document.getElementById('sidebar-logo-gruya');
+        const headerImg = document.getElementById('header-logo-gruya');
+        if (sidebarImg) sidebarImg.src = res.dark;
+        if (headerImg) headerImg.src = res.dark;
+    });
     try {
         const response = await fetch('/api/excel');
         if (!response.ok) throw new Error('No se pudo cargar el archivo del servidor.');
@@ -935,16 +1046,46 @@ function downloadClientPDF() {
     doc.setFillColor(11, 26, 48); // Deep blue (#0B1A30)
     doc.rect(0, 0, 210, 8, 'F');
 
-    // Corporate Header Title
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(20);
-    doc.setTextColor(11, 26, 48);
-    doc.text('INGENTRON S.R.L.', 15, 24);
+    // Corporate Header Title (Logos side-by-side with fallback)
+    let logoDrawn = false;
+    let currentX = 15;
+    
+    if (window.logoIngentronObj && window.logoIngentronObj.light && window.logoGruyaObj && window.logoGruyaObj.light) {
+        try {
+            // Draw Ingentron Logo
+            const ingHeight = 8;
+            const ingWidth = ingHeight * (window.logoIngentronObj.width / window.logoIngentronObj.height);
+            doc.addImage(window.logoIngentronObj.light, 'PNG', currentX, 17, ingWidth, ingHeight);
+            currentX += ingWidth + 4;
+            
+            // Draw Divider Line
+            doc.setDrawColor(200, 200, 200);
+            doc.setLineWidth(0.25);
+            doc.line(currentX, 16, currentX, 26);
+            currentX += 4;
+            
+            // Draw Gruya Logo
+            const gruHeight = 8;
+            const gruWidth = gruHeight * (window.logoGruyaObj.width / window.logoGruyaObj.height);
+            doc.addImage(window.logoGruyaObj.light, 'PNG', currentX, 17, gruWidth, gruHeight);
+            logoDrawn = true;
+        } catch (err) {
+            console.error("Error drawing logos in PDF:", err);
+        }
+    }
+    
+    if (!logoDrawn) {
+        // Fallback to text if logos could not be drawn
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(16);
+        doc.setTextColor(11, 26, 48);
+        doc.text('INGENTRON S.R.L. / GRUYA S.R.L.', 15, 24);
+    }
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(100, 116, 139);
-    doc.text('Administración y Control de Cuentas Corrientes', 15, 29);
+    doc.text('Administración y Control de Cuentas Corrientes', 15, 31);
 
     // Document Title & Metadata (Right side)
     doc.setFont('helvetica', 'bold');
