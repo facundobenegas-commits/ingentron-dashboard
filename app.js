@@ -682,6 +682,14 @@ window.addEventListener('click', (e) => {
 
 let currentModalInvoices = [];
 let currentModalClient = '';
+let currentModalOriginFilter = 'ALL';
+
+const downloadPdfBtn = document.getElementById('modal-download-pdf-btn');
+if (downloadPdfBtn) {
+    downloadPdfBtn.addEventListener('click', () => {
+        downloadClientPDF();
+    });
+}
 
 window.showInvoices = function(clientName) {
     currentModalClient = clientName;
@@ -807,6 +815,7 @@ function updateActiveModalBtn(activeOrigin) {
 }
 
 function renderModalInvoices(originFilter, animate = true) {
+    currentModalOriginFilter = originFilter;
     const tbody = document.getElementById('invoices-tbody');
     const animWrapper = document.getElementById('table-anim-wrapper');
     
@@ -868,6 +877,232 @@ function renderModalInvoices(originFilter, animate = true) {
             animWrapper.style.height = 'auto';
         }, 400);
     }
+}
+
+function downloadClientPDF() {
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+        alert("La librería de generación de PDF no se ha cargado correctamente. Por favor, revise su conexión a internet e intente nuevamente.");
+        return;
+    }
+
+    const activeOrigin = currentModalOriginFilter || 'ALL';
+    
+    // Parse helper
+    const getInvoiceDateValue = (excelDate) => {
+        const parsed = parseExcelDate(excelDate);
+        return parsed ? parsed.getTime() : 0;
+    };
+
+    // Filter and sort invoices to match the active screen view
+    const invoicesToExport = (activeOrigin === 'ALL'
+        ? currentModalInvoices
+        : currentModalInvoices.filter(inv => inv.origin === activeOrigin)
+    ).slice().sort((a, b) => getInvoiceDateValue(a.date) - getInvoiceDateValue(b.date));
+
+    if (invoicesToExport.length === 0) {
+        alert("No hay facturas pendientes en el filtro seleccionado para exportar.");
+        return;
+    }
+
+    // Compute sums and unique lists
+    let totalAmount = 0;
+    const clientCodesSet = new Set();
+    const uniqueSituacionesSet = new Set();
+
+    invoicesToExport.forEach(inv => {
+        totalAmount += inv.amount;
+        if (inv.clientCode && inv.clientCode !== 'N/A') {
+            clientCodesSet.add(`${inv.origin}: ${inv.clientCode}`);
+        }
+        if (inv.situacion && inv.situacion !== 'Sin Especificar') {
+            uniqueSituacionesSet.add(inv.situacion);
+        }
+    });
+
+    const clientCodes = Array.from(clientCodesSet);
+    const uniqueSituaciones = Array.from(uniqueSituacionesSet);
+
+    // Initialize document
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+    });
+
+    // Page decoration and Header Bar
+    doc.setFillColor(11, 26, 48); // Deep blue (#0B1A30)
+    doc.rect(0, 0, 210, 8, 'F');
+
+    // Corporate Header Title
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(20);
+    doc.setTextColor(11, 26, 48);
+    doc.text('INGENTRON S.R.L.', 15, 24);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(100, 116, 139);
+    doc.text('Administración y Control de Cuentas Corrientes', 15, 29);
+
+    // Document Title & Metadata (Right side)
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.setTextColor(10, 132, 255); // Accent blue (#0A84FF)
+    doc.text('RESUMEN DE CUENTA', 195, 24, { align: 'right' });
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(100, 116, 139);
+    const dateFormatted = new Date().toLocaleDateString('es-AR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+    doc.text(`Emisión: ${dateFormatted}`, 195, 29, { align: 'right' });
+    
+    const scopeLabel = activeOrigin === 'ALL' ? 'Todas las empresas' : `Empresa: ${activeOrigin}`;
+    doc.text(`Filtro: ${scopeLabel}`, 195, 34, { align: 'right' });
+
+    // Divider Line
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.4);
+    doc.line(15, 38, 195, 38);
+
+    // Client Info Card Box
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(241, 245, 249);
+    doc.roundedRect(15, 43, 180, 25, 3, 3, 'FD');
+
+    // Client Info Labels and Values
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(11, 26, 48);
+    doc.text('CLIENTE:', 20, 49);
+    doc.setFont('helvetica', 'normal');
+    doc.text(currentModalClient, 42, 49);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('CÓDIGO:', 20, 55);
+    doc.setFont('helvetica', 'normal');
+    const codeText = clientCodes.length > 0 ? clientCodes.join(' | ') : 'N/A';
+    doc.text(codeText, 42, 55);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('SITUACIÓN:', 20, 61);
+    doc.setFont('helvetica', 'normal');
+    const situText = uniqueSituaciones.length > 0 ? uniqueSituaciones.join(' | ') : 'Sin especificar';
+    doc.text(situText, 42, 61);
+
+    // Balance Card Box (Inside info box)
+    doc.setFillColor(235, 245, 255); // Highlight blue accent bg
+    doc.setDrawColor(191, 219, 254);
+    doc.roundedRect(130, 46, 60, 19, 2, 2, 'FD');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(10, 132, 255);
+    doc.text('SALDO TOTAL PENDIENTE', 160, 51, { align: 'center' });
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12.5);
+    doc.setTextColor(11, 26, 48);
+    doc.text(formatCurrency(totalAmount), 160, 58, { align: 'center' });
+
+    // Table rows data
+    const tableBody = invoicesToExport.map(inv => {
+        const status = getDueDateStatus(inv.dueDate, inv.date);
+        return [
+            inv.invoice || 'N/A',
+            inv.origin || 'N/A',
+            formatDate(inv.date),
+            status.text || 'N/A',
+            formatCurrency(inv.amount)
+        ];
+    });
+
+    // Add Invoices Table
+    doc.autoTable({
+        head: [['Comprobante', 'Empresa', 'Fecha Emisión', 'Estado', 'Importe']],
+        body: tableBody,
+        startY: 74,
+        theme: 'striped',
+        headStyles: {
+            fillColor: [11, 26, 48],
+            textColor: [255, 255, 255],
+            fontSize: 9,
+            fontStyle: 'bold',
+            halign: 'left',
+            valign: 'middle'
+        },
+        columnStyles: {
+            0: { cellWidth: 'auto' },
+            1: { cellWidth: 32 },
+            2: { cellWidth: 32 },
+            3: { cellWidth: 35 },
+            4: { cellWidth: 38, halign: 'right' }
+        },
+        didParseCell: function(data) {
+            if (data.section === 'head' && data.column.index === 4) {
+                data.cell.styles.halign = 'right';
+            }
+            if (data.section === 'body' && data.column.index === 3) {
+                const val = data.cell.raw;
+                if (val === 'Vencido') {
+                    data.cell.styles.textColor = [220, 100, 0]; // Amber-orange
+                    data.cell.styles.fontStyle = 'bold';
+                } else if (val === 'Más de 30 días') {
+                    data.cell.styles.textColor = [220, 38, 38]; // Bold red
+                    data.cell.styles.fontStyle = 'bold';
+                } else if (val === 'OK') {
+                    data.cell.styles.textColor = [22, 163, 74]; // Green
+                    data.cell.styles.fontStyle = 'bold';
+                }
+            }
+        },
+        bodyStyles: {
+            fontSize: 8.5,
+            textColor: [30, 41, 59],
+            cellPadding: 4
+        },
+        alternateRowStyles: {
+            fillColor: [248, 250, 252]
+        },
+        margin: { left: 15, right: 15, top: 15, bottom: 22 },
+        styles: {
+            font: 'helvetica',
+            lineColor: [241, 245, 249],
+            lineWidth: 0.3
+        }
+    });
+
+    // Write footer elements and page numbers
+    const totalPages = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        
+        // Footer line
+        doc.setDrawColor(241, 245, 249);
+        doc.setLineWidth(0.4);
+        doc.line(15, 280, 195, 280);
+
+        // Footer disclaimer
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(7.5);
+        doc.setTextColor(148, 163, 184);
+        const footnoteStr = "Este documento es un resumen de cuenta provisorio e informativo. Para conciliaciones, contactar a administración.";
+        doc.text(footnoteStr, 15, 285);
+        
+        // Page numbers
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Página ${i} de ${totalPages}`, 195, 285, { align: 'right' });
+    }
+
+    // Save File
+    const cleanClientName = currentModalClient.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    doc.save(`Resumen_Cuenta_${cleanClientName}.pdf`);
 }
 
 function formatDate(excelDate) {

@@ -603,6 +603,17 @@ tbody tr:hover {
     to { transform: translateY(0); opacity: 1; }
 }
 
+#modal-download-pdf-btn:hover {
+    background: rgba(10, 132, 255, 0.25) !important;
+    border-color: rgba(10, 132, 255, 0.6) !important;
+    transform: translateY(-1.5px);
+    box-shadow: 0 4px 15px rgba(10, 132, 255, 0.3);
+}
+
+#modal-download-pdf-btn:active {
+    transform: translateY(0);
+}
+
 /* Back to Top Button */
 .back-to-top {
     position: fixed;
