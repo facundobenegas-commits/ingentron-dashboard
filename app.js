@@ -1029,10 +1029,18 @@ function downloadClientPDF() {
         return name;
     };
 
+    const formatOriginName = (name) => {
+        if (name === 'Salliquelo') return 'Salliqueló';
+        if (name === 'Trenque Lauquen') return 'Trenque Lauquen';
+        if (name === 'Aguas') return 'Aguas';
+        if (name === 'PepsiCo') return 'PepsiCo';
+        return name;
+    };
+
     invoicesToExport.forEach(inv => {
         totalAmount += inv.amount;
         if (inv.clientCode && inv.clientCode !== 'N/A') {
-            clientCodesSet.add(`${formatCompanyName(inv.origin)}: ${inv.clientCode}`);
+            clientCodesSet.add(`${formatOriginName(inv.origin)}: ${inv.clientCode}`);
         }
     });
 
