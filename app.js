@@ -1020,8 +1020,12 @@ function downloadClientPDF() {
     const clientCodesSet = new Set();
 
     const formatCompanyName = (name) => {
-        if (name === 'Gruya') return 'Gruya S.R.L.';
-        if (name === 'Ingentron') return 'Ingentron S.R.L.';
+        if (name === 'Aguas' || name === 'PepsiCo' || name === 'Ingentron' || name === 'Ingentron S.R.L.') {
+            return 'Ingentron S.R.L.';
+        }
+        if (name === 'Trenque Lauquen' || name === 'Salliquelo' || name === 'Gruya' || name === 'Gruya S.R.L.') {
+            return 'Gruya S.R.L.';
+        }
         return name;
     };
 
