@@ -1788,7 +1788,8 @@ function updateTrendChart(weeks, balances) {
 // Sidebar Toggle Logic
 const sidebarToggleBtn = document.getElementById('sidebar-toggle');
 if (sidebarToggleBtn) {
-    sidebarToggleBtn.addEventListener('click', () => {
+    sidebarToggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent immediate closing due to click events
         const sidebar = document.getElementById('sidebar');
         const mainContent = document.getElementById('main-content');
         if (sidebar && mainContent) {
@@ -1797,6 +1798,35 @@ if (sidebarToggleBtn) {
         }
     });
 }
+
+// Close mobile sidebar drawer when clicking outside it
+document.addEventListener('click', (event) => {
+    const sidebar = document.getElementById('sidebar');
+    const toggleBtn = document.getElementById('sidebar-toggle');
+    const isMobile = window.innerWidth <= 768; // Matching the detectMobile() helper
+    
+    if (isMobile && sidebar && !sidebar.classList.contains('collapsed')) {
+        if (!sidebar.contains(event.target) && !toggleBtn.contains(event.target)) {
+            sidebar.classList.add('collapsed');
+            const mainContent = document.getElementById('main-content');
+            if (mainContent) mainContent.classList.add('expanded');
+        }
+    }
+});
+
+// Close mobile sidebar drawer when selecting a navigation menu item
+const navItems = document.querySelectorAll('.nav-item');
+navItems.forEach(item => {
+    item.addEventListener('click', () => {
+        const sidebar = document.getElementById('sidebar');
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile && sidebar && !sidebar.classList.contains('collapsed')) {
+            sidebar.classList.add('collapsed');
+            const mainContent = document.getElementById('main-content');
+            if (mainContent) mainContent.classList.add('expanded');
+        }
+    });
+});
 
 // Mobile Device Detection & Adaptability
 function detectMobile() {
