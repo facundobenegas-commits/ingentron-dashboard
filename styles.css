@@ -785,6 +785,7 @@ tbody tr:hover {
 ═══════════════════════════════════════ */
 
 /* Each labelled selector group (Unidad, Semana, Estado, Situación) */
+.empresa-selector-container,
 .origin-selector-container,
 .week-selector-container,
 .status-selector-container,
@@ -801,10 +802,11 @@ tbody tr:hover {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
-    align-items: flex-end;
+    align-items: flex-start;
     flex: 1 1 auto;
     min-width: 0;
 }
+
 
 /* Header actions wrapper */
 .header-actions {
@@ -889,6 +891,7 @@ tbody tr:hover {
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     }
     /* Selectors flex basis smaller */
+    .empresa-selector-container,
     .origin-selector-container,
     .week-selector-container,
     .status-selector-container,
@@ -925,6 +928,7 @@ tbody tr:hover {
         flex-direction: column;
         align-items: stretch;
     }
+    .empresa-selector-container,
     .origin-selector-container,
     .week-selector-container,
     .status-selector-container,
@@ -1173,7 +1177,10 @@ tbody tr:hover {
     margin-top: 8px;
     display: flex;
     align-items: center;
+    margin-left: 4px;
 }
+
+
 
 .compensar-checkbox-wrapper label {
     display: inline-flex !important;

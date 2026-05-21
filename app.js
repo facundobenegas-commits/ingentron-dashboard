@@ -535,12 +535,20 @@ const ACCOUNTS_TO_HIDE = new Set([
     '1804', '1815', '841', '1698', '2671', '2698', '882', '20214', '20667', '172'
 ]);
 
+// Pre-normalize the blacklisted accounts for fast, robust lookup (removes leading zeros and spaces)
+const NORMALIZED_ACCOUNTS_TO_HIDE = new Set(
+    Array.from(ACCOUNTS_TO_HIDE).map(code => String(code).trim().replace(/^0+/, ''))
+);
+
 function shouldHideAccount(clientCode) {
     const checkbox = document.getElementById('hide-compensar-checkbox');
     const isChecked = checkbox ? checkbox.checked : true;
     if (!isChecked) return false;
     if (!clientCode) return false;
-    return ACCOUNTS_TO_HIDE.has(clientCode);
+    
+    // Normalize input clientCode: convert to string, trim, and remove any leading zeros
+    const normalized = String(clientCode).trim().replace(/^0+/, '');
+    return NORMALIZED_ACCOUNTS_TO_HIDE.has(normalized);
 }
 
 const hideCompensarCheckbox = document.getElementById('hide-compensar-checkbox');
