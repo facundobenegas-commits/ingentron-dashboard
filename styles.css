@@ -546,6 +546,11 @@ tbody tr:hover {
     font-size: 12px;
     font-weight: 500;
     background: rgba(255, 255, 255, 0.1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    vertical-align: middle;
 }
 
 .client-code-badge {

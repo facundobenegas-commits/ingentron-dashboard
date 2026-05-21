@@ -780,7 +780,7 @@ function performDashboardUpdate() {
                 </div>
             </td>
             <td>${originsHtml}</td>
-            <td><span class="badge ${status.class}" style="font-size: 11px; padding: 4px 10px; font-weight: 600; display: inline-block;">${status.text}</span></td>
+            <td class="text-center"><span class="badge ${status.class}" style="font-size: 11px; padding: 4px 10px; font-weight: 600; display: inline-flex; min-width: 90px; text-align: center; justify-content: center;">${status.text}</span></td>
             <td>${situacionHtml}</td>
             <td class="text-right font-medium">${formatCurrency(client.totalAmount)}</td>
             <td class="text-center">
@@ -1019,7 +1019,7 @@ function renderModalInvoices(originFilter, animate = true) {
         tr.innerHTML = `
             <td>${inv.invoice} <span class="badge ${getOriginColorClass(inv.origin)}" style="font-size: 10px; padding: 2px 8px; margin-left: 8px; display: inline-block;">${inv.origin}</span></td>
             <td>${formatDate(inv.date)}</td>
-            <td><span class="badge ${status.class}" style="font-size: 10px; padding: 4px 10px; font-weight: 600; display: inline-block;">${status.text}</span></td>
+            <td class="text-center"><span class="badge ${status.class}" style="font-size: 10px; padding: 4px 10px; font-weight: 600; display: inline-flex; min-width: 80px; text-align: center; justify-content: center;">${status.text}</span></td>
             <td class="text-right font-medium">${formatCurrency(inv.amount)}</td>
         `;
         tbody.appendChild(tr);
