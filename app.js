@@ -1279,6 +1279,9 @@ function updateTrendChart(weeks, balances) {
                     borderColor: 'rgba(58, 134, 255, 0.85)',
                     borderWidth: 1.5,
                     borderRadius: 8,
+                    maxBarThickness: 120, // Keep bar sized nicely
+                    barPercentage: 0.5,
+                    categoryPercentage: 0.5,
                     order: 2
                 },
                 {
@@ -1301,6 +1304,14 @@ function updateTrendChart(weeks, balances) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            layout: {
+                padding: {
+                    left: 20,
+                    right: 20,
+                    top: 20,
+                    bottom: 0
+                }
+            },
             plugins: {
                 legend: {
                     display: true,
@@ -1334,6 +1345,7 @@ function updateTrendChart(weeks, balances) {
                 },
                 y: {
                     grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    grace: '10%', // Add 10% spacing at the top of the scale to prevent clipping
                     ticks: {
                         color: 'rgba(255, 255, 255, 0.6)',
                         font: { family: 'Inter', size: 11 },
