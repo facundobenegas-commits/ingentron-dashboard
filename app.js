@@ -550,7 +550,8 @@ if (clearSearchBtn) {
 
 const ACCOUNTS_TO_HIDE = new Set([
     '524', '20116', '2110', '17', '1593', '1840', '1707', '1722', '1708', 
-    '1804', '1815', '841', '1698', '2671', '2698', '882', '20214', '20667', '172'
+    '1804', '1815', '841', '1698', '2671', '2698', '882', '20214', '20667', '172',
+    '206', '3367'
 ]);
 
 // Pre-normalize the blacklisted accounts for fast, robust lookup (removes leading zeros and spaces)
