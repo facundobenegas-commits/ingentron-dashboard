@@ -1149,11 +1149,6 @@ function downloadClientPDF() {
         doc.text('INGENTRON S.R.L. / GRUYA S.R.L.', 15, 24);
     }
 
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(100, 116, 139);
-    doc.text('Administración y Control de Cuentas Corrientes', 15, 31);
-
     // Document Title & Metadata (Right side)
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(13);
