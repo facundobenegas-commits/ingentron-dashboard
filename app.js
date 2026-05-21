@@ -907,20 +907,21 @@ function downloadClientPDF() {
     // Compute sums and unique lists
     let totalAmount = 0;
     const clientCodesSet = new Set();
-    const uniqueSituacionesSet = new Set();
+
+    const formatCompanyName = (name) => {
+        if (name === 'Gruya') return 'Gruya S.R.L.';
+        if (name === 'Ingentron') return 'Ingentron S.R.L.';
+        return name;
+    };
 
     invoicesToExport.forEach(inv => {
         totalAmount += inv.amount;
         if (inv.clientCode && inv.clientCode !== 'N/A') {
-            clientCodesSet.add(`${inv.origin}: ${inv.clientCode}`);
-        }
-        if (inv.situacion && inv.situacion !== 'Sin Especificar') {
-            uniqueSituacionesSet.add(inv.situacion);
+            clientCodesSet.add(`${formatCompanyName(inv.origin)}: ${inv.clientCode}`);
         }
     });
 
     const clientCodes = Array.from(clientCodesSet);
-    const uniqueSituaciones = Array.from(uniqueSituacionesSet);
 
     // Initialize document
     const { jsPDF } = window.jspdf;
@@ -962,9 +963,6 @@ function downloadClientPDF() {
         minute: '2-digit'
     });
     doc.text(`Emisión: ${dateFormatted}`, 195, 29, { align: 'right' });
-    
-    const scopeLabel = activeOrigin === 'ALL' ? 'Todas las empresas' : `Empresa: ${activeOrigin}`;
-    doc.text(`Filtro: ${scopeLabel}`, 195, 34, { align: 'right' });
 
     // Divider Line
     doc.setDrawColor(226, 232, 240);
@@ -974,49 +972,43 @@ function downloadClientPDF() {
     // Client Info Card Box
     doc.setFillColor(248, 250, 252);
     doc.setDrawColor(241, 245, 249);
-    doc.roundedRect(15, 43, 180, 25, 3, 3, 'FD');
+    doc.roundedRect(15, 43, 180, 20, 3, 3, 'FD');
 
     // Client Info Labels and Values
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
     doc.setTextColor(11, 26, 48);
-    doc.text('CLIENTE:', 20, 49);
+    doc.text('CLIENTE:', 20, 50);
     doc.setFont('helvetica', 'normal');
-    doc.text(currentModalClient, 42, 49);
+    doc.text(currentModalClient, 42, 50);
 
     doc.setFont('helvetica', 'bold');
-    doc.text('CÓDIGO:', 20, 55);
+    doc.text('CÓDIGO:', 20, 56);
     doc.setFont('helvetica', 'normal');
     const codeText = clientCodes.length > 0 ? clientCodes.join(' | ') : 'N/A';
-    doc.text(codeText, 42, 55);
-
-    doc.setFont('helvetica', 'bold');
-    doc.text('SITUACIÓN:', 20, 61);
-    doc.setFont('helvetica', 'normal');
-    const situText = uniqueSituaciones.length > 0 ? uniqueSituaciones.join(' | ') : 'Sin especificar';
-    doc.text(situText, 42, 61);
+    doc.text(codeText, 42, 56);
 
     // Balance Card Box (Inside info box)
     doc.setFillColor(235, 245, 255); // Highlight blue accent bg
     doc.setDrawColor(191, 219, 254);
-    doc.roundedRect(130, 46, 60, 19, 2, 2, 'FD');
+    doc.roundedRect(130, 45, 60, 16, 2, 2, 'FD');
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(7.5);
     doc.setTextColor(10, 132, 255);
-    doc.text('SALDO TOTAL PENDIENTE', 160, 51, { align: 'center' });
+    doc.text('SALDO TOTAL PENDIENTE', 160, 49.5, { align: 'center' });
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12.5);
     doc.setTextColor(11, 26, 48);
-    doc.text(formatCurrency(totalAmount), 160, 58, { align: 'center' });
+    doc.text(formatCurrency(totalAmount), 160, 56.5, { align: 'center' });
 
     // Table rows data
     const tableBody = invoicesToExport.map(inv => {
         const status = getDueDateStatus(inv.dueDate, inv.date);
         return [
             inv.invoice || 'N/A',
-            inv.origin || 'N/A',
+            formatCompanyName(inv.origin) || 'N/A',
             formatDate(inv.date),
             status.text || 'N/A',
             formatCurrency(inv.amount)
@@ -1027,7 +1019,7 @@ function downloadClientPDF() {
     doc.autoTable({
         head: [['Comprobante', 'Empresa', 'Fecha Emisión', 'Estado', 'Importe']],
         body: tableBody,
-        startY: 74,
+        startY: 68,
         theme: 'striped',
         headStyles: {
             fillColor: [11, 26, 48],
