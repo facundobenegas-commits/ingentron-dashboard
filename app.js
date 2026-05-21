@@ -615,7 +615,7 @@ function performDashboardUpdate() {
     
     aggregatedClients.forEach(client => {
         const status = getClientMostCriticalStatus(client.invoices).text;
-        if (status === 'OK') okCount++;
+        if (status === 'No vencida') okCount++;
         else if (status === 'Vencido') vencidoCount++;
         else if (status === 'Más de 30 días') criticoCount++;
     });
@@ -1201,7 +1201,7 @@ function downloadClientPDF() {
                 } else if (val === 'Más de 30 días') {
                     data.cell.styles.textColor = [220, 38, 38]; // Bold red
                     data.cell.styles.fontStyle = 'bold';
-                } else if (val === 'OK') {
+                } else if (val === 'No vencida') {
                     data.cell.styles.textColor = [22, 163, 74]; // Green
                     data.cell.styles.fontStyle = 'bold';
                 }
@@ -1296,7 +1296,7 @@ function getDueDateStatus(dueDateExcel, dateExcel) {
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     
     if (diffDays <= 7) {
-        return { text: 'OK', class: 'bg-green' };
+        return { text: 'No vencida', class: 'bg-green' };
     } else if (diffDays >= 8 && diffDays <= 30) {
         return { text: 'Vencido', class: 'bg-accent' };
     } else {
@@ -1315,7 +1315,7 @@ function getClientMostCriticalStatus(invoices) {
     invoices.forEach(inv => {
         const status = getDueDateStatus(inv.dueDate, inv.date);
         let severity = 0;
-        if (status.text === 'OK') severity = 1;
+        if (status.text === 'No vencida') severity = 1;
         else if (status.text === 'Vencido') severity = 2;
         else if (status.text === 'Más de 30 días') severity = 3;
         
@@ -1514,10 +1514,10 @@ function updateStatusPieChart(ok, vencido, critico) {
             const criticoPercent = total > 0 ? Math.round((critico / total) * 100) : 0;
             
             legendContainer.innerHTML = `
-                <div class="chart-legend-item" style="cursor: pointer;" onclick="document.getElementById('status-select').value='OK'; document.getElementById('status-select').dispatchEvent(new Event('change'));">
+                <div class="chart-legend-item" style="cursor: pointer;" onclick="document.getElementById('status-select').value='No vencida'; document.getElementById('status-select').dispatchEvent(new Event('change'));">
                     <div class="legend-left">
                         <div class="legend-color-pill" style="background: #34d399; box-shadow: 0 0 10px rgba(52, 211, 153, 0.4);"></div>
-                        <span class="legend-label">OK</span>
+                        <span class="legend-label">No vencida</span>
                     </div>
                     <div class="legend-right">
                         <span class="legend-count">${ok} cl.</span>
@@ -1580,7 +1580,7 @@ function updateStatusPieChart(ok, vencido, critico) {
     statusChart = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: ['OK', 'Vencido', 'Más de 30 días'],
+            labels: ['No vencida', 'Vencido', 'Más de 30 días'],
             datasets: [{
                 data: [ok, vencido, critico],
                 backgroundColor: [
