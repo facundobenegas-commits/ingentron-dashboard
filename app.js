@@ -525,10 +525,28 @@ function updateWeekSelectorForCurrentOrigin() {
 }
 
 let _dashboardDebounce = null;
+const clearSearchBtn = document.getElementById('clear-search');
+
+function toggleClearSearchBtn() {
+    if (clearSearchBtn) {
+        clearSearchBtn.style.display = searchInput.value ? 'flex' : 'none';
+    }
+}
+
 searchInput.addEventListener('input', () => {
+    toggleClearSearchBtn();
     clearTimeout(_dashboardDebounce);
     _dashboardDebounce = setTimeout(() => updateDashboard(), 120);
 });
+
+if (clearSearchBtn) {
+    clearSearchBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        toggleClearSearchBtn();
+        updateDashboard();
+        searchInput.focus();
+    });
+}
 
 const ACCOUNTS_TO_HIDE = new Set([
     '524', '20116', '2110', '17', '1593', '1840', '1707', '1722', '1708', 

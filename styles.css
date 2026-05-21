@@ -445,17 +445,44 @@ body {
     width: clamp(160px, 100%, 300px);
 }
 
-.search-box i {
+.search-box > i {
     position: absolute;
     left: 14px;
     top: 50%;
     transform: translateY(-50%);
     color: var(--text-secondary);
+    pointer-events: none;
 }
 
 .search-box input {
     width: 100%;
     padding-left: 40px;
+    padding-right: 36px;
+}
+
+.clear-search-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    outline: none;
+    font-size: 13px;
+    z-index: 2;
+}
+
+.clear-search-btn:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.08);
 }
 
 /* Tables */
