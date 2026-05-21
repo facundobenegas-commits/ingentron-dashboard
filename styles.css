@@ -118,7 +118,7 @@ body {
     display: flex;
     flex-direction: column;
     min-width: 0;         /* allow flex child to shrink */
-    overflow-x: hidden;   /* clip any overflow from child elements */
+    /* overflow-x: hidden; - removed to allow sticky headers to work */
     max-width: calc(100% - var(--sidebar-width));
 }
 
