@@ -9,11 +9,11 @@ const app = express();
 // Servir archivos estáticos del dashboard (index.html, styles.css, app.js)
 app.use(express.static(__dirname));
 
-// Opciones de conexión a Firebird de desarrollo/pruebas
+// Opciones de conexión a Firebird de PRODUCCIÓN (servidor en vivo)
 const dbOptions = {
-    host: '127.0.0.1',
+    host: '192.168.2.150', // servidor (nombre de red: 'servidor')
     port: 3050,
-    database: 'C:\\Users\\Usuario\\Desktop\\Tomcat 9.0\\1_ERP.FDB',
+    database: 'C:/ERPCalvoyAsociados/Database/ERPDATABASE.FDB',
     user: 'SYSDBA',
     password: 'masterkey',
     lowercase_keys: true
@@ -259,6 +259,11 @@ app.get('/api/saldos', async (req, res) => {
           AND c.TIPOCOMPROBANTE_OID IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 43, 56)
           AND (cp.IMPORTE + COALESCE((SELECT SUM(can.IMPORTE) FROM CANCELACION can WHERE can.COMPROBANTECANCELADO_OID = c.OID), 0)) > 0.01
           AND c.TALONARIO_OID NOT IN (23, 24)
+          AND ci.ALNUMERO > 0
+          AND NOT (
+            COALESCE((SELECT SUM(can.IMPORTE) FROM CANCELACION can WHERE can.COMPROBANTECANCELADO_OID = c.OID), 0) = 0
+            AND c.FECHA < DATEADD(-1 YEAR TO CURRENT_DATE)
+          )
         `;
         
         const pepsiQuery = `
@@ -283,6 +288,11 @@ app.get('/api/saldos', async (req, res) => {
           AND c.TIPOCOMPROBANTE_OID IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 43, 56)
           AND (cp.IMPORTE + COALESCE((SELECT SUM(can.IMPORTE) FROM CANCELACION can WHERE can.COMPROBANTECANCELADO_OID = c.OID), 0)) > 0.01
           AND c.TALONARIO_OID IN (23, 24)
+          AND ci.ALNUMERO > 0
+          AND NOT (
+            COALESCE((SELECT SUM(can.IMPORTE) FROM CANCELACION can WHERE can.COMPROBANTECANCELADO_OID = c.OID), 0) = 0
+            AND c.FECHA < DATEADD(-1 YEAR TO CURRENT_DATE)
+          )
         `;
         
         console.log("Consultando base de datos Firebird local...");
