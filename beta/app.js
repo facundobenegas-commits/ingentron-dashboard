@@ -142,12 +142,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (headerImg) headerImg.src = res.dark;
     });
     try {
-        const response = await fetch('/api/excel');
-        if (!response.ok) throw new Error('No se pudo cargar el archivo del servidor.');
-        const data = await response.arrayBuffer();
-        const workbook = XLSX.read(data, { type: 'array' });
+        const response = await fetch('/api/saldos');
+        if (!response.ok) throw new Error('No se pudo cargar la información de saldos desde el servidor.');
+        globalData = await response.json();
         
-        processWorkbook(workbook);
+        // Populate availableWeeks based on globalData
+        availableWeeks = new Set();
+        globalData.forEach(item => {
+            if (item.week) {
+                availableWeeks.add(item.week);
+            }
+        });
+        
+        populateFilters();
         
         loadingIndicator.classList.remove('show');
         dashboardView.style.display = 'block';
@@ -160,205 +167,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadingIndicator.querySelector('.processing-spinner').style.display = 'none';
     }
 });
-
-function cleanClientCode(code) {
-    if (!code) return '';
-    code = String(code).trim();
-    code = code.replace(/[\.,]0+$/, '');
-    if (/^\d+([\.,]\d+)+$/.test(code)) {
-        code = code.replace(/[\.,]/g, '');
-    }
-    return code;
-}
-
-// Excel Parsing Logic
-function processWorkbook(workbook) {
-    globalData = [];
-    availableWeeks = new Set();
-    
-    // Process SALDOS AGUAS
-    if (workbook.Sheets['SALDOS AGUAS']) {
-        const rows = XLSX.utils.sheet_to_json(workbook.Sheets['SALDOS AGUAS'], { header: 1 });
-        parseStandardSheet(rows, 'SALDOS AGUAS', 'Aguas');
-    }
-    
-    // Process SALLIQUELO
-    if (workbook.Sheets['SALLIQUELO']) {
-        const rows = XLSX.utils.sheet_to_json(workbook.Sheets['SALLIQUELO'], { header: 1 });
-        parseStandardSheet(rows, 'SALLIQUELO', 'Salliquelo');
-    }
-    
-    // Process TRENQUE LAUQUEN
-    if (workbook.Sheets['TRENQUE LAUQUEN']) {
-        const rows = XLSX.utils.sheet_to_json(workbook.Sheets['TRENQUE LAUQUEN'], { header: 1 });
-        parseStandardSheet(rows, 'TRENQUE LAUQUEN', 'Trenque Lauquen');
-    }
-    
-    // Process SALDOS NUEVO (Complex format)
-    if (workbook.Sheets['SALDOS NUEVO']) {
-        const rows = XLSX.utils.sheet_to_json(workbook.Sheets['SALDOS NUEVO'], { header: 1 });
-        parseSaldosNuevo(rows, 'PepsiCo');
-    }
-
-    populateFilters();
-}
-
-function parseStandardSheet(rows, sheetName, originName) {
-    // Attempt to find headers dynamically or fallback to heuristics
-    let headerRowIndex = -1;
-    let colMap = { client: -1, amount: -1, week: -1, invoice: -1, date: -1, dueDate: -1, situacion: -1 };
-    
-    for (let i = 0; i < Math.min(rows.length, 10); i++) {
-        const row = rows[i];
-        if (!row || row.length < 5) continue;
-        
-        const rowStr = row.join(' ').toLowerCase();
-        if (rowStr.includes('comprobante') && (rowStr.includes('cliente') || rowStr.includes('razon social') || rowStr.includes('cta cte'))) {
-            headerRowIndex = i;
-            
-            // Map columns
-            row.forEach((cell, index) => {
-                if (!cell) return;
-                const h = String(cell).toLowerCase().trim();
-                if (h.includes('razon social') || h === 'cliente' || h === 'cta cte') colMap.client = index;
-                if (h === 'importe' || h === 'debe' || h === 'saldo') colMap.amount = index;
-                if (h.includes('semana')) colMap.week = index;
-                if (h === 'comprobante') colMap.invoice = index;
-                if (h === 'fecha' || h === 'fecha mov.') colMap.date = index;
-                if (h === 'vencimiento' || h === 'fechavenc') colMap.dueDate = index;
-                if (h.includes('situacion') || h.includes('situación')) colMap.situacion = index;
-            });
-            break;
-        }
-    }
-    
-    // Fallbacks if mapping failed but we know standard positions
-    if (colMap.client === -1 && sheetName === 'TRENQUE LAUQUEN') colMap.client = 3; // Razon Social
-    if (colMap.amount === -1 && sheetName === 'TRENQUE LAUQUEN') colMap.amount = 8; // Importe
-    if (colMap.week === -1 && sheetName === 'TRENQUE LAUQUEN') colMap.week = 10; // SEMANA ANALISIS is often K (index 10)
-    
-    if (headerRowIndex === -1) headerRowIndex = 0; // Default to start parsing
-    
-    for (let i = headerRowIndex + 1; i < rows.length; i++) {
-        const row = rows[i];
-        if (!row || row.length === 0) continue;
-        
-        // Use maps or defaults
-        let clientName = colMap.client > -1 ? row[colMap.client] : (sheetName === 'SALLIQUELO' ? row[1] : row[1]);
-        let amount = colMap.amount > -1 ? row[colMap.amount] : row[7];
-        let week = colMap.week > -1 ? row[colMap.week] : row[row.length - 1]; // Assume week is last if not found
-        let invoice = colMap.invoice > -1 ? row[colMap.invoice] : row[3];
-        let date = colMap.date > -1 ? row[colMap.date] : row[2];
-        let dueDate = colMap.dueDate > -1 ? row[colMap.dueDate] : row[4];
-        
-        // Clean up
-        if (!clientName || typeof clientName !== 'string' || clientName.trim() === '') continue;
-        if (!amount || isNaN(parseFloat(String(amount).replace(',','.')))) continue;
-        
-        amount = parseFloat(String(amount).replace(',','.'));
-        if (amount === 0) continue; // Skip zero balances
-        
-        week = week ? String(week).trim() : 'Sin Semana';
-        availableWeeks.add(week);
-        
-        let clientCode = '';
-        if (sheetName === 'SALDOS AGUAS' || sheetName === 'SALLIQUELO') {
-            clientCode = row[0] !== undefined ? String(row[0]) : '';
-        } else if (sheetName === 'TRENQUE LAUQUEN') {
-            clientCode = row[2] !== undefined ? String(row[2]) : '';
-        }
-        
-        let situacion = colMap.situacion > -1 && row[colMap.situacion] !== undefined ? String(row[colMap.situacion]).trim() : 'Sin Especificar';
-        if (!situacion) situacion = 'Sin Especificar';
-        
-        globalData.push({
-            origin: originName,
-            client: String(clientName).trim(),
-            clientCode: cleanClientCode(clientCode),
-            amount: amount,
-            week: week,
-            invoice: invoice || 'N/A',
-            date: date || 'N/A',
-            dueDate: dueDate || 'N/A',
-            situacion: situacion
-        });
-    }
-}
-
-function parseSaldosNuevo(rows, originName) {
-    // Highly unstructured. Usually client name is in col 1 (index 1) and amount in col 7 or 8.
-    // We look for rows that look like invoice rows or balance rows.
-    let currentClient = "Desconocido";
-    let currentClientCode = "";
-    let currentWeek = "Sin Semana";
-    
-    let situacionCol = -1;
-    for (let i = 0; i < Math.min(rows.length, 30); i++) {
-        if (!rows[i]) continue;
-        rows[i].forEach((cell, index) => {
-            if (cell) {
-                const h = String(cell).toLowerCase().trim();
-                if (h.includes('situacion') || h.includes('situación')) {
-                    situacionCol = index;
-                }
-            }
-        });
-        if (situacionCol > -1) break;
-    }
-    
-    for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
-        if (!row || row.length < 2) continue;
-        
-        // Detect client row: typically has an ID in index 0 and Name in index 1, but no amount in index 7/8
-        if (row[0] && row[1] && typeof row[1] === 'string' && row[1].length > 5 && !row[2]) {
-            // Might be a client header row
-            if (isNaN(parseFloat(String(row[1])))) {
-                currentClient = row[1];
-                currentClientCode = row[0] !== undefined ? String(row[0]) : '';
-            }
-        }
-        
-        // Detect invoice row or total row
-        // Usually, 'SEMANA ANALISIS' is near the end, index 11, 12 or 13.
-        let amount = row[7] || row[8]; 
-        let week = row[12] || row[13] || row[11];
-        let dateVal = row[0] !== undefined ? row[0] : (row[1] !== undefined ? row[1] : 'N/A');
-        let dueDateVal = row[2] !== undefined ? row[2] : (row[3] !== undefined ? row[3] : 'N/A');
-
-        let invoice = row[4];
-        
-        if (amount !== undefined && !isNaN(parseFloat(String(amount).replace(',','.')))) {
-            let parsedAmount = parseFloat(String(amount).replace(',','.'));
-            
-            // Validate invoice to exclude subtotals
-            let invoiceStr = String(invoice || '').trim();
-            let isLikelyInvoice = invoiceStr.length > 3 && /\d/.test(invoiceStr);
-            
-            if (parsedAmount !== 0 && isLikelyInvoice) {
-                let w = week ? String(week).trim() : currentWeek;
-                if (w.includes("AL") || w.includes("SEMANA")) currentWeek = w;
-                
-                availableWeeks.add(currentWeek);
-                
-                let situacionVal = (situacionCol > -1 && row[situacionCol] !== undefined) ? String(row[situacionCol]).trim() : 'Sin Especificar';
-                if (!situacionVal) situacionVal = 'Sin Especificar';
-                
-                globalData.push({
-                    origin: originName,
-                    client: String(currentClient).trim(),
-                    clientCode: cleanClientCode(currentClientCode),
-                    amount: parsedAmount,
-                    week: currentWeek,
-                    invoice: invoiceStr,
-                    date: dateVal,
-                    dueDate: dueDateVal,
-                    situacion: situacionVal
-                });
-            }
-        }
-    }
-}
 
 // UI Updating
 function updateOriginOptionsForEmpresa() {
