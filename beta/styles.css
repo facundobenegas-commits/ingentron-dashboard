@@ -43,9 +43,9 @@ body {
 /* Sidebar */
 .sidebar {
     width: var(--sidebar-width);
-    background: rgba(10, 10, 12, 0.5);
-    backdrop-filter: blur(40px) saturate(200%);
-    -webkit-backdrop-filter: blur(40px) saturate(200%);
+    background: rgba(15, 15, 18, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border-right: 1px solid var(--surface-border);
     display: flex;
     flex-direction: column;
@@ -176,9 +176,9 @@ body {
     gap: 12px;
     padding: 0 40px;
     border-bottom: 1px solid var(--surface-border);
-    background: rgba(10, 10, 12, 0.5);
-    backdrop-filter: blur(40px) saturate(200%);
-    -webkit-backdrop-filter: blur(40px) saturate(200%);
+    background: rgba(15, 15, 18, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     position: sticky;
     top: 0;
     z-index: 5;
@@ -202,9 +202,9 @@ body {
 
 /* Glassmorphism Classes */
 .glass-card {
-    background: var(--surface-color);
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    background: rgba(20, 20, 24, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border: 1px solid var(--surface-border);
     border-radius: var(--border-radius);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
@@ -990,14 +990,15 @@ tbody tr:hover {
         height: 100vh;
         width: 260px;
         z-index: 1000;
-        transform: translateX(-100%);
+        transform: translate3d(-100%, 0, 0);
         box-shadow: none;
-        transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
-        will-change: transform;
+        transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
     }
     
     .sidebar:not(.collapsed) {
-        transform: translateX(0);
+        transform: translate3d(0, 0, 0);
         box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
     }
     .main-content {
@@ -1049,15 +1050,20 @@ tbody tr:hover {
 
 /* Sidebar Toggle Styles */
 .sidebar {
-    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
     will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transform: translate3d(0, 0, 0);
 }
 .sidebar.collapsed {
-    transform: translateX(-100%);
+    transform: translate3d(-100%, 0, 0);
 }
 .main-content {
-    transition: margin-left 0.25s cubic-bezier(0.16, 1, 0.3, 1), max-width 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
-    will-change: margin-left, max-width;
+    transition: margin-left 0.18s cubic-bezier(0.16, 1, 0.3, 1), max-width 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transform: translate3d(0, 0, 0);
 }
 .main-content.expanded {
     margin-left: 0 !important;
@@ -1082,9 +1088,9 @@ tbody tr:hover {
     height: 2px;
     background-color: var(--text-primary);
     border-radius: 2px;
-    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), 
-                opacity 0.2s ease, 
-                background-color 0.25s ease;
+    transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), 
+                opacity 0.15s ease, 
+                background-color 0.18s ease;
     transform-origin: center;
 }
 

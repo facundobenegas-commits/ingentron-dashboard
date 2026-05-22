@@ -1616,6 +1616,7 @@ function updateStatusPieChart(ok, vencido, critico) {
             },
             options: {
                 responsive: true,
+                resizeDelay: 150,
                 maintainAspectRatio: false,
                 plugins: {
                     legend: { display: false },
@@ -1649,6 +1650,7 @@ function updateStatusPieChart(ok, vencido, critico) {
         },
         options: {
             responsive: true,
+            resizeDelay: 150,
             maintainAspectRatio: false,
             plugins: {
                 legend: { display: false },
@@ -1728,6 +1730,7 @@ function updateTrendChart(weeks, balances) {
         },
         options: {
             responsive: true,
+            resizeDelay: 150,
             maintainAspectRatio: false,
             layout: {
                 padding: {
