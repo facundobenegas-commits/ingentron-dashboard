@@ -10,7 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
-    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="icon" type="image/png" href="../favicon.png">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -19,11 +19,11 @@
         <aside class="sidebar collapsed" id="sidebar">
             <div class="logo-container" style="display: flex; align-items: center; gap: 10px; justify-content: center; height: var(--header-height); border-bottom: 1px solid var(--surface-border); padding: 0 16px;">
                 <div class="logo-badge" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 4px 10px; border-radius: 8px; display: flex; align-items: center; justify-content: center; height: 32px;">
-                    <img id="sidebar-logo-ingentron" src="logo_ingentron.png" alt="Ingentron S.R.L." style="max-height: 20px; width: auto; object-fit: contain;">
+                    <img id="sidebar-logo-ingentron" src="../logo_ingentron.png" alt="Ingentron S.R.L." style="max-height: 20px; width: auto; object-fit: contain;">
                 </div>
                 <div style="width: 1px; height: 18px; background: rgba(255,255,255,0.15);"></div>
                 <div class="logo-badge" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 4px 10px; border-radius: 8px; display: flex; align-items: center; justify-content: center; height: 32px;">
-                    <img id="sidebar-logo-gruya" src="logo_gruya.jpg" alt="Gruya S.R.L." style="max-height: 20px; width: auto; object-fit: contain;">
+                    <img id="sidebar-logo-gruya" src="../logo_gruya.jpg" alt="Gruya S.R.L." style="max-height: 20px; width: auto; object-fit: contain;">
                 </div>
             </div>
             <nav class="nav-menu">
@@ -31,8 +31,8 @@
                     <i class="fas fa-home"></i> <span>Resumen</span>
                 </div>
                 <div style="flex: 1;"></div>
-                <div class="nav-item beta-link" onclick="window.location.href='/beta/'">
-                    <i class="fas fa-flask"></i> <span>Versión Beta</span>
+                <div class="nav-item stable-link" onclick="window.location.href='/'">
+                    <i class="fas fa-check-circle"></i> <span>Versión Estable</span>
                 </div>
             </nav>
         </aside>
@@ -48,15 +48,18 @@
                     </button>
                     <div class="header-logo-container">
                         <div class="logo-badge" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 4px 10px; border-radius: 8px; display: flex; align-items: center; justify-content: center; height: 32px;">
-                            <img id="header-logo-ingentron" src="logo_ingentron.png" alt="Ingentron S.R.L." style="max-height: 20px; width: auto; object-fit: contain;">
+                            <img id="header-logo-ingentron" src="../logo_ingentron.png" alt="Ingentron S.R.L." style="max-height: 20px; width: auto; object-fit: contain;">
                         </div>
                         <div style="width: 1px; height: 18px; background: rgba(255,255,255,0.15);"></div>
                         <div class="logo-badge" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 4px 10px; border-radius: 8px; display: flex; align-items: center; justify-content: center; height: 32px;">
-                            <img id="header-logo-gruya" src="logo_gruya.jpg" alt="Gruya S.R.L." style="max-height: 20px; width: auto; object-fit: contain;">
+                            <img id="header-logo-gruya" src="../logo_gruya.jpg" alt="Gruya S.R.L." style="max-height: 20px; width: auto; object-fit: contain;">
                         </div>
                     </div>
                     <div>
-                        <h2 id="view-title">Dashboard</h2>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <h2 id="view-title">Dashboard</h2>
+                            <span class="badge beta-badge">Beta</span>
+                        </div>
                         <p id="view-subtitle">Resumen de cuentas corrientes</p>
                     </div>
                 </div>
