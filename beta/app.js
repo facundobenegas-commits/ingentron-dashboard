@@ -1035,26 +1035,26 @@ function downloadClientPDF() {
 
     // Add Invoices Table
     doc.autoTable({
-        head: [['Comprobante', 'Empresa', 'Fecha Emisión', 'Estado', 'Importe', 'Canceló', 'Pendiente']],
+        head: [['Comprobante', 'Empresa', 'Fecha', 'Estado', 'Importe', 'Canceló', 'Pendiente']],
         body: tableBody,
         startY: 68,
         theme: 'striped',
         headStyles: {
             fillColor: [11, 26, 48],
             textColor: [255, 255, 255],
-            fontSize: 9,
+            fontSize: 8.5,
             fontStyle: 'bold',
             halign: 'left',
             valign: 'middle'
         },
         columnStyles: {
-            0: { cellWidth: 'auto' },
+            0: { cellWidth: 30 },
             1: { cellWidth: 24 },
-            2: { cellWidth: 24 },
-            3: { cellWidth: 28 },
-            4: { cellWidth: 28, halign: 'right' },
-            5: { cellWidth: 28, halign: 'right' },
-            6: { cellWidth: 28, halign: 'right' }
+            2: { cellWidth: 18 },
+            3: { cellWidth: 20 },
+            4: { cellWidth: 32, halign: 'right' },
+            5: { cellWidth: 32, halign: 'right' },
+            6: { cellWidth: 32, halign: 'right' }
         },
         didParseCell: function(data) {
             if (data.section === 'head' && (data.column.index === 4 || data.column.index === 5 || data.column.index === 6)) {
@@ -1075,14 +1075,14 @@ function downloadClientPDF() {
             }
         },
         bodyStyles: {
-            fontSize: 8.5,
+            fontSize: 8,
             textColor: [30, 41, 59],
-            cellPadding: 4
+            cellPadding: 3
         },
         alternateRowStyles: {
             fillColor: [248, 250, 252]
         },
-        margin: { left: 15, right: 15, top: 15, bottom: 22 },
+        margin: { left: 10, right: 10, top: 15, bottom: 22 },
         styles: {
             font: 'helvetica',
             lineColor: [241, 245, 249],
