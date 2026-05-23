@@ -824,11 +824,13 @@ function renderModalInvoices(originFilter, animate = true) {
         
         const status = getDueDateStatus(inv.dueDate, inv.date);
         
+        const originalAmt = (inv.originalAmount !== undefined && !isNaN(inv.originalAmount)) ? inv.originalAmount : inv.amount;
         tr.innerHTML = `
             <td>${inv.invoice} <span class="badge ${getOriginColorClass(inv.origin)}" style="font-size: 10px; padding: 2px 8px; margin-left: 8px; display: inline-block;">${inv.origin}</span></td>
             <td>${formatDate(inv.date)}</td>
             <td class="text-center"><span class="badge ${status.class}" style="font-size: 10px; padding: 4px 10px; font-weight: 600; display: inline-flex; min-width: 80px; text-align: center; justify-content: center;">${status.text}</span></td>
-            <td class="text-right font-medium">${formatCurrency(inv.amount)}</td>
+            <td class="text-right font-medium" style="opacity: 0.8;">${formatCurrency(originalAmt)}</td>
+            <td class="text-right font-medium" style="color: var(--accent-color);">${formatCurrency(inv.amount)}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -1017,18 +1019,20 @@ function downloadClientPDF() {
     // Table rows data
     const tableBody = invoicesToExport.map(inv => {
         const status = getDueDateStatus(inv.dueDate, inv.date);
+        const originalAmt = (inv.originalAmount !== undefined && !isNaN(inv.originalAmount)) ? inv.originalAmount : inv.amount;
         return [
             inv.invoice || 'N/A',
             formatCompanyName(inv.origin) || 'N/A',
             formatDate(inv.date),
             status.text || 'N/A',
+            formatCurrency(originalAmt),
             formatCurrency(inv.amount)
         ];
     });
 
     // Add Invoices Table
     doc.autoTable({
-        head: [['Comprobante', 'Empresa', 'Fecha Emisión', 'Estado', 'Importe']],
+        head: [['Comprobante', 'Empresa', 'Fecha Emisión', 'Estado', 'Importe', 'Pendiente']],
         body: tableBody,
         startY: 68,
         theme: 'striped',
@@ -1042,13 +1046,14 @@ function downloadClientPDF() {
         },
         columnStyles: {
             0: { cellWidth: 'auto' },
-            1: { cellWidth: 32 },
-            2: { cellWidth: 32 },
-            3: { cellWidth: 35 },
-            4: { cellWidth: 38, halign: 'right' }
+            1: { cellWidth: 28 },
+            2: { cellWidth: 28 },
+            3: { cellWidth: 32 },
+            4: { cellWidth: 32, halign: 'right' },
+            5: { cellWidth: 32, halign: 'right' }
         },
         didParseCell: function(data) {
-            if (data.section === 'head' && data.column.index === 4) {
+            if (data.section === 'head' && (data.column.index === 4 || data.column.index === 5)) {
                 data.cell.styles.halign = 'right';
             }
             if (data.section === 'body' && data.column.index === 3) {
