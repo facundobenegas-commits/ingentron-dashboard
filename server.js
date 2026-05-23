@@ -16,16 +16,46 @@ const dbOptions = {
     database: 'C:/ERPCalvoyAsociados/Database/ERPDATABASE.FDB',
     user: 'SYSDBA',
     password: 'masterkey',
-    lowercase_keys: true
+    lowercase_keys: true,
+    connectTimeout: 2000 // Límite de 2 segundos en el driver
 };
 
-// Helper para ejecutar consultas Firebird con Promesas y desconexión automática
+// Helper para ejecutar consultas Firebird con Promesas, desconexión automática y control de timeout estricto
 function queryFirebird(sql) {
     return new Promise((resolve, reject) => {
+        let finished = false;
+        
+        // Timeout de seguridad de 2 segundos para evitar que la petición quede colgada
+        const timer = setTimeout(() => {
+            if (!finished) {
+                finished = true;
+                reject(new Error("Timeout al conectar/consultar la base de datos Firebird (límite de 2000ms superado)"));
+            }
+        }, 2000);
+
         firebird.attach(dbOptions, (err, db) => {
-            if (err) return reject(err);
+            if (finished) {
+                if (db) {
+                    try { db.detach(); } catch (e) {}
+                }
+                return;
+            }
+            
+            if (err) {
+                finished = true;
+                clearTimeout(timer);
+                return reject(err);
+            }
+            
             db.query(sql, (err, results) => {
-                db.detach();
+                if (db) {
+                    try { db.detach(); } catch (e) {}
+                }
+                
+                if (finished) return;
+                finished = true;
+                clearTimeout(timer);
+                
                 if (err) return reject(err);
                 resolve(results);
             });
