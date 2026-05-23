@@ -546,6 +546,10 @@ th, td {
     border-bottom: 1px solid var(--surface-border);
 }
 
+.invoice-table th, .invoice-table td {
+    padding: 12px 10px;
+}
+
 th {
     color: var(--text-secondary);
     font-weight: 500;
@@ -635,7 +639,7 @@ tbody tr:hover {
 
 .modal-content {
     width: 90%;
-    max-width: 800px;
+    max-width: 900px;
     max-height: 80vh;
     display: flex;
     flex-direction: column;
