@@ -3,11 +3,11 @@ const XLSX = require('xlsx');
 const path = require('path');
 const fs = require('fs');
 
-// Opciones de conexión a Firebird de pruebas (Copia local actualizada hoy)
+// Opciones de conexión a Firebird del servidor principal (Producción en vivo)
 const dbOptions = {
-    host: '127.0.0.1', // localhost para pruebas locales en esta PC
+    host: '192.168.2.150', // Servidor principal
     port: 3050,
-    database: 'C:/Users/Usuario/Desktop/Tomcat 9.0/1_ERP.FDB',
+    database: 'C:/ERPCalvoyAsociados/Database/ERPDATABASE.FDB',
     user: 'SYSDBA',
     password: 'masterkey',
     lowercase_keys: true,
