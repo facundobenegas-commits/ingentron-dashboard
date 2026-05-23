@@ -281,29 +281,7 @@ app.get('/api/saldos', async (req, res) => {
 
     let globalData = [];
     
-    // 1. Cargar Salliqueló y Trenque Lauquen (La Gruya) desde el Excel estático
-    try {
-        const excelPath = path.join(__dirname, 'QUERY.xlsx');
-        if (fs.existsSync(excelPath)) {
-            const workbook = XLSX.readFile(excelPath);
-            
-            // Salliqueló
-            if (workbook.Sheets['SALLIQUELO']) {
-                const rows = XLSX.utils.sheet_to_json(workbook.Sheets['SALLIQUELO'], { header: 1 });
-                const salliqueloData = parseStandardSheet(rows, 'SALLIQUELO', 'Salliquelo');
-                globalData.push(...salliqueloData);
-            }
-            
-            // Trenque Lauquen
-            if (workbook.Sheets['TRENQUE LAUQUEN']) {
-                const rows = XLSX.utils.sheet_to_json(workbook.Sheets['TRENQUE LAUQUEN'], { header: 1 });
-                const trenqueData = parseStandardSheet(rows, 'TRENQUE LAUQUEN', 'Trenque Lauquen');
-                globalData.push(...trenqueData);
-            }
-        }
-    } catch (err) {
-        console.error("Error leyendo Salliquelo/Trenque Lauquen desde Excel:", err);
-    }
+
     
     // 2. Intentar consultar Aguas y PepsiCo desde Firebird en tiempo real
     let liveSuccess = false;
@@ -403,32 +381,7 @@ app.get('/api/saldos', async (req, res) => {
         console.error("ADVERTENCIA: No se pudo conectar a la base de datos Firebird. Usando fallback de Excel:", dbErr.message);
     }
     
-    // 3. Fallback: Si Firebird falló, leer Aguas y PepsiCo desde QUERY.xlsx
-    if (!liveSuccess) {
-        try {
-            const excelPath = path.join(__dirname, 'QUERY.xlsx');
-            if (fs.existsSync(excelPath)) {
-                const workbook = XLSX.readFile(excelPath);
-                
-                // Aguas Fallback
-                if (workbook.Sheets['SALDOS AGUAS']) {
-                    const rows = XLSX.utils.sheet_to_json(workbook.Sheets['SALDOS AGUAS'], { header: 1 });
-                    const aguasData = parseStandardSheet(rows, 'SALDOS AGUAS', 'Aguas');
-                    globalData.push(...aguasData);
-                }
-                
-                // PepsiCo Fallback
-                if (workbook.Sheets['SALDOS NUEVO']) {
-                    const rows = XLSX.utils.sheet_to_json(workbook.Sheets['SALDOS NUEVO'], { header: 1 });
-                    const pepsiData = parseSaldosNuevo(rows, 'PepsiCo');
-                    globalData.push(...pepsiData);
-                }
-                console.log("Cargados saldos estáticos desde QUERY.xlsx (modo fallback).");
-            }
-        } catch (excelErr) {
-            console.error("Error en fallback de Excel:", excelErr);
-        }
-    }
+
     
     res.json(globalData);
 });

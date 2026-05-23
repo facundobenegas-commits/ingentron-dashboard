@@ -1,5 +1,4 @@
 const firebird = require('node-firebird');
-const XLSX = require('xlsx');
 const path = require('path');
 const fs = require('fs');
 
@@ -54,84 +53,7 @@ function formatDate(date) {
     return `${day}/${month}/${year}`;
 }
 
-// Lógica de parseo de La Gruya desde Excel local
-function parseStandardSheet(rows, sheetName, originName) {
-    let headerRowIndex = -1;
-    let colMap = { client: -1, amount: -1, week: -1, invoice: -1, date: -1, dueDate: -1, situacion: -1 };
-    
-    for (let i = 0; i < Math.min(rows.length, 10); i++) {
-        const row = rows[i];
-        if (!row || row.length < 5) continue;
-        
-        const rowStr = row.join(' ').toLowerCase();
-        if (rowStr.includes('comprobante') && (rowStr.includes('cliente') || rowStr.includes('razon social') || rowStr.includes('cta cte'))) {
-            headerRowIndex = i;
-            
-            row.forEach((cell, index) => {
-                if (!cell) return;
-                const h = String(cell).toLowerCase().trim();
-                if (h.includes('razon social') || h === 'cliente' || h === 'cta cte') colMap.client = index;
-                if (h === 'importe' || h === 'debe' || h === 'saldo') colMap.amount = index;
-                if (h.includes('semana')) colMap.week = index;
-                if (h === 'comprobante') colMap.invoice = index;
-                if (h === 'fecha' || h === 'fecha mov.') colMap.date = index;
-                if (h === 'vencimiento' || h === 'fechavenc') colMap.dueDate = index;
-                if (h.includes('situacion') || h.includes('situación')) colMap.situacion = index;
-            });
-            break;
-        }
-    }
-    
-    if (colMap.client === -1 && sheetName === 'TRENQUE LAUQUEN') colMap.client = 3;
-    if (colMap.amount === -1 && sheetName === 'TRENQUE LAUQUEN') colMap.amount = 8;
-    if (colMap.week === -1 && sheetName === 'TRENQUE LAUQUEN') colMap.week = 10;
-    
-    if (headerRowIndex === -1) headerRowIndex = 0;
-    
-    const sheetData = [];
-    for (let i = headerRowIndex + 1; i < rows.length; i++) {
-        const row = rows[i];
-        if (!row || row.length === 0) continue;
-        
-        let clientName = colMap.client > -1 ? row[colMap.client] : row[1];
-        let amount = colMap.amount > -1 ? row[colMap.amount] : row[7];
-        let week = colMap.week > -1 ? row[colMap.week] : row[row.length - 1];
-        let invoice = colMap.invoice > -1 ? row[colMap.invoice] : row[3];
-        let date = colMap.date > -1 ? row[colMap.date] : row[2];
-        let dueDate = colMap.dueDate > -1 ? row[colMap.dueDate] : row[4];
-        
-        if (!clientName || typeof clientName !== 'string' || clientName.trim() === '') continue;
-        if (!amount || isNaN(parseFloat(String(amount).replace(',','.')))) continue;
-        
-        amount = parseFloat(String(amount).replace(',','.'));
-        if (amount === 0) continue;
-        
-        week = week ? String(week).trim() : 'Sin Semana';
-        
-        let clientCode = '';
-        if (sheetName === 'SALDOS AGUAS' || sheetName === 'SALLIQUELO') {
-            clientCode = row[0] !== undefined ? String(row[0]) : '';
-        } else if (sheetName === 'TRENQUE LAUQUEN') {
-            clientCode = row[2] !== undefined ? String(row[2]) : '';
-        }
-        
-        let situacion = colMap.situacion > -1 && row[colMap.situacion] !== undefined ? String(row[colMap.situacion]).trim() : 'Sin Especificar';
-        if (!situacion) situacion = 'Sin Especificar';
-        
-        sheetData.push({
-            origin: originName,
-            client: String(clientName).trim(),
-            clientCode: cleanClientCode(clientCode),
-            amount: amount,
-            week: week,
-            invoice: invoice || 'N/A',
-            date: date || 'N/A',
-            dueDate: dueDate || 'N/A',
-            situacion: situacion
-        });
-    }
-    return sheetData;
-}
+
 
 // Ejecutar la sincronización completa
 async function runSynchronization() {
@@ -140,33 +62,7 @@ async function runSynchronization() {
     
     let globalData = [];
     
-    // 1. Cargar datos de La Gruya desde el Excel local (Salliqueló y Trenque Lauquen)
-    try {
-        const excelPath = path.join(__dirname, 'QUERY.xlsx');
-        if (fs.existsSync(excelPath)) {
-            const workbook = XLSX.readFile(excelPath);
-            
-            // Salliqueló
-            if (workbook.Sheets['SALLIQUELO']) {
-                const rows = XLSX.utils.sheet_to_json(workbook.Sheets['SALLIQUELO'], { header: 1 });
-                const salliqueloData = parseStandardSheet(rows, 'SALLIQUELO', 'Salliquelo');
-                globalData.push(...salliqueloData);
-                console.log(`[La Gruya] Cargados ${salliqueloData.length} registros de Salliqueló.`);
-            }
-            
-            // Trenque Lauquen
-            if (workbook.Sheets['TRENQUE LAUQUEN']) {
-                const rows = XLSX.utils.sheet_to_json(workbook.Sheets['TRENQUE LAUQUEN'], { header: 1 });
-                const trenqueData = parseStandardSheet(rows, 'TRENQUE LAUQUEN', 'Trenque Lauquen');
-                globalData.push(...trenqueData);
-                console.log(`[La Gruya] Cargados ${trenqueData.length} registros de Trenque Lauquen.`);
-            }
-        } else {
-            console.warn("[La Gruya] ADVERTENCIA: QUERY.xlsx no se encontró en esta ubicación. Omitiendo La Gruya.");
-        }
-    } catch (excelErr) {
-        console.error("[La Gruya] Error al leer La Gruya desde Excel:", excelErr.message);
-    }
+
     
     // 2. Cargar datos en vivo de Aguas y PepsiCo desde la base de datos Firebird local
     try {
