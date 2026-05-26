@@ -51,6 +51,24 @@ function formatDate(date) {
     return `${day}/${month}/${year}`;
 }
 
+function formatDateForCutFirebird(yyyymmdd) {
+    if (!yyyymmdd || yyyymmdd.length !== 10) return 'N/A';
+    const parts = yyyymmdd.split('-');
+    if (parts.length !== 3) return 'N/A';
+    return `${parts[2]}/${parts[1]}/${parts[0].slice(2, 4)}`;
+}
+
+const WEDNESDAY_CUTS = [
+    { label: "Del 25/03/2026 al 01/04/2026", date: "2026-04-01" },
+    { label: "Del 01/04/2026 al 08/04/2026", date: "2026-04-08" },
+    { label: "Del 08/04/2026 al 15/04/2026", date: "2026-04-15" },
+    { label: "Del 15/04/2026 al 22/04/2026", date: "2026-04-22" },
+    { label: "Del 22/04/2026 al 29/04/2026", date: "2026-04-29" },
+    { label: "Del 29/04/2026 al 06/05/2026", date: "2026-05-06" },
+    { label: "Del 06/05/2026 al 13/05/2026", date: "2026-05-13" },
+    { label: "Del 13/05/2026 al 20/05/2026", date: "2026-05-20" }
+];
+
 // Ejecutar la sincronización de Aguas
 async function runSynchronization() {
     const timestamp = new Date().toLocaleString();
@@ -105,7 +123,50 @@ async function runSynchronization() {
             situacion: 'PENDIENTE DE PAGO'
         }));
         
-        console.log(`[Firebird] Éxito: Cargados ${globalData.length} saldos de Aguas.`);
+        console.log(`[Firebird] Éxito: Cargados ${globalData.length} saldos en tiempo real de Aguas.`);
+
+        // Extraer cortes históricos semanales de Aguas (los miércoles)
+        for (const cut of WEDNESDAY_CUTS) {
+            console.log(`[Firebird] Consultando corte histórico: ${cut.label}...`);
+            const histQuery = `
+            SELECT 
+                p.NUMERO AS client_code,
+                p.NOMBRE AS client_name,
+                SUM(cp.IMPORTE + COALESCE((SELECT SUM(can.IMPORTE) FROM CANCELACION can JOIN COMPROBANTE pay ON can.COMPROBANTE_OID = pay.OID WHERE can.COMPROBANTECANCELADO_OID = c.OID AND pay.FECHA <= '${cut.date}'), 0)) AS outstanding_balance
+            FROM COMPROBANTE c
+            JOIN COMPROBANTEIDENTIFICACION ci ON c.COMPROBANTEIDENTIFICACION_OID = ci.OID
+            JOIN TIPOCOMPROBANTE t ON c.TIPOCOMPROBANTE_OID = t.OID
+            JOIN CONTRAPARTIDA cp ON cp.COMPROBANTE_OID = c.OID AND cp.TIPOCONTRAPARTIDA_OID = 5
+            JOIN CUENTACORRIENTE ct ON cp.CUENTACORRIENTE_OID = ct.OID
+            JOIN PERSONA p ON ct.PROPIETARIO_OID = p.OID
+            WHERE cp.IMPORTE > 0 
+              AND p.dtype = 'Cliente'
+              AND c.TIPOCOMPROBANTE_OID IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 43, 56)
+              AND c.TALONARIO_OID NOT IN (23, 24)
+              AND ci.ALNUMERO > 0
+              AND c.FECHA <= '${cut.date}'
+            GROUP BY p.NUMERO, p.NOMBRE
+            `;
+            const histRows = await queryFirebird(histQuery);
+            const histData = histRows.map(row => {
+                return {
+                    origin: 'Aguas',
+                    client: String(row.client_name).trim(),
+                    clientCode: cleanClientCode(row.client_code),
+                    amount: parseFloat(row.outstanding_balance),
+                    originalAmount: parseFloat(row.outstanding_balance),
+                    paidAmount: 0,
+                    week: cut.label,
+                    invoice: 'HISTÓRICO',
+                    date: formatDateForCutFirebird(cut.date),
+                    dueDate: formatDateForCutFirebird(cut.date),
+                    situacion: 'HISTÓRICO'
+                };
+            });
+            globalData = [...globalData, ...histData];
+        }
+
+        console.log(`[Firebird] Sincronización completa preparada: total ${globalData.length} registros (tiempo real + cortes).`);
     } catch (dbErr) {
         console.error("[Firebird] ERROR al extraer saldos de Aguas:", dbErr.message);
         return;
