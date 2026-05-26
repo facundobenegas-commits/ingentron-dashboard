@@ -489,13 +489,29 @@ function updateWeekSelectorForCurrentOrigin() {
             if (!allowedOrigins.includes(item.origin)) return;
         }
         if (currentOriginFilter === '' || item.origin === currentOriginFilter) {
-            if (item.week && typeof item.week === 'string' && !item.week.includes(' al ')) {
+            if (item.week && typeof item.week === 'string') {
                 weeksForOrigin.add(item.week);
             }
         }
     });
     
-    const sortedWeeks = Array.from(weeksForOrigin).sort();
+    const parseWeekEndDate = (weekStr) => {
+        if (weekStr === 'Tiempo Real') return new Date(8640000000000000);
+        const parts = weekStr.split(' al ');
+        let dateStr = parts.length === 2 ? parts[1] : weekStr;
+        dateStr = dateStr.replace(/^[Dd]el\s+/, '').replace(/^[Aa][Ll]\s+/, '').replace(/^SEMANA\s+/, '').trim();
+        const dateParts = dateStr.split('/');
+        if (dateParts.length === 3) {
+            let y = parseInt(dateParts[2]);
+            if (y < 100) y += 2000;
+            return new Date(y, parseInt(dateParts[1]) - 1, parseInt(dateParts[0]));
+        }
+        const parsed = Date.parse(dateStr);
+        if (!isNaN(parsed)) return new Date(parsed);
+        return new Date(0);
+    };
+
+    const sortedWeeks = Array.from(weeksForOrigin).sort((a, b) => parseWeekEndDate(a) - parseWeekEndDate(b));
     
     // Opción especial para mostrar la última semana automáticamente
     const latestOption = document.createElement('option');
@@ -669,7 +685,7 @@ function performDashboardUpdate() {
     
     aggregatedClients.forEach(client => {
         const status = getClientMostCriticalStatus(client.invoices).text;
-        if (status === 'No vencida') okCount++;
+        if (status === 'No vencido') okCount++;
         else if (status === 'Vencido') vencidoCount++;
         else if (status === 'Más de 30 días') criticoCount++;
     });
@@ -1280,7 +1296,7 @@ function downloadClientPDF() {
                 } else if (val === 'Más de 30 días') {
                     data.cell.styles.textColor = [220, 38, 38]; // Bold red
                     data.cell.styles.fontStyle = 'bold';
-                } else if (val === 'No vencida') {
+                } else if (val === 'No vencido') {
                     data.cell.styles.textColor = [22, 163, 74]; // Green
                     data.cell.styles.fontStyle = 'bold';
                 } else if (val === 'Saldo a favor') {
@@ -1378,7 +1394,7 @@ function getDueDateStatus(dueDateExcel, dateExcel, amount) {
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     
     if (diffDays <= 7) {
-        return { text: 'No vencida', class: 'bg-green' };
+        return { text: 'No vencido', class: 'bg-green' };
     } else if (diffDays >= 8 && diffDays <= 30) {
         return { text: 'Vencido', class: 'bg-accent' };
     } else {
@@ -1397,7 +1413,7 @@ function getClientMostCriticalStatus(invoices) {
     invoices.forEach(inv => {
         const status = getDueDateStatus(inv.dueDate, inv.date, inv.amount);
         let severity = 0;
-        if (status.text === 'No vencida') severity = 1;
+        if (status.text === 'No vencido') severity = 1;
         else if (status.text === 'Vencido') severity = 2;
         else if (status.text === 'Más de 30 días') severity = 3;
         
@@ -1596,10 +1612,10 @@ function updateStatusPieChart(ok, vencido, critico) {
             const criticoPercent = total > 0 ? Math.round((critico / total) * 100) : 0;
             
             legendContainer.innerHTML = `
-                <div class="chart-legend-item" style="cursor: pointer;" onclick="document.getElementById('status-select').value='No vencida'; document.getElementById('status-select').dispatchEvent(new Event('change'));">
+                <div class="chart-legend-item" style="cursor: pointer;" onclick="document.getElementById('status-select').value='No vencido'; document.getElementById('status-select').dispatchEvent(new Event('change'));">
                     <div class="legend-left">
                         <div class="legend-color-pill" style="background: #34d399; box-shadow: 0 0 10px rgba(52, 211, 153, 0.4);"></div>
-                        <span class="legend-label">No vencida</span>
+                        <span class="legend-label">No vencido</span>
                     </div>
                     <div class="legend-right">
                         <span class="legend-count">${ok} cl.</span>
@@ -1662,7 +1678,7 @@ function updateStatusPieChart(ok, vencido, critico) {
     statusChart = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: ['No vencida', 'Vencido', 'Más de 30 días'],
+            labels: ['No vencido', 'Vencido', 'Más de 30 días'],
             datasets: [{
                 data: [ok, vencido, critico],
                 backgroundColor: [
