@@ -197,13 +197,13 @@ async function runSynchronization() {
     }
 }
 
-// Bucle de sincronización: ejecutar al arrancar y cada 2 minutos
-const INTERVAL_MINUTES = 2;
+// Bucle de sincronización: ejecutar al arrancar y cada 30 segundos
+const INTERVAL_SECONDS = 30;
 console.log(`=============================================================`);
 console.log(`🔄 INICIANDO CLIENTE SINCRONIZADOR DE AGUAS (CALVO PC)`);
-console.log(`Sincronizando cada ${INTERVAL_MINUTES} minutos.`);
+console.log(`Sincronizando cada ${INTERVAL_SECONDS} segundos.`);
 console.log(`Destino: ${RENDER_SYNC_URL}`);
 console.log(`=============================================================`);
 
 runSynchronization();
-setInterval(runSynchronization, INTERVAL_MINUTES * 60 * 1000);
+setInterval(runSynchronization, INTERVAL_SECONDS * 1000);
