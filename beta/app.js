@@ -1087,19 +1087,19 @@ function downloadClientPDF() {
         headStyles: {
             fillColor: [11, 26, 48],
             textColor: [255, 255, 255],
-            fontSize: 8.5,
+            fontSize: 8,
             fontStyle: 'bold',
             halign: 'left',
             valign: 'middle'
         },
         columnStyles: {
-            0: { cellWidth: 29 },
-            1: { cellWidth: 24 },
-            2: { cellWidth: 18 },
-            3: { cellWidth: 27 },
-            4: { cellWidth: 27, halign: 'right' },
-            5: { cellWidth: 27, halign: 'right' },
-            6: { cellWidth: 28, halign: 'right' }
+            0: { cellWidth: 40 },
+            1: { cellWidth: 22 },
+            2: { cellWidth: 16 },
+            3: { cellWidth: 24 },
+            4: { cellWidth: 29, halign: 'right' },
+            5: { cellWidth: 29, halign: 'right' },
+            6: { cellWidth: 30, halign: 'right' }
         },
         didParseCell: function(data) {
             if (data.section === 'head' && (data.column.index === 4 || data.column.index === 5 || data.column.index === 6)) {
@@ -1123,7 +1123,7 @@ function downloadClientPDF() {
             }
         },
         bodyStyles: {
-            fontSize: 8,
+            fontSize: 7.3,
             textColor: [30, 41, 59],
             cellPadding: 3
         },
