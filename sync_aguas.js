@@ -145,6 +145,7 @@ async function runSynchronization() {
               AND c.TALONARIO_OID NOT IN (23, 24)
               AND ci.ALNUMERO > 0
               AND c.FECHA <= '${cut.date}'
+              AND (cp.IMPORTE + COALESCE((SELECT SUM(can.IMPORTE) FROM CANCELACION can JOIN COMPROBANTE pay ON can.COMPROBANTE_OID = pay.OID WHERE can.COMPROBANTECANCELADO_OID = c.OID AND pay.FECHA <= '${cut.date}'), 0)) > 0.01
             GROUP BY p.NUMERO, p.NOMBRE
             `;
             const histRows = await queryFirebird(histQuery);
