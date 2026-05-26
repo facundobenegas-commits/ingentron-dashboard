@@ -59,6 +59,9 @@ const WEDNESDAY_CUTS = [
     { label: "Del 13/05/2026 al 20/05/2026", date: "20260520" }
 ];
 
+// Cache en memoria para evitar consultar cortes históricos que no cambian
+let cachedHistoricalData = null;
+
 // Ejecutar la sincronización de PepsiCo
 async function runSynchronization() {
     const timestamp = new Date().toLocaleString();
@@ -108,39 +111,49 @@ async function runSynchronization() {
         
         console.log(`[SQL Server] Éxito: Cargados ${globalData.length} saldos en tiempo real de PepsiCo.`);
 
-        // Extraer cortes históricos semanales (los miércoles)
-        for (const cut of WEDNESDAY_CUTS) {
-            console.log(`[SQL Server] Consultando corte histórico: ${cut.label}...`);
-            const histQuery = `
-            SELECT 
-                cccd.cliente_codigo AS client_code,
-                cli.razon_social AS client_name,
-                SUM(cccd.cccd_importe) AS outstanding_balance
-            FROM ctacteclidet cccd
-            INNER JOIN cliente cli ON cccd.cliente_codigo = cli.codigo
-            INNER JOIN ctactecli ccc ON cccd.ccc_comprobante = ccc.ccc_comprobante AND cccd.cliente_codigo = ccc.cliente_codigo AND cccd.empresa_id = ccc.empresa_id
-            WHERE ccc.ccc_fecha <= '${cut.date}'
-            GROUP BY cccd.cliente_codigo, cli.razon_social
-            HAVING ABS(SUM(cccd.cccd_importe)) > 0.01
-            `;
-            const histResult = await pool.request().query(histQuery);
-            const histData = histResult.recordset.map(row => {
-                return {
-                    origin: 'PepsiCo',
-                    client: String(row.client_name).trim(),
-                    clientCode: cleanClientCode(row.client_code),
-                    amount: parseFloat(row.outstanding_balance),
-                    originalAmount: parseFloat(row.outstanding_balance),
-                    paidAmount: 0,
-                    week: cut.label,
-                    invoice: 'HISTÓRICO',
-                    date: formatDateForCut(cut.date),
-                    dueDate: formatDateForCut(cut.date),
-                    situacion: 'HISTÓRICO'
-                };
-            });
-            globalData = [...globalData, ...histData];
+        // Extraer cortes históricos semanales (los miércoles) solo la primera vez
+        if (!cachedHistoricalData) {
+            console.log("[SQL Server] 📥 Consultando cortes históricos por única vez para cachear...");
+            let tempHist = [];
+            for (const cut of WEDNESDAY_CUTS) {
+                console.log(`[SQL Server] Consultando corte histórico: ${cut.label}...`);
+                const histQuery = `
+                SELECT 
+                    cccd.cliente_codigo AS client_code,
+                    cli.razon_social AS client_name,
+                    SUM(cccd.cccd_importe) AS outstanding_balance
+                FROM ctacteclidet cccd
+                INNER JOIN cliente cli ON cccd.cliente_codigo = cli.codigo
+                INNER JOIN ctactecli ccc ON cccd.ccc_comprobante = ccc.ccc_comprobante AND cccd.cliente_codigo = ccc.cliente_codigo AND cccd.empresa_id = ccc.empresa_id
+                WHERE ccc.ccc_fecha <= '${cut.date}'
+                GROUP BY cccd.cliente_codigo, cli.razon_social
+                HAVING ABS(SUM(cccd.cccd_importe)) > 0.01
+                `;
+                const histResult = await pool.request().query(histQuery);
+                const histData = histResult.recordset.map(row => {
+                    return {
+                        origin: 'PepsiCo',
+                        client: String(row.client_name).trim(),
+                        clientCode: cleanClientCode(row.client_code),
+                        amount: parseFloat(row.outstanding_balance),
+                        originalAmount: parseFloat(row.outstanding_balance),
+                        paidAmount: 0,
+                        week: cut.label,
+                        invoice: 'HISTÓRICO',
+                        date: formatDateForCut(cut.date),
+                        dueDate: formatDateForCut(cut.date),
+                        situacion: 'HISTÓRICO'
+                    };
+                });
+                tempHist = [...tempHist, ...histData];
+            }
+            cachedHistoricalData = tempHist;
+            console.log(`[SQL Server] 💾 Guardados en cache ${cachedHistoricalData.length} registros históricos.`);
+        } else {
+            console.log(`[SQL Server] ⚡ Reutilizando ${cachedHistoricalData.length} registros históricos desde la cache.`);
         }
+
+        globalData = [...globalData, ...cachedHistoricalData];
 
         console.log(`[SQL Server] Sincronización completa preparada: total ${globalData.length} registros (tiempo real + cortes).`);
     } catch (err) {
