@@ -489,7 +489,7 @@ function updateWeekSelectorForCurrentOrigin() {
             if (!allowedOrigins.includes(item.origin)) return;
         }
         if (currentOriginFilter === '' || item.origin === currentOriginFilter) {
-            if (item.week && typeof item.week === 'string' && !item.week.startsWith('Del ')) {
+            if (item.week && typeof item.week === 'string' && !item.week.includes(' al ')) {
                 weeksForOrigin.add(item.week);
             }
         }
@@ -600,7 +600,7 @@ function performDashboardUpdate() {
                 if (!allowed.includes(item.origin)) return;
             }
             if (currentOriginFilter !== '' && item.origin !== currentOriginFilter) return;
-            if (item.week && item.week !== 'undefined' && typeof item.week === 'string' && !item.week.startsWith('Del ')) {
+            if (item.week && item.week !== 'undefined' && typeof item.week === 'string' && !item.week.includes(' al ')) {
                 applicableWeeks.add(item.week);
             }
         });
@@ -695,12 +695,12 @@ function performDashboardUpdate() {
     // Sort weeks chronologically
     const parseWeekEndDate = (weekStr) => {
         if (weekStr === 'Tiempo Real') return new Date(8640000000000000);
-        // Check if it is a range: "Del 13/05/2026 al 20/05/2026"
+        // Check if it is a range: "13/05/26 al 20/05/26" or "Del 13/05/2026 al 20/05/2026"
         const parts = weekStr.split(' al ');
         let dateStr = parts.length === 2 ? parts[1] : weekStr;
         
-        // Clean up potential prefixes like "AL ", "SEMANA ", etc.
-        dateStr = dateStr.replace(/^[Aa][Ll]\s+/, '').replace(/^SEMANA\s+/, '').trim();
+        // Clean up potential prefixes like "Del ", "AL ", "SEMANA ", etc.
+        dateStr = dateStr.replace(/^[Dd]el\s+/, '').replace(/^[Aa][Ll]\s+/, '').replace(/^SEMANA\s+/, '').trim();
         
         const dateParts = dateStr.split('/');
         if (dateParts.length === 3) {
@@ -1362,9 +1362,6 @@ function parseExcelDate(excelDate) {
 }
 
 function getDueDateStatus(dueDateExcel, dateExcel, amount) {
-    if (amount !== undefined && parseFloat(amount) < -0.01) {
-        return { text: 'Saldo a favor', class: 'bg-blue' };
-    }
     let parsedDate = parseExcelDate(dateExcel);
     if (!parsedDate) {
         parsedDate = parseExcelDate(dueDateExcel);
