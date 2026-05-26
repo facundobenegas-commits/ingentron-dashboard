@@ -239,7 +239,7 @@ app.get('/api/excel', (req, res) => {
 // --- SISTEMA DE SINCRONIZACIÓN SEGURO (BETA NUBE) ---
 const SYNC_TOKEN = process.env.SYNC_TOKEN || "TokenIngentronSeguro2026";
 
-// Endpoint POST seguro para recibir saldos procesados en tiempo real desde la PC local
+// Endpoint POST seguro para recibir saldos procesados en tiempo real desde los sincronizadores locales
 app.post('/api/update-saldos', express.json({ limit: '15mb' }), (req, res) => {
     const clientToken = req.headers['x-sync-token'];
     if (clientToken !== SYNC_TOKEN) {
@@ -252,10 +252,39 @@ app.post('/api/update-saldos', express.json({ limit: '15mb' }), (req, res) => {
         return res.status(400).json({ error: "El payload debe ser un array de saldos." });
     }
     
+    const syncOrigin = req.headers['x-sync-origin']; // Ej: 'Aguas' o 'PepsiCo'
+    
     try {
-        fs.writeFileSync(path.join(__dirname, 'saldos_cache.json'), JSON.stringify(payload));
-        console.log(`[Sync] Saldos sincronizados correctamente: ${payload.length} registros actualizados.`);
-        res.json({ success: true, count: payload.length });
+        const cachePath = path.join(__dirname, 'saldos_cache.json');
+        let currentCache = [];
+        if (fs.existsSync(cachePath)) {
+            try {
+                currentCache = JSON.parse(fs.readFileSync(cachePath, 'utf8')) || [];
+            } catch (err) {
+                console.error("[Sync] Error leyendo caché anterior:", err.message);
+            }
+        }
+
+        // Obtener los orígenes presentes en el nuevo payload recibido
+        const incomingOrigins = [...new Set(payload.map(item => item.origin).filter(Boolean))];
+        
+        // Si viene el header 'x-sync-origin', lo usamos de prioridad para limpiar ese origen
+        const originsToClear = incomingOrigins.length > 0 ? incomingOrigins : (syncOrigin ? [syncOrigin] : []);
+
+        let updatedCache;
+        if (originsToClear.length > 0) {
+            // Filtrar y quitar de la caché anterior los registros de los orígenes actualizados
+            const cleanCache = currentCache.filter(item => !originsToClear.includes(item.origin));
+            // Unificar la caché con los nuevos datos
+            updatedCache = [...cleanCache, ...payload];
+        } else {
+            // Fallback si no hay origen especificado
+            updatedCache = payload;
+        }
+        
+        fs.writeFileSync(cachePath, JSON.stringify(updatedCache));
+        console.log(`[Sync] Recibidos ${payload.length} saldos de [${originsToClear.join(', ')}]. Total caché consolidada: ${updatedCache.length} registros.`);
+        res.json({ success: true, count: payload.length, total: updatedCache.length });
     } catch (err) {
         console.error("Error escribiendo archivo de caché de saldos:", err);
         res.status(500).json({ error: "Error interno al escribir caché de saldos." });

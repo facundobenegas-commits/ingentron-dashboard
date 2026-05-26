@@ -1,0 +1,9 @@
+{
+  "name": "ingentron-sync-aguas",
+  "version": "1.0.0",
+  "description": "Sincronizador Ingentron de base de datos Firebird (Aguas) a Render",
+  "main": "sync_aguas.js",
+  "dependencies": {
+    "node-firebird": "^2.3.2"
+  }
+}

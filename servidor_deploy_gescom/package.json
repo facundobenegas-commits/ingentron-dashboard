@@ -1,0 +1,9 @@
+{
+  "name": "ingentron-sync-pepsi",
+  "version": "1.0.0",
+  "description": "Sincronizador Ingentron de base de datos SQL Server (PepsiCo) a Render",
+  "main": "sync_pepsi.js",
+  "dependencies": {
+    "mssql": "^10.0.1"
+  }
+}
