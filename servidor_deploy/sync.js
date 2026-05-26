@@ -221,7 +221,7 @@ async function runSynchronization() {
 // Bucle de sincronización: ejecutar al arrancar y cada 2 minutos
 const INTERVAL_MINUTES = 2;
 console.log(`=============================================================`);
-console.log(`🔄 INICIANDO CLIENTE SINCRONIZADOR DUAL INGENTRON`);
+console.log(`🔄 INICIANDO CLIENTE SINCRONIZADOR DUAL INGENTRON (SERVIDOR)`);
 console.log(`Consolidando Aguas (Firebird) y PepsiCo (SQL Server)`);
 console.log(`Frecuencia: Cada ${INTERVAL_MINUTES} minutos.`);
 console.log(`Destino: ${RENDER_SYNC_URL}`);
