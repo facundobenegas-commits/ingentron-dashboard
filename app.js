@@ -1014,7 +1014,7 @@ function renderModalInvoices(originFilter, animate = true) {
             tr.style.animationDelay = `${Math.min(index * 0.03, 0.5)}s`;
         }
         
-        const status = getDueDateStatus(inv.dueDate, inv.date);
+        const status = getDueDateStatus(inv.dueDate, inv.date, inv.amount);
         
         tr.innerHTML = `
             <td>${inv.invoice} <span class="badge ${getOriginColorClass(inv.origin)}" style="font-size: 10px; padding: 2px 8px; margin-left: 8px; display: inline-block;">${inv.origin}</span></td>
@@ -1208,7 +1208,7 @@ function downloadClientPDF() {
 
     // Table rows data
     const tableBody = invoicesToExport.map(inv => {
-        const status = getDueDateStatus(inv.dueDate, inv.date);
+        const status = getDueDateStatus(inv.dueDate, inv.date, inv.amount);
         return [
             inv.invoice || 'N/A',
             formatCompanyName(inv.origin) || 'N/A',
@@ -1253,6 +1253,9 @@ function downloadClientPDF() {
                     data.cell.styles.fontStyle = 'bold';
                 } else if (val === 'No vencida') {
                     data.cell.styles.textColor = [22, 163, 74]; // Green
+                    data.cell.styles.fontStyle = 'bold';
+                } else if (val === 'Saldo a favor') {
+                    data.cell.styles.textColor = [10, 132, 255]; // Accent blue
                     data.cell.styles.fontStyle = 'bold';
                 }
             }
@@ -1329,7 +1332,10 @@ function parseExcelDate(excelDate) {
     return isNaN(d.getTime()) ? null : d;
 }
 
-function getDueDateStatus(dueDateExcel, dateExcel) {
+function getDueDateStatus(dueDateExcel, dateExcel, amount) {
+    if (amount !== undefined && parseFloat(amount) < -0.01) {
+        return { text: 'Saldo a favor', class: 'bg-blue' };
+    }
     let parsedDate = parseExcelDate(dateExcel);
     if (!parsedDate) {
         parsedDate = parseExcelDate(dueDateExcel);
@@ -1363,7 +1369,7 @@ function getClientMostCriticalStatus(invoices) {
     let mostCritical = { text: 'N/A', class: 'bg-dark' };
     
     invoices.forEach(inv => {
-        const status = getDueDateStatus(inv.dueDate, inv.date);
+        const status = getDueDateStatus(inv.dueDate, inv.date, inv.amount);
         let severity = 0;
         if (status.text === 'No vencida') severity = 1;
         else if (status.text === 'Vencido') severity = 2;

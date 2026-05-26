@@ -63,7 +63,7 @@ async function runSynchronization() {
         INNER JOIN cliente cli ON cccd.cliente_codigo = cli.codigo
         INNER JOIN ctactecli cccref ON cccd.cccd_referencia = cccref.ccc_comprobante AND cccd.cliente_codigo = cccref.cliente_codigo AND cccd.empresa_id = cccref.empresa_id
         GROUP BY cccd.cliente_codigo, cli.razon_social, cccd.cccd_referencia, cccref.ccc_fecha, cccref.ccc_fechavenc, cccref.ccc_importe
-        HAVING SUM(cccd.cccd_importe) > 0.01
+        HAVING ABS(SUM(cccd.cccd_importe)) > 0.01
         `;
         
         console.log("[SQL Server] Consultando base de datos Gescom local...");
