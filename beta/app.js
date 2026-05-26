@@ -1093,13 +1093,13 @@ function downloadClientPDF() {
             valign: 'middle'
         },
         columnStyles: {
-            0: { cellWidth: 40 },
-            1: { cellWidth: 22 },
-            2: { cellWidth: 16 },
-            3: { cellWidth: 24 },
-            4: { cellWidth: 29, halign: 'right' },
-            5: { cellWidth: 29, halign: 'right' },
-            6: { cellWidth: 30, halign: 'right' }
+            0: { cellWidth: 48 },
+            1: { cellWidth: 26 },
+            2: { cellWidth: 18 },
+            3: { cellWidth: 30 },
+            4: { cellWidth: 23, halign: 'right' },
+            5: { cellWidth: 23, halign: 'right' },
+            6: { cellWidth: 22, halign: 'right' }
         },
         didParseCell: function(data) {
             if (data.section === 'head' && (data.column.index === 4 || data.column.index === 5 || data.column.index === 6)) {
@@ -1123,7 +1123,7 @@ function downloadClientPDF() {
             }
         },
         bodyStyles: {
-            fontSize: 7.3,
+            fontSize: 7,
             textColor: [30, 41, 59],
             cellPadding: 3
         },
@@ -1134,7 +1134,8 @@ function downloadClientPDF() {
         styles: {
             font: 'helvetica',
             lineColor: [241, 245, 249],
-            lineWidth: 0.3
+            lineWidth: 0.3,
+            overflow: 'hidden'
         }
     });
 
@@ -1148,8 +1149,6 @@ function downloadClientPDF() {
         doc.setLineWidth(0.4);
         doc.line(15, 280, 195, 280);
 
-
-        
         // Page numbers
         doc.setFont('helvetica', 'normal');
         doc.text(`Página ${i} de ${totalPages}`, 195, 285, { align: 'right' });
