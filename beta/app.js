@@ -482,7 +482,10 @@ function performDashboardUpdate() {
         clientData.invoices.push(item);
         
         if (item.clientCode && item.clientCode !== 'N/A') {
-            clientData.clientCodesByOrigin[item.origin] = item.clientCode;
+            if (!clientData.clientCodesByOrigin[item.origin]) {
+                clientData.clientCodesByOrigin[item.origin] = new Set();
+            }
+            clientData.clientCodesByOrigin[item.origin].add(item.clientCode);
         }
         
         totalBalance += item.amount;
@@ -604,13 +607,13 @@ function performDashboardUpdate() {
         let codesHtml = '';
         if (originsWithCodes.length === 1) {
             const org = originsWithCodes[0];
-            const code = client.clientCodesByOrigin[org];
-            codesHtml = `<span class="client-code-badge"><i class="fas fa-tag"></i> ${org}: ${code}</span>`;
+            const codes = Array.from(client.clientCodesByOrigin[org]).join(' | ');
+            codesHtml = `<span class="client-code-badge"><i class="fas fa-tag"></i> ${org}: ${codes}</span>`;
         } else if (originsWithCodes.length > 1) {
             const codesList = [];
             originsWithCodes.forEach(org => {
-                const code = client.clientCodesByOrigin[org];
-                codesList.push(`<span class="client-code-badge"><i class="fas fa-tag"></i> ${org}: ${code}</span>`);
+                const codes = Array.from(client.clientCodesByOrigin[org]).join(' | ');
+                codesList.push(`<span class="client-code-badge"><i class="fas fa-tag"></i> ${org}: ${codes}</span>`);
             });
             codesHtml = codesList.join(' ');
         }
@@ -755,7 +758,10 @@ window.showInvoices = function(clientName) {
     const codesByOrigin = {};
     invoices.forEach(inv => {
         if (inv.clientCode && inv.clientCode !== 'N/A') {
-            codesByOrigin[inv.origin] = inv.clientCode;
+            if (!codesByOrigin[inv.origin]) {
+                codesByOrigin[inv.origin] = new Set();
+            }
+            codesByOrigin[inv.origin].add(inv.clientCode);
         }
     });
     
@@ -765,14 +771,14 @@ window.showInvoices = function(clientName) {
         const originsWithCodes = Object.keys(codesByOrigin);
         if (originsWithCodes.length === 1) {
             const org = originsWithCodes[0];
-            const code = codesByOrigin[org];
-            codesEl.innerHTML = `<span class="client-code-badge"><i class="fas fa-tag"></i> ${org}: ${code}</span>`;
+            const codes = Array.from(codesByOrigin[org]).join(' | ');
+            codesEl.innerHTML = `<span class="client-code-badge"><i class="fas fa-tag"></i> ${org}: ${codes}</span>`;
         } else if (originsWithCodes.length > 1) {
             originsWithCodes.forEach(org => {
-                const code = codesByOrigin[org];
+                const codes = Array.from(codesByOrigin[org]).join(' | ');
                 const badge = document.createElement('span');
                 badge.className = 'client-code-badge';
-                badge.innerHTML = `<i class="fas fa-tag"></i> ${org}: ${code}`;
+                badge.innerHTML = `<i class="fas fa-tag"></i> ${org}: ${codes}`;
                 codesEl.appendChild(badge);
             });
         }
@@ -875,8 +881,11 @@ function renderModalInvoices(originFilter, animate = true) {
         const paidAmt = (inv.paidAmount !== undefined && !isNaN(inv.paidAmount)) ? inv.paidAmount : 0;
         tr.innerHTML = `
             <td style="display: flex; justify-content: space-between; align-items: center; gap: 12px; border-bottom: none;">
-                <span>${inv.invoice}</span>
-                <span class="badge ${getOriginColorClass(inv.origin)}" style="font-size: 10px; padding: 2px 8px; flex-shrink: 0;">${inv.origin}</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span>${inv.invoice}</span>
+                    ${inv.clientCode && inv.clientCode !== 'N/A' ? `<span style="font-size: 11px; color: rgba(255,255,255,0.4); font-weight: 500;">(Cód. ${inv.clientCode})</span>` : ''}
+                </div>
+                <span class="badge ${getOriginColorClass(inv.origin)}" style="font-size: 10px; padding: 2px 0; width: 60px; text-align: center; display: inline-block; flex-shrink: 0;">${inv.origin}</span>
             </td>
             <td>${formatDate(inv.date)}</td>
             <td class="text-center"><span class="badge ${status.class}" style="font-size: 10px; padding: 4px 10px; font-weight: 600; display: inline-flex; min-width: 80px; text-align: center; justify-content: center;">${status.text}</span></td>
@@ -1748,7 +1757,6 @@ async function loadSyncStatus() {
     }
 }
 
-// Consultar la sincronización al arrancar y cada 30 segundos
-setInterval(loadSyncStatus, 30000);
+
 
 
