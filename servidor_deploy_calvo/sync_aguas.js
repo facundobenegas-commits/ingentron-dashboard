@@ -58,19 +58,36 @@ function formatDateForCutFirebird(yyyymmdd) {
     return `${parts[2]}/${parts[1]}/${parts[0].slice(2, 4)}`;
 }
 
-const WEDNESDAY_CUTS = [
-    { label: "Del 25/03/2026 al 01/04/2026", date: "2026-04-01" },
-    { label: "Del 01/04/2026 al 08/04/2026", date: "2026-04-08" },
-    { label: "Del 08/04/2026 al 15/04/2026", date: "2026-04-15" },
-    { label: "Del 15/04/2026 al 22/04/2026", date: "2026-04-22" },
-    { label: "Del 22/04/2026 al 29/04/2026", date: "2026-04-29" },
-    { label: "Del 29/04/2026 al 06/05/2026", date: "2026-05-06" },
-    { label: "Del 06/05/2026 al 13/05/2026", date: "2026-05-13" },
-    { label: "Del 13/05/2026 al 20/05/2026", date: "2026-05-20" }
-];
+// Generación dinámica de cortes semanales (todos los miércoles a las 12:00hs desde el 01/04/2026)
+function getWednesdayCuts() {
+    const cuts = [];
+    let current = new Date("2026-04-01T12:00:00");
+    const now = new Date();
+    
+    const pad = (n) => String(n).padStart(2, '0');
+    
+    while (current <= now) {
+        const startDate = new Date(current.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const label = `Del ${pad(startDate.getDate())}/${pad(startDate.getMonth() + 1)}/${startDate.getFullYear()} al ${pad(current.getDate())}/${pad(current.getMonth() + 1)}/${current.getFullYear()}`;
+        
+        const year = current.getFullYear();
+        const month = pad(current.getMonth() + 1);
+        const day = pad(current.getDate());
+        
+        cuts.push({
+            label: label,
+            dateSql: `${year}-${month}-${day}`, // Para Firebird (YYYY-MM-DD)
+            dateMsSql: `${year}${month}${day}` // Para SQL Server (YYYYMMDD)
+        });
+        
+        current = new Date(current.getTime() + 7 * 24 * 60 * 60 * 1000);
+    }
+    return cuts;
+}
 
 // Cache en memoria para evitar consultar cortes históricos que no cambian
 let cachedHistoricalData = null;
+let cachedCutsCount = 0;
 
 // Ejecutar la sincronización de Aguas
 async function runSynchronization() {
@@ -128,17 +145,20 @@ async function runSynchronization() {
         
         console.log(`[Firebird] Éxito: Cargados ${globalData.length} saldos en tiempo real de Aguas.`);
 
-        // Extraer cortes históricos semanales de Aguas (los miércoles) solo la primera vez
-        if (!cachedHistoricalData) {
-            console.log("[Firebird] 📥 Consultando cortes históricos por única vez para cachear...");
+        // Extraer cortes históricos semanales de Aguas (los miércoles) de forma automática y dinámica
+        const currentCuts = getWednesdayCuts();
+        const hasNewCut = !cachedHistoricalData || (cachedCutsCount !== currentCuts.length);
+        
+        if (hasNewCut) {
+            console.log(`[Firebird] 📥 Detectados ${currentCuts.length} cortes históricos a procesar (anterior: ${cachedCutsCount}). Consultando y cacheando...`);
             let tempHist = [];
-            for (const cut of WEDNESDAY_CUTS) {
+            for (const cut of currentCuts) {
                 console.log(`[Firebird] Consultando corte histórico: ${cut.label}...`);
                 const histQuery = `
                 SELECT 
                     p.NUMERO AS client_code,
                     p.NOMBRE AS client_name,
-                    SUM(cp.IMPORTE + COALESCE((SELECT SUM(can.IMPORTE) FROM CANCELACION can JOIN COMPROBANTE pay ON can.COMPROBANTE_OID = pay.OID WHERE can.COMPROBANTECANCELADO_OID = c.OID AND pay.FECHA <= '${cut.date}'), 0)) AS outstanding_balance
+                    SUM(cp.IMPORTE + COALESCE((SELECT SUM(can.IMPORTE) FROM CANCELACION can JOIN COMPROBANTE pay ON can.COMPROBANTE_OID = pay.OID WHERE can.COMPROBANTECANCELADO_OID = c.OID AND pay.FECHA <= '${cut.dateSql}'), 0)) AS outstanding_balance
                 FROM COMPROBANTE c
                 JOIN COMPROBANTEIDENTIFICACION ci ON c.COMPROBANTEIDENTIFICACION_OID = ci.OID
                 JOIN TIPOCOMPROBANTE t ON c.TIPOCOMPROBANTE_OID = t.OID
@@ -150,8 +170,8 @@ async function runSynchronization() {
                   AND c.TIPOCOMPROBANTE_OID IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 43, 56)
                   AND c.TALONARIO_OID NOT IN (23, 24)
                   AND ci.ALNUMERO > 0
-                  AND c.FECHA <= '${cut.date}'
-                  AND (cp.IMPORTE + COALESCE((SELECT SUM(can.IMPORTE) FROM CANCELACION can JOIN COMPROBANTE pay ON can.COMPROBANTE_OID = pay.OID WHERE can.COMPROBANTECANCELADO_OID = c.OID AND pay.FECHA <= '${cut.date}'), 0)) > 0.01
+                  AND c.FECHA <= '${cut.dateSql}'
+                  AND (cp.IMPORTE + COALESCE((SELECT SUM(can.IMPORTE) FROM CANCELACION can JOIN COMPROBANTE pay ON can.COMPROBANTE_OID = pay.OID WHERE can.COMPROBANTECANCELADO_OID = c.OID AND pay.FECHA <= '${cut.dateSql}'), 0)) > 0.01
                 GROUP BY p.NUMERO, p.NOMBRE
                 `;
                 const histRows = await queryFirebird(histQuery);
@@ -165,14 +185,15 @@ async function runSynchronization() {
                         paidAmount: 0,
                         week: cut.label,
                         invoice: 'HISTÓRICO',
-                        date: formatDateForCutFirebird(cut.date),
-                        dueDate: formatDateForCutFirebird(cut.date),
+                        date: formatDateForCutFirebird(cut.dateSql),
+                        dueDate: formatDateForCutFirebird(cut.dateSql),
                         situacion: 'HISTÓRICO'
                     };
                 });
                 tempHist = [...tempHist, ...histData];
             }
             cachedHistoricalData = tempHist;
+            cachedCutsCount = currentCuts.length;
             console.log(`[Firebird] 💾 Guardados en cache ${cachedHistoricalData.length} registros históricos.`);
         } else {
             console.log(`[Firebird] ⚡ Reutilizando ${cachedHistoricalData.length} registros históricos desde la cache.`);

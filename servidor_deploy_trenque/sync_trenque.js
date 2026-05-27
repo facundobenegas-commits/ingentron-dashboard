@@ -48,19 +48,36 @@ function formatDateForCut(yyyymmdd) {
     return `${day}/${month}/${year}`;
 }
 
-const WEDNESDAY_CUTS = [
-    { label: "Del 25/03/2026 al 01/04/2026", date: "20260401" },
-    { label: "Del 01/04/2026 al 08/04/2026", date: "20260408" },
-    { label: "Del 08/04/2026 al 15/04/2026", date: "20260415" },
-    { label: "Del 15/04/2026 al 22/04/2026", date: "20260422" },
-    { label: "Del 22/04/2026 al 29/04/2026", date: "20260429" },
-    { label: "Del 29/04/2026 al 06/05/2026", date: "20260506" },
-    { label: "Del 06/05/2026 al 13/05/2026", date: "20260513" },
-    { label: "Del 13/05/2026 al 20/05/2026", date: "20260520" }
-];
+// Generación dinámica de cortes semanales (todos los miércoles a las 12:00hs desde el 01/04/2026)
+function getWednesdayCuts() {
+    const cuts = [];
+    let current = new Date("2026-04-01T12:00:00");
+    const now = new Date();
+    
+    const pad = (n) => String(n).padStart(2, '0');
+    
+    while (current <= now) {
+        const startDate = new Date(current.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const label = `Del ${pad(startDate.getDate())}/${pad(startDate.getMonth() + 1)}/${startDate.getFullYear()} al ${pad(current.getDate())}/${pad(current.getMonth() + 1)}/${current.getFullYear()}`;
+        
+        const year = current.getFullYear();
+        const month = pad(current.getMonth() + 1);
+        const day = pad(current.getDate());
+        
+        cuts.push({
+            label: label,
+            dateSql: `${year}-${month}-${day}`, // Para Firebird (YYYY-MM-DD)
+            dateMsSql: `${year}${month}${day}` // Para SQL Server (YYYYMMDD)
+        });
+        
+        current = new Date(current.getTime() + 7 * 24 * 60 * 60 * 1000);
+    }
+    return cuts;
+}
 
 // Cache en memoria para evitar consultar cortes históricos que no cambian
 let cachedHistoricalData = null;
+let cachedCutsCount = 0;
 
 // Ejecutar la sincronización de Trenque Lauquen
 async function runSynchronization() {
@@ -111,11 +128,14 @@ async function runSynchronization() {
         
         console.log(`[SQL Server] Éxito: Cargados ${globalData.length} saldos en tiempo real de Trenque Lauquen.`);
 
-        // Extraer cortes históricos semanales (los miércoles) solo la primera vez
-        if (!cachedHistoricalData) {
-            console.log("[SQL Server] 📥 Consultando cortes históricos por única vez para cachear...");
+        // Extraer cortes históricos semanales de forma automática y dinámica
+        const currentCuts = getWednesdayCuts();
+        const hasNewCut = !cachedHistoricalData || (cachedCutsCount !== currentCuts.length);
+        
+        if (hasNewCut) {
+            console.log(`[SQL Server] 📥 Detectados ${currentCuts.length} cortes históricos a procesar (anterior: ${cachedCutsCount}). Consultando y cacheando...`);
             let tempHist = [];
-            for (const cut of WEDNESDAY_CUTS) {
+            for (const cut of currentCuts) {
                 console.log(`[SQL Server] Consultando corte histórico: ${cut.label}...`);
                 const histQuery = `
                 SELECT 
@@ -125,7 +145,7 @@ async function runSynchronization() {
                 FROM ctacteclidet cccd
                 INNER JOIN cliente cli ON cccd.cliente_codigo = cli.codigo
                 INNER JOIN ctactecli ccc ON cccd.ccc_comprobante = ccc.ccc_comprobante AND cccd.cliente_codigo = ccc.cliente_codigo AND cccd.empresa_id = ccc.empresa_id
-                WHERE ccc.ccc_fecha <= '${cut.date}'
+                WHERE ccc.ccc_fecha <= '${cut.dateMsSql}'
                 GROUP BY cccd.cliente_codigo, cli.razon_social
                 HAVING ABS(SUM(cccd.cccd_importe)) > 0.01
                 `;
@@ -140,14 +160,15 @@ async function runSynchronization() {
                         paidAmount: 0,
                         week: cut.label,
                         invoice: 'HISTÓRICO',
-                        date: formatDateForCut(cut.date),
-                        dueDate: formatDateForCut(cut.date),
+                        date: formatDateForCut(cut.dateMsSql),
+                        dueDate: formatDateForCut(cut.dateMsSql),
                         situacion: 'HISTÓRICO'
                     };
                 });
                 tempHist = [...tempHist, ...histData];
             }
             cachedHistoricalData = tempHist;
+            cachedCutsCount = currentCuts.length;
             console.log(`[SQL Server] 💾 Guardados en cache ${cachedHistoricalData.length} registros históricos.`);
         } else {
             console.log(`[SQL Server] ⚡ Reutilizando ${cachedHistoricalData.length} registros históricos desde la cache.`);
