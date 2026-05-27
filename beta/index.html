@@ -11,57 +11,17 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
     <link rel="icon" type="image/png" href="../favicon.png">
     <link rel="stylesheet" href="styles.css">
-    <style>
-        /* Animación premium de brillo perimetral para logos en Beta (Inmune a caché) */
-        .logo-badge {
-            position: relative !important;
-            overflow: hidden !important;
-            padding: 4px 10px !important;
-            border-radius: 8px !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            height: 32px !important;
-            border: 1px solid rgba(255, 255, 255, 0.08) !important;
-            background-color: rgba(255, 255, 255, 0.03) !important;
-            animation: logo-glow 3s ease-in-out infinite !important;
-            transition: border-color 0.4s, box-shadow 0.4s, background-color 0.4s !important;
-        }
-
-        .logo-badge img {
-            position: relative !important;
-            z-index: 2 !important;
-        }
-
-        @keyframes logo-glow {
-            0% {
-                border-color: rgba(255, 255, 255, 0.08) !important;
-                background-color: rgba(255, 255, 255, 0.03) !important;
-                box-shadow: none !important;
-            }
-            50% {
-                border-color: rgba(10, 132, 255, 0.6) !important; /* Azul Ingentron Brillante */
-                background-color: rgba(255, 255, 255, 0.08) !important;
-                box-shadow: 0 0 10px rgba(10, 132, 255, 0.25) !important; /* Resplandor */
-            }
-            100% {
-                border-color: rgba(255, 255, 255, 0.08) !important;
-                background-color: rgba(255, 255, 255, 0.03) !important;
-                box-shadow: none !important;
-            }
-        }
-    </style>
 </head>
 <body>
     <div class="app-container">
         <!-- Sidebar -->
         <aside class="sidebar collapsed" id="sidebar">
             <div class="logo-container" style="display: flex; align-items: center; gap: 10px; justify-content: center; height: var(--header-height); border-bottom: 1px solid var(--surface-border); padding: 0 16px;">
-                <div class="logo-badge">
+                <div class="logo-badge" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 4px 10px; border-radius: 8px; display: flex; align-items: center; justify-content: center; height: 32px;">
                     <img id="sidebar-logo-ingentron" src="../logo_ingentron.png" alt="Ingentron S.R.L." style="max-height: 20px; width: auto; object-fit: contain;">
                 </div>
                 <div style="width: 1px; height: 18px; background: rgba(255,255,255,0.15);"></div>
-                <div class="logo-badge">
+                <div class="logo-badge" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 4px 10px; border-radius: 8px; display: flex; align-items: center; justify-content: center; height: 32px;">
                     <img id="sidebar-logo-gruya" src="../logo_gruya.jpg" alt="Gruya S.R.L." style="max-height: 20px; width: auto; object-fit: contain;">
                 </div>
             </div>
@@ -86,11 +46,11 @@
                         <span class="bar"></span>
                     </button>
                     <div class="header-logo-container">
-                        <div class="logo-badge">
+                        <div class="logo-badge" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 4px 10px; border-radius: 8px; display: flex; align-items: center; justify-content: center; height: 32px;">
                             <img id="header-logo-ingentron" src="../logo_ingentron.png" alt="Ingentron S.R.L." style="max-height: 20px; width: auto; object-fit: contain;">
                         </div>
                         <div style="width: 1px; height: 18px; background: rgba(255,255,255,0.15);"></div>
-                        <div class="logo-badge">
+                        <div class="logo-badge" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 4px 10px; border-radius: 8px; display: flex; align-items: center; justify-content: center; height: 32px;">
                             <img id="header-logo-gruya" src="../logo_gruya.jpg" alt="Gruya S.R.L." style="max-height: 20px; width: auto; object-fit: contain;">
                         </div>
                     </div>

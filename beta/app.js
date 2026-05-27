@@ -1095,11 +1095,11 @@ function downloadClientPDF() {
         columnStyles: {
             0: { cellWidth: 26 },
             1: { cellWidth: 30 },
-            2: { cellWidth: 15 },
+            2: { cellWidth: 21 },
             3: { cellWidth: 31 },
-            4: { cellWidth: 28, halign: 'right' },
-            5: { cellWidth: 28, halign: 'right' },
-            6: { cellWidth: 32, halign: 'right' }
+            4: { cellWidth: 26, halign: 'right' },
+            5: { cellWidth: 26, halign: 'right' },
+            6: { cellWidth: 30, halign: 'right' }
         },
         didParseCell: function(data) {
             if (data.section === 'head' && (data.column.index === 4 || data.column.index === 5 || data.column.index === 6)) {
