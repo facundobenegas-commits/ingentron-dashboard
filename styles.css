@@ -1403,55 +1403,5 @@ tbody tr:hover {
     background: rgba(255, 255, 255, 0.08);
 }
 
-/* Animación de Brillo Rotatorio en sentido horario para los logos */
-.logo-badge {
-    position: relative !important;
-    overflow: hidden !important;
-    z-index: 1 !important;
-}
-
-.logo-badge::before {
-    content: '' !important;
-    position: absolute !important;
-    width: 250% !important;
-    height: 250% !important;
-    background: conic-gradient(
-        from 0deg,
-        transparent 50%,
-        rgba(255, 255, 255, 0.0) 70%,
-        rgba(255, 255, 255, 0.25) 85%,
-        rgba(255, 255, 255, 0.0) 95%,
-        transparent 100%
-    ) !important;
-    animation: rotate-shimmer 4s linear infinite !important;
-    z-index: -1 !important;
-    pointer-events: none !important;
-}
-
-/* Fondo oscuro interior para enmascarar el interior y dejar ver el brillo sutil solo en el contorno */
-.logo-badge::after {
-    content: '' !important;
-    position: absolute !important;
-    inset: 1px !important;
-    background: #0f1218 !important;
-    border-radius: 7px !important;
-    z-index: -1 !important;
-    pointer-events: none !important;
-}
-
-.logo-badge img {
-    position: relative !important;
-    z-index: 2 !important;
-}
-
-@keyframes rotate-shimmer {
-    0% {
-        transform: rotate(0deg);
-    }
-    100% {
-        transform: rotate(360deg);
-    }
-}
-
 
 
