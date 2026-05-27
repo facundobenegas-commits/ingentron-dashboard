@@ -1422,16 +1422,16 @@ tbody tr:hover {
     position: absolute !important;
     top: 0 !important;
     left: -150% !important;
-    width: 60% !important;
+    width: 80% !important;
     height: 100% !important;
     background: linear-gradient(
-        90deg,
+        135deg,
         rgba(255, 255, 255, 0) 0%,
-        rgba(255, 255, 255, 0.15) 50%,
+        rgba(255, 255, 255, 0.45) 50%,
         rgba(255, 255, 255, 0) 100%
     ) !important;
-    transform: skewX(-25deg) !important;
-    animation: shimmer-swipe 4s ease-in-out infinite !important;
+    transform: skewX(-20deg) !important;
+    animation: shimmer-swipe 3s ease-in-out infinite !important;
     z-index: 2 !important;
     pointer-events: none !important;
 }
@@ -1445,7 +1445,7 @@ tbody tr:hover {
     0% {
         left: -150%;
     }
-    40% {
+    35% {
         left: 150%;
     }
     100% {
