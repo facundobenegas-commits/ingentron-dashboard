@@ -1410,12 +1410,19 @@ tbody tr:hover {
     background: rgba(255, 255, 255, 0.08);
 }
 
-/* Animación premium de brillo perimetral que gira en sentido horario para los logos en Beta */
+/* Animación premium e interactiva de respiración de brillo para los logos en Beta */
 .logo-badge {
     position: relative !important;
     overflow: hidden !important;
-    animation: border-glow-rotate 4s linear infinite !important;
-    transition: all 0.3s ease !important;
+    animation: logo-pulse 4s ease-in-out infinite !important;
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}
+
+.logo-badge:hover {
+    transform: scale(1.06) !important;
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(10, 132, 255, 0.5) !important;
+    box-shadow: 0 0 12px rgba(10, 132, 255, 0.3) !important;
 }
 
 .logo-badge img {
@@ -1423,26 +1430,21 @@ tbody tr:hover {
     z-index: 2 !important;
 }
 
-@keyframes border-glow-rotate {
+@keyframes logo-pulse {
     0% {
-        border-color: rgba(255, 255, 255, 0.4) !important;
-        box-shadow: 1px -1px 4px rgba(255, 255, 255, 0.35), -1px 1px 1px rgba(255, 255, 255, 0.05) !important;
-    }
-    25% {
-        border-color: rgba(255, 255, 255, 0.25) !important;
-        box-shadow: 1px 1px 4px rgba(255, 255, 255, 0.35), -1px -1px 1px rgba(255, 255, 255, 0.05) !important;
+        background-color: rgba(255, 255, 255, 0.03) !important;
+        border-color: rgba(255, 255, 255, 0.08) !important;
+        box-shadow: none !important;
     }
     50% {
-        border-color: rgba(255, 255, 255, 0.4) !important;
-        box-shadow: -1px 1px 4px rgba(255, 255, 255, 0.35), 1px -1px 1px rgba(255, 255, 255, 0.05) !important;
-    }
-    75% {
-        border-color: rgba(255, 255, 255, 0.25) !important;
-        box-shadow: -1px -1px 4px rgba(255, 255, 255, 0.35), 1px 1px 1px rgba(255, 255, 255, 0.05) !important;
+        background-color: rgba(255, 255, 255, 0.06) !important;
+        border-color: rgba(10, 132, 255, 0.3) !important;
+        box-shadow: 0 0 8px rgba(10, 132, 255, 0.15) !important;
     }
     100% {
-        border-color: rgba(255, 255, 255, 0.4) !important;
-        box-shadow: 1px -1px 4px rgba(255, 255, 255, 0.35), -1px 1px 1px rgba(255, 255, 255, 0.05) !important;
+        background-color: rgba(255, 255, 255, 0.03) !important;
+        border-color: rgba(255, 255, 255, 0.08) !important;
+        box-shadow: none !important;
     }
 }
 
