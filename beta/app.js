@@ -1087,7 +1087,7 @@ function downloadClientPDF() {
         headStyles: {
             fillColor: [11, 26, 48],
             textColor: [255, 255, 255],
-            fontSize: 8.5,
+            fontSize: 8.0,
             fontStyle: 'bold',
             halign: 'left',
             valign: 'middle'
@@ -1123,7 +1123,7 @@ function downloadClientPDF() {
             }
         },
         bodyStyles: {
-            fontSize: 8.2,
+            fontSize: 7.6,
             textColor: [30, 41, 59],
             cellPadding: 2.5
         },
