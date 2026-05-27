@@ -15,6 +15,24 @@ const empresaToOrigins = {
     'Gruya': ['Trenque Lauquen', 'Salliquelo']
 };
 
+// Helper robusto para ordenar fechas de cortes semanales cronológicamente
+function parseWeekEndDate(weekStr) {
+    if (!weekStr) return new Date(0);
+    if (weekStr === 'Tiempo Real') return new Date(8640000000000000);
+    const parts = weekStr.split(' al ');
+    let dateStr = parts.length === 2 ? parts[1] : weekStr;
+    dateStr = dateStr.replace(/^[Dd]el\s+/, '').replace(/^[Aa][Ll]\s+/, '').replace(/^SEMANA\s+/, '').trim();
+    const dateParts = dateStr.split('/');
+    if (dateParts.length === 3) {
+        let y = parseInt(dateParts[2]);
+        if (y < 100) y += 2000;
+        return new Date(y, parseInt(dateParts[1]) - 1, parseInt(dateParts[0]));
+    }
+    const parsed = Date.parse(dateStr);
+    if (!isNaN(parsed)) return new Date(parsed);
+    return new Date(0);
+}
+
 // DOM Elements
 const dashboardView = document.getElementById('dashboard-view');
 const viewTitle = document.getElementById('view-title');
@@ -306,22 +324,6 @@ function updateWeekSelectorForCurrentOrigin() {
         }
     });
     
-    const parseWeekEndDate = (weekStr) => {
-        if (weekStr === 'Tiempo Real') return new Date(8640000000000000);
-        const parts = weekStr.split(' al ');
-        let dateStr = parts.length === 2 ? parts[1] : weekStr;
-        dateStr = dateStr.replace(/^[Dd]el\s+/, '').replace(/^[Aa][Ll]\s+/, '').replace(/^SEMANA\s+/, '').trim();
-        const dateParts = dateStr.split('/');
-        if (dateParts.length === 3) {
-            let y = parseInt(dateParts[2]);
-            if (y < 100) y += 2000;
-            return new Date(y, parseInt(dateParts[1]) - 1, parseInt(dateParts[0]));
-        }
-        const parsed = Date.parse(dateStr);
-        if (!isNaN(parsed)) return new Date(parsed);
-        return new Date(0);
-    };
-
     const sortedWeeks = Array.from(weeksForOrigin).sort((a, b) => parseWeekEndDate(a) - parseWeekEndDate(b));
     
     // Opción especial para mostrar la última semana automáticamente
@@ -427,11 +429,11 @@ function performDashboardUpdate() {
                 if (!allowed.includes(item.origin)) return;
             }
             if (currentOriginFilter !== '' && item.origin !== currentOriginFilter) return;
-            if (item.week && item.week !== 'undefined' && typeof item.week === 'string' && !item.week.includes(' al ')) {
+            if (item.week && item.week !== 'undefined' && typeof item.week === 'string' && item.week !== 'Tiempo Real') {
                 applicableWeeks.add(item.week);
             }
         });
-        const sorted = Array.from(applicableWeeks).sort();
+        const sorted = Array.from(applicableWeeks).sort((a, b) => parseWeekEndDate(a) - parseWeekEndDate(b));
         resolvedLatestWeek = sorted[sorted.length - 1] || '';
     }
 
@@ -523,28 +525,6 @@ function performDashboardUpdate() {
     });
     
     // Sort weeks chronologically
-    const parseWeekEndDate = (weekStr) => {
-        if (weekStr === 'Tiempo Real') return new Date(8640000000000000);
-        // Check if it is a range: "13/05/26 al 20/05/26" or "Del 13/05/2026 al 20/05/2026"
-        const parts = weekStr.split(' al ');
-        let dateStr = parts.length === 2 ? parts[1] : weekStr;
-        
-        // Clean up potential prefixes like "Del ", "AL ", "SEMANA ", etc.
-        dateStr = dateStr.replace(/^[Dd]el\s+/, '').replace(/^[Aa][Ll]\s+/, '').replace(/^SEMANA\s+/, '').trim();
-        
-        const dateParts = dateStr.split('/');
-        if (dateParts.length === 3) {
-            let y = parseInt(dateParts[2]);
-            if (y < 100) y += 2000;
-            return new Date(y, parseInt(dateParts[1]) - 1, parseInt(dateParts[0]));
-        }
-        // Fallback: try parsing with standard Date
-        const parsed = Date.parse(dateStr);
-        if (!isNaN(parsed)) return new Date(parsed);
-        
-        return new Date(0);
-    };
-
     const weeksArray = Array.from(new Set(dataForOrigin.map(item => item.week || 'Sin Semana')));
     const cleanWeeksArray = weeksArray
         .filter(w => w && w !== 'undefined' && w !== 'Sin Semana')
