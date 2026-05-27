@@ -278,6 +278,19 @@
         </div>
     </div>
 
+    <!-- Sync Status Panel -->
+    <div id="sync-status-panel" class="glass-card" style="position: fixed; bottom: 20px; right: 20px; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; font-size: 10.5px; background: rgba(10, 10, 12, 0.4); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; backdrop-filter: blur(20px); z-index: 99; width: max-content; transition: opacity 0.3s; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+        <div style="font-weight: 600; opacity: 0.5; text-transform: uppercase; font-size: 8.5px; letter-spacing: 0.5px; margin-bottom: 2px;">ÚLTIMA SINCRONIZACIÓN</div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #0a84ff;"></span>
+            <span style="opacity: 0.85;">Calvo (Aguas): <span id="sync-time-aguas" style="font-weight: 500;">Cargando...</span></span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #bf5af2;"></span>
+            <span style="opacity: 0.85;">Gescom (PepsiCo): <span id="sync-time-pepsico" style="font-weight: 500;">Cargando...</span></span>
+        </div>
+    </div>
+
     <button id="back-to-top" class="back-to-top" title="Volver al inicio">
         <i class="fas fa-arrow-up"></i>
     </button>

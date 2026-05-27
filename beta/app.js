@@ -125,6 +125,9 @@ function processLogo(imgSrc, isGruya, callback) {
 
 // Auto Load Data on Startup
 document.addEventListener('DOMContentLoaded', async () => {
+    // Consultar estado de sincronización inicial
+    loadSyncStatus();
+
     // Process logos for both themes
     processLogo('../logo_ingentron.png', false, (res) => {
         window.logoIngentronObj = res;
@@ -871,7 +874,10 @@ function renderModalInvoices(originFilter, animate = true) {
         const originalAmt = (inv.originalAmount !== undefined && !isNaN(inv.originalAmount)) ? inv.originalAmount : inv.amount;
         const paidAmt = (inv.paidAmount !== undefined && !isNaN(inv.paidAmount)) ? inv.paidAmount : 0;
         tr.innerHTML = `
-            <td>${inv.invoice} <span class="badge ${getOriginColorClass(inv.origin)}" style="font-size: 10px; padding: 2px 8px; margin-left: 8px; display: inline-block;">${inv.origin}</span></td>
+            <td style="display: flex; justify-content: space-between; align-items: center; gap: 12px; border-bottom: none;">
+                <span>${inv.invoice}</span>
+                <span class="badge ${getOriginColorClass(inv.origin)}" style="font-size: 10px; padding: 2px 8px; flex-shrink: 0;">${inv.origin}</span>
+            </td>
             <td>${formatDate(inv.date)}</td>
             <td class="text-center"><span class="badge ${status.class}" style="font-size: 10px; padding: 4px 10px; font-weight: 600; display: inline-flex; min-width: 80px; text-align: center; justify-content: center;">${status.text}</span></td>
             <td class="text-right font-medium" style="opacity: 0.8;">${formatCurrency(originalAmt)}</td>
@@ -1709,5 +1715,40 @@ function detectMobile() {
 window.addEventListener('resize', detectMobile);
 window.addEventListener('DOMContentLoaded', detectMobile);
 detectMobile();
+
+// Función para consultar e imprimir la fecha y hora de la última sincronización en tiempo real
+async function loadSyncStatus() {
+    try {
+        const res = await fetch('/api/sync-status');
+        if (!res.ok) return;
+        const status = await res.json();
+        
+        const formatSyncDate = (isoStr) => {
+            if (!isoStr) return 'Nunca';
+            const d = new Date(isoStr);
+            if (isNaN(d.getTime())) return 'Nunca';
+            
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = String(d.getFullYear()).slice(-2);
+            const hour = String(d.getHours()).padStart(2, '0');
+            const minute = String(d.getMinutes()).padStart(2, '0');
+            const second = String(d.getSeconds()).padStart(2, '0');
+            
+            return `${day}/${month}/${year} ${hour}:${minute}:${second}`;
+        };
+        
+        const aguasEl = document.getElementById('sync-time-aguas');
+        const pepsicoEl = document.getElementById('sync-time-pepsico');
+        
+        if (aguasEl) aguasEl.textContent = formatSyncDate(status.Aguas);
+        if (pepsicoEl) pepsicoEl.textContent = formatSyncDate(status.PepsiCo);
+    } catch (e) {
+        console.error("Error al cargar estado de sincronización:", e);
+    }
+}
+
+// Consultar la sincronización al arrancar y cada 30 segundos
+setInterval(loadSyncStatus, 30000);
 
 

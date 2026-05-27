@@ -283,12 +283,42 @@ app.post('/api/update-saldos', express.json({ limit: '15mb' }), (req, res) => {
         }
         
         fs.writeFileSync(cachePath, JSON.stringify(updatedCache));
+        
+        // Guardar la fecha y hora de la última sincronización exitosa por origen
+        const statusPath = path.join(__dirname, 'sync_status.json');
+        let syncStatus = { Aguas: null, PepsiCo: null };
+        if (fs.existsSync(statusPath)) {
+            try {
+                syncStatus = JSON.parse(fs.readFileSync(statusPath, 'utf8')) || syncStatus;
+            } catch (err) {}
+        }
+        
+        const nowStr = new Date().toISOString();
+        originsToClear.forEach(org => {
+            if (org === 'Aguas' || org === 'PepsiCo') {
+                syncStatus[org] = nowStr;
+            }
+        });
+        fs.writeFileSync(statusPath, JSON.stringify(syncStatus));
+
         console.log(`[Sync] Recibidos ${payload.length} saldos de [${originsToClear.join(', ')}]. Total caché consolidada: ${updatedCache.length} registros.`);
         res.json({ success: true, count: payload.length, total: updatedCache.length });
     } catch (err) {
         console.error("Error escribiendo archivo de caché de saldos:", err);
         res.status(500).json({ error: "Error interno al escribir caché de saldos." });
     }
+});
+
+// Endpoint para consultar el estado de la última sincronización de los servidores locales
+app.get('/api/sync-status', (req, res) => {
+    const statusPath = path.join(__dirname, 'sync_status.json');
+    let syncStatus = { Aguas: null, PepsiCo: null };
+    if (fs.existsSync(statusPath)) {
+        try {
+            syncStatus = JSON.parse(fs.readFileSync(statusPath, 'utf8')) || syncStatus;
+        } catch (err) {}
+    }
+    res.json(syncStatus);
 });
 
 // Endpoint unificado y ultra-rápido en tiempo real (para versión Beta)
