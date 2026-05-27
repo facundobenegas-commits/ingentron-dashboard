@@ -1093,12 +1093,12 @@ function downloadClientPDF() {
             valign: 'middle'
         },
         columnStyles: {
-            0: { cellWidth: 22 },
+            0: { cellWidth: 26 },
             1: { cellWidth: 26 },
             2: { cellWidth: 18 },
             3: { cellWidth: 26 },
-            4: { cellWidth: 32, halign: 'right' },
-            5: { cellWidth: 32, halign: 'right' },
+            4: { cellWidth: 30, halign: 'right' },
+            5: { cellWidth: 30, halign: 'right' },
             6: { cellWidth: 34, halign: 'right' }
         },
         didParseCell: function(data) {

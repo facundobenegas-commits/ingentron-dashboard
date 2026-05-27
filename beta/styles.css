@@ -1410,7 +1410,7 @@ tbody tr:hover {
     background: rgba(255, 255, 255, 0.08);
 }
 
-/* Animación de Brillo Rotatorio en sentido horario para los logos en Beta */
+/* Animación premium de destello de vidrio sutil (Glass Shimmer) para los logos en Beta */
 .logo-badge {
     position: relative !important;
     overflow: hidden !important;
@@ -1420,43 +1420,36 @@ tbody tr:hover {
 .logo-badge::before {
     content: '' !important;
     position: absolute !important;
-    width: 250% !important;
-    height: 250% !important;
-    background: conic-gradient(
-        from 0deg,
-        transparent 50%,
-        rgba(255, 255, 255, 0.0) 70%,
-        rgba(255, 255, 255, 0.15) 85%,
-        rgba(255, 255, 255, 0.0) 95%,
-        transparent 100%
+    top: 0 !important;
+    left: -150% !important;
+    width: 60% !important;
+    height: 100% !important;
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.15) 50%,
+        rgba(255, 255, 255, 0) 100%
     ) !important;
-    animation: rotate-shimmer 5s linear infinite !important;
-    z-index: -1 !important;
-    pointer-events: none !important;
-}
-
-/* Fondo integrado y sutil para fundirse con la barra del dashboard sin crear parches */
-.logo-badge::after {
-    content: '' !important;
-    position: absolute !important;
-    inset: 1px !important;
-    background: rgba(18, 18, 22, 0.95) !important;
-    border-radius: 7px !important;
-    z-index: -1 !important;
+    transform: skewX(-25deg) !important;
+    animation: shimmer-swipe 4s ease-in-out infinite !important;
+    z-index: 2 !important;
     pointer-events: none !important;
 }
 
 .logo-badge img {
     position: relative !important;
-    z-index: 2 !important;
+    z-index: 1 !important;
 }
 
-@keyframes rotate-shimmer {
+@keyframes shimmer-swipe {
     0% {
-        transform: rotate(0deg);
+        left: -150%;
+    }
+    40% {
+        left: 150%;
     }
     100% {
-        transform: rotate(360deg);
+        left: 150%;
     }
 }
 
