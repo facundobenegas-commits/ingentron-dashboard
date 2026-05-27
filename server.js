@@ -286,7 +286,7 @@ app.post('/api/update-saldos', express.json({ limit: '15mb' }), (req, res) => {
         
         // Guardar la fecha y hora de la última sincronización exitosa por origen
         const statusPath = path.join(__dirname, 'sync_status.json');
-        let syncStatus = { Aguas: null, PepsiCo: null };
+        let syncStatus = { Aguas: null, PepsiCo: null, 'Trenque Lauquen': null, Salliquelo: null };
         if (fs.existsSync(statusPath)) {
             try {
                 syncStatus = JSON.parse(fs.readFileSync(statusPath, 'utf8')) || syncStatus;
@@ -295,9 +295,7 @@ app.post('/api/update-saldos', express.json({ limit: '15mb' }), (req, res) => {
         
         const nowStr = new Date().toISOString();
         originsToClear.forEach(org => {
-            if (org === 'Aguas' || org === 'PepsiCo') {
-                syncStatus[org] = nowStr;
-            }
+            syncStatus[org] = nowStr;
         });
         fs.writeFileSync(statusPath, JSON.stringify(syncStatus));
 
@@ -312,7 +310,7 @@ app.post('/api/update-saldos', express.json({ limit: '15mb' }), (req, res) => {
 // Endpoint para consultar el estado de la última sincronización de los servidores locales
 app.get('/api/sync-status', (req, res) => {
     const statusPath = path.join(__dirname, 'sync_status.json');
-    let syncStatus = { Aguas: null, PepsiCo: null };
+    let syncStatus = { Aguas: null, PepsiCo: null, 'Trenque Lauquen': null, Salliquelo: null };
     if (fs.existsSync(statusPath)) {
         try {
             syncStatus = JSON.parse(fs.readFileSync(statusPath, 'utf8')) || syncStatus;
