@@ -76,15 +76,15 @@ async function runSynchronization() {
         SELECT 
             cccd.cliente_codigo AS client_code,
             cli.razon_social AS client_name,
-            cccref.ccc_comprobante AS doc_number,
+            cccd.cccd_referencia AS doc_number,
             cccref.ccc_fecha AS doc_date,
             cccref.ccc_fechavenc AS due_date,
             cccref.ccc_importe AS total_amount,
             SUM(cccd.cccd_importe) AS outstanding_balance
         FROM ctacteclidet cccd
         INNER JOIN cliente cli ON cccd.cliente_codigo = cli.codigo
-        INNER JOIN ctactecli cccref ON cccd.ccc_comprobante = cccref.ccc_comprobante AND cccd.cliente_codigo = cccref.cliente_codigo AND cccd.empresa_id = cccref.empresa_id
-        GROUP BY cccd.cliente_codigo, cli.razon_social, cccref.ccc_comprobante, cccref.ccc_fecha, cccref.ccc_fechavenc, cccref.ccc_importe
+        INNER JOIN ctactecli cccref ON cccd.cccd_referencia = cccref.ccc_comprobante AND cccd.cliente_codigo = cccref.cliente_codigo AND cccd.empresa_id = cccref.empresa_id
+        GROUP BY cccd.cliente_codigo, cli.razon_social, cccd.cccd_referencia, cccref.ccc_fecha, cccref.ccc_fechavenc, cccref.ccc_importe
         HAVING ABS(SUM(cccd.cccd_importe)) > 0.01
         `;
         
