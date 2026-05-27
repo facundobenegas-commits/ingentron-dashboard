@@ -1410,43 +1410,5 @@ tbody tr:hover {
     background: rgba(255, 255, 255, 0.08);
 }
 
-/* Animación premium e interactiva de respiración de brillo para los logos en Beta */
-.logo-badge {
-    position: relative !important;
-    overflow: hidden !important;
-    animation: logo-pulse 4s ease-in-out infinite !important;
-    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
-}
-
-.logo-badge:hover {
-    transform: scale(1.06) !important;
-    background-color: rgba(255, 255, 255, 0.08) !important;
-    border-color: rgba(10, 132, 255, 0.5) !important;
-    box-shadow: 0 0 12px rgba(10, 132, 255, 0.3) !important;
-}
-
-.logo-badge img {
-    position: relative !important;
-    z-index: 2 !important;
-}
-
-@keyframes logo-pulse {
-    0% {
-        background-color: rgba(255, 255, 255, 0.03) !important;
-        border-color: rgba(255, 255, 255, 0.08) !important;
-        box-shadow: none !important;
-    }
-    50% {
-        background-color: rgba(255, 255, 255, 0.06) !important;
-        border-color: rgba(10, 132, 255, 0.3) !important;
-        box-shadow: 0 0 8px rgba(10, 132, 255, 0.15) !important;
-    }
-    100% {
-        background-color: rgba(255, 255, 255, 0.03) !important;
-        border-color: rgba(255, 255, 255, 0.08) !important;
-        box-shadow: none !important;
-    }
-}
-
 
 
