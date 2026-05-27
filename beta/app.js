@@ -1093,13 +1093,13 @@ function downloadClientPDF() {
             valign: 'middle'
         },
         columnStyles: {
-            0: { cellWidth: 32 },
-            1: { cellWidth: 20 },
-            2: { cellWidth: 14 },
-            3: { cellWidth: 24 },
-            4: { cellWidth: 34, halign: 'right' },
-            5: { cellWidth: 33, halign: 'right' },
-            6: { cellWidth: 33, halign: 'right' }
+            0: { cellWidth: 22 },
+            1: { cellWidth: 26 },
+            2: { cellWidth: 18 },
+            3: { cellWidth: 26 },
+            4: { cellWidth: 32, halign: 'right' },
+            5: { cellWidth: 32, halign: 'right' },
+            6: { cellWidth: 34, halign: 'right' }
         },
         didParseCell: function(data) {
             if (data.section === 'head' && (data.column.index === 4 || data.column.index === 5 || data.column.index === 6)) {
