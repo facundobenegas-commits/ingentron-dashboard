@@ -1,0 +1,9 @@
+{
+  "name": "gruya-sync-salliquelo",
+  "version": "1.0.0",
+  "description": "Sincronizador Gruya de base de datos Firebird (Salliqueló) a Render",
+  "main": "sync_salliquelo.js",
+  "dependencies": {
+    "node-firebird": "^2.3.2"
+  }
+}
