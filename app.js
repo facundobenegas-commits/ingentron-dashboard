@@ -15,6 +15,24 @@ const empresaToOrigins = {
     'Gruya': ['Trenque Lauquen', 'Salliquelo']
 };
 
+// Helper robusto para ordenar fechas de cortes semanales cronológicamente
+function parseWeekEndDate(weekStr) {
+    if (!weekStr) return new Date(0);
+    if (weekStr === 'Tiempo Real') return new Date(8640000000000000);
+    const parts = weekStr.split(' al ');
+    let dateStr = parts.length === 2 ? parts[1] : weekStr;
+    dateStr = dateStr.replace(/^[Dd]el\s+/, '').replace(/^[Aa][Ll]\s+/, '').replace(/^SEMANA\s+/, '').trim();
+    const dateParts = dateStr.split('/');
+    if (dateParts.length === 3) {
+        let y = parseInt(dateParts[2]);
+        if (y < 100) y += 2000;
+        return new Date(y, parseInt(dateParts[1]) - 1, parseInt(dateParts[0]));
+    }
+    const parsed = Date.parse(dateStr);
+    if (!isNaN(parsed)) return new Date(parsed);
+    return new Date(0);
+}
+
 // DOM Elements
 const dashboardView = document.getElementById('dashboard-view');
 const viewTitle = document.getElementById('view-title');
@@ -125,6 +143,9 @@ function processLogo(imgSrc, isGruya, callback) {
 
 // Auto Load Data on Startup
 document.addEventListener('DOMContentLoaded', async () => {
+    // Consultar estado de sincronización inicial
+    loadSyncStatus();
+
     // Process logos for both themes
     processLogo('logo_ingentron.png', false, (res) => {
         window.logoIngentronObj = res;
@@ -142,12 +163,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (headerImg) headerImg.src = res.dark;
     });
     try {
-        const response = await fetch('/api/excel');
-        if (!response.ok) throw new Error('No se pudo cargar el archivo del servidor.');
-        const data = await response.arrayBuffer();
-        const workbook = XLSX.read(data, { type: 'array' });
+        const response = await fetch('/api/saldos');
+        if (!response.ok) throw new Error('No se pudo cargar la información de saldos desde el servidor.');
+        globalData = await response.json();
         
-        processWorkbook(workbook);
+        // Populate availableWeeks based on globalData
+        availableWeeks = new Set();
+        globalData.forEach(item => {
+            if (item.week) {
+                availableWeeks.add(item.week);
+            }
+        });
+        
+        populateFilters();
         
         loadingIndicator.classList.remove('show');
         dashboardView.style.display = 'block';
@@ -160,205 +188,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadingIndicator.querySelector('.processing-spinner').style.display = 'none';
     }
 });
-
-function cleanClientCode(code) {
-    if (!code) return '';
-    code = String(code).trim();
-    code = code.replace(/[\.,]0+$/, '');
-    if (/^\d+([\.,]\d+)+$/.test(code)) {
-        code = code.replace(/[\.,]/g, '');
-    }
-    return code;
-}
-
-// Excel Parsing Logic
-function processWorkbook(workbook) {
-    globalData = [];
-    availableWeeks = new Set();
-    
-    // Process SALDOS AGUAS
-    if (workbook.Sheets['SALDOS AGUAS']) {
-        const rows = XLSX.utils.sheet_to_json(workbook.Sheets['SALDOS AGUAS'], { header: 1 });
-        parseStandardSheet(rows, 'SALDOS AGUAS', 'Aguas');
-    }
-    
-    // Process SALLIQUELO
-    if (workbook.Sheets['SALLIQUELO']) {
-        const rows = XLSX.utils.sheet_to_json(workbook.Sheets['SALLIQUELO'], { header: 1 });
-        parseStandardSheet(rows, 'SALLIQUELO', 'Salliquelo');
-    }
-    
-    // Process TRENQUE LAUQUEN
-    if (workbook.Sheets['TRENQUE LAUQUEN']) {
-        const rows = XLSX.utils.sheet_to_json(workbook.Sheets['TRENQUE LAUQUEN'], { header: 1 });
-        parseStandardSheet(rows, 'TRENQUE LAUQUEN', 'Trenque Lauquen');
-    }
-    
-    // Process SALDOS NUEVO (Complex format)
-    if (workbook.Sheets['SALDOS NUEVO']) {
-        const rows = XLSX.utils.sheet_to_json(workbook.Sheets['SALDOS NUEVO'], { header: 1 });
-        parseSaldosNuevo(rows, 'PepsiCo');
-    }
-
-    populateFilters();
-}
-
-function parseStandardSheet(rows, sheetName, originName) {
-    // Attempt to find headers dynamically or fallback to heuristics
-    let headerRowIndex = -1;
-    let colMap = { client: -1, amount: -1, week: -1, invoice: -1, date: -1, dueDate: -1, situacion: -1 };
-    
-    for (let i = 0; i < Math.min(rows.length, 10); i++) {
-        const row = rows[i];
-        if (!row || row.length < 5) continue;
-        
-        const rowStr = row.join(' ').toLowerCase();
-        if (rowStr.includes('comprobante') && (rowStr.includes('cliente') || rowStr.includes('razon social') || rowStr.includes('cta cte'))) {
-            headerRowIndex = i;
-            
-            // Map columns
-            row.forEach((cell, index) => {
-                if (!cell) return;
-                const h = String(cell).toLowerCase().trim();
-                if (h.includes('razon social') || h === 'cliente' || h === 'cta cte') colMap.client = index;
-                if (h === 'importe' || h === 'debe' || h === 'saldo') colMap.amount = index;
-                if (h.includes('semana')) colMap.week = index;
-                if (h === 'comprobante') colMap.invoice = index;
-                if (h === 'fecha' || h === 'fecha mov.') colMap.date = index;
-                if (h === 'vencimiento' || h === 'fechavenc') colMap.dueDate = index;
-                if (h.includes('situacion') || h.includes('situación')) colMap.situacion = index;
-            });
-            break;
-        }
-    }
-    
-    // Fallbacks if mapping failed but we know standard positions
-    if (colMap.client === -1 && sheetName === 'TRENQUE LAUQUEN') colMap.client = 3; // Razon Social
-    if (colMap.amount === -1 && sheetName === 'TRENQUE LAUQUEN') colMap.amount = 8; // Importe
-    if (colMap.week === -1 && sheetName === 'TRENQUE LAUQUEN') colMap.week = 10; // SEMANA ANALISIS is often K (index 10)
-    
-    if (headerRowIndex === -1) headerRowIndex = 0; // Default to start parsing
-    
-    for (let i = headerRowIndex + 1; i < rows.length; i++) {
-        const row = rows[i];
-        if (!row || row.length === 0) continue;
-        
-        // Use maps or defaults
-        let clientName = colMap.client > -1 ? row[colMap.client] : (sheetName === 'SALLIQUELO' ? row[1] : row[1]);
-        let amount = colMap.amount > -1 ? row[colMap.amount] : row[7];
-        let week = colMap.week > -1 ? row[colMap.week] : row[row.length - 1]; // Assume week is last if not found
-        let invoice = colMap.invoice > -1 ? row[colMap.invoice] : row[3];
-        let date = colMap.date > -1 ? row[colMap.date] : row[2];
-        let dueDate = colMap.dueDate > -1 ? row[colMap.dueDate] : row[4];
-        
-        // Clean up
-        if (!clientName || typeof clientName !== 'string' || clientName.trim() === '') continue;
-        if (!amount || isNaN(parseFloat(String(amount).replace(',','.')))) continue;
-        
-        amount = parseFloat(String(amount).replace(',','.'));
-        if (amount === 0) continue; // Skip zero balances
-        
-        week = week ? String(week).trim() : 'Sin Semana';
-        availableWeeks.add(week);
-        
-        let clientCode = '';
-        if (sheetName === 'SALDOS AGUAS' || sheetName === 'SALLIQUELO') {
-            clientCode = row[0] !== undefined ? String(row[0]) : '';
-        } else if (sheetName === 'TRENQUE LAUQUEN') {
-            clientCode = row[2] !== undefined ? String(row[2]) : '';
-        }
-        
-        let situacion = colMap.situacion > -1 && row[colMap.situacion] !== undefined ? String(row[colMap.situacion]).trim() : 'Sin Especificar';
-        if (!situacion) situacion = 'Sin Especificar';
-        
-        globalData.push({
-            origin: originName,
-            client: String(clientName).trim(),
-            clientCode: cleanClientCode(clientCode),
-            amount: amount,
-            week: week,
-            invoice: invoice || 'N/A',
-            date: date || 'N/A',
-            dueDate: dueDate || 'N/A',
-            situacion: situacion
-        });
-    }
-}
-
-function parseSaldosNuevo(rows, originName) {
-    // Highly unstructured. Usually client name is in col 1 (index 1) and amount in col 7 or 8.
-    // We look for rows that look like invoice rows or balance rows.
-    let currentClient = "Desconocido";
-    let currentClientCode = "";
-    let currentWeek = "Sin Semana";
-    
-    let situacionCol = -1;
-    for (let i = 0; i < Math.min(rows.length, 30); i++) {
-        if (!rows[i]) continue;
-        rows[i].forEach((cell, index) => {
-            if (cell) {
-                const h = String(cell).toLowerCase().trim();
-                if (h.includes('situacion') || h.includes('situación')) {
-                    situacionCol = index;
-                }
-            }
-        });
-        if (situacionCol > -1) break;
-    }
-    
-    for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
-        if (!row || row.length < 2) continue;
-        
-        // Detect client row: typically has an ID in index 0 and Name in index 1, but no amount in index 7/8
-        if (row[0] && row[1] && typeof row[1] === 'string' && row[1].length > 5 && !row[2]) {
-            // Might be a client header row
-            if (isNaN(parseFloat(String(row[1])))) {
-                currentClient = row[1];
-                currentClientCode = row[0] !== undefined ? String(row[0]) : '';
-            }
-        }
-        
-        // Detect invoice row or total row
-        // Usually, 'SEMANA ANALISIS' is near the end, index 11, 12 or 13.
-        let amount = row[7] || row[8]; 
-        let week = row[12] || row[13] || row[11];
-        let dateVal = row[0] !== undefined ? row[0] : (row[1] !== undefined ? row[1] : 'N/A');
-        let dueDateVal = row[2] !== undefined ? row[2] : (row[3] !== undefined ? row[3] : 'N/A');
-
-        let invoice = row[4];
-        
-        if (amount !== undefined && !isNaN(parseFloat(String(amount).replace(',','.')))) {
-            let parsedAmount = parseFloat(String(amount).replace(',','.'));
-            
-            // Validate invoice to exclude subtotals
-            let invoiceStr = String(invoice || '').trim();
-            let isLikelyInvoice = invoiceStr.length > 3 && /\d/.test(invoiceStr);
-            
-            if (parsedAmount !== 0 && isLikelyInvoice) {
-                let w = week ? String(week).trim() : currentWeek;
-                if (w.includes("AL") || w.includes("SEMANA")) currentWeek = w;
-                
-                availableWeeks.add(currentWeek);
-                
-                let situacionVal = (situacionCol > -1 && row[situacionCol] !== undefined) ? String(row[situacionCol]).trim() : 'Sin Especificar';
-                if (!situacionVal) situacionVal = 'Sin Especificar';
-                
-                globalData.push({
-                    origin: originName,
-                    client: String(currentClient).trim(),
-                    clientCode: cleanClientCode(currentClientCode),
-                    amount: parsedAmount,
-                    week: currentWeek,
-                    invoice: invoiceStr,
-                    date: dateVal,
-                    dueDate: dueDateVal,
-                    situacion: situacionVal
-                });
-            }
-        }
-    }
-}
 
 // UI Updating
 function updateOriginOptionsForEmpresa() {
@@ -495,22 +324,6 @@ function updateWeekSelectorForCurrentOrigin() {
         }
     });
     
-    const parseWeekEndDate = (weekStr) => {
-        if (weekStr === 'Tiempo Real') return new Date(8640000000000000);
-        const parts = weekStr.split(' al ');
-        let dateStr = parts.length === 2 ? parts[1] : weekStr;
-        dateStr = dateStr.replace(/^[Dd]el\s+/, '').replace(/^[Aa][Ll]\s+/, '').replace(/^SEMANA\s+/, '').trim();
-        const dateParts = dateStr.split('/');
-        if (dateParts.length === 3) {
-            let y = parseInt(dateParts[2]);
-            if (y < 100) y += 2000;
-            return new Date(y, parseInt(dateParts[1]) - 1, parseInt(dateParts[0]));
-        }
-        const parsed = Date.parse(dateStr);
-        if (!isNaN(parsed)) return new Date(parsed);
-        return new Date(0);
-    };
-
     const sortedWeeks = Array.from(weeksForOrigin).sort((a, b) => parseWeekEndDate(a) - parseWeekEndDate(b));
     
     // Opción especial para mostrar la última semana automáticamente
@@ -621,11 +434,11 @@ function performDashboardUpdate() {
                 if (!allowed.includes(item.origin)) return;
             }
             if (currentOriginFilter !== '' && item.origin !== currentOriginFilter) return;
-            if (item.week && item.week !== 'undefined' && typeof item.week === 'string' && !item.week.includes(' al ')) {
+            if (item.week && item.week !== 'undefined' && typeof item.week === 'string' && item.week !== 'Tiempo Real') {
                 applicableWeeks.add(item.week);
             }
         });
-        const sorted = Array.from(applicableWeeks).sort();
+        const sorted = Array.from(applicableWeeks).sort((a, b) => parseWeekEndDate(a) - parseWeekEndDate(b));
         resolvedLatestWeek = sorted[sorted.length - 1] || '';
     }
 
@@ -676,7 +489,10 @@ function performDashboardUpdate() {
         clientData.invoices.push(item);
         
         if (item.clientCode && item.clientCode !== 'N/A') {
-            clientData.clientCodesByOrigin[item.origin] = item.clientCode;
+            if (!clientData.clientCodesByOrigin[item.origin]) {
+                clientData.clientCodesByOrigin[item.origin] = new Set();
+            }
+            clientData.clientCodesByOrigin[item.origin].add(item.clientCode);
         }
         
         totalBalance += item.amount;
@@ -714,28 +530,6 @@ function performDashboardUpdate() {
     });
     
     // Sort weeks chronologically
-    const parseWeekEndDate = (weekStr) => {
-        if (weekStr === 'Tiempo Real') return new Date(8640000000000000);
-        // Check if it is a range: "13/05/26 al 20/05/26" or "Del 13/05/2026 al 20/05/2026"
-        const parts = weekStr.split(' al ');
-        let dateStr = parts.length === 2 ? parts[1] : weekStr;
-        
-        // Clean up potential prefixes like "Del ", "AL ", "SEMANA ", etc.
-        dateStr = dateStr.replace(/^[Dd]el\s+/, '').replace(/^[Aa][Ll]\s+/, '').replace(/^SEMANA\s+/, '').trim();
-        
-        const dateParts = dateStr.split('/');
-        if (dateParts.length === 3) {
-            let y = parseInt(dateParts[2]);
-            if (y < 100) y += 2000;
-            return new Date(y, parseInt(dateParts[1]) - 1, parseInt(dateParts[0]));
-        }
-        // Fallback: try parsing with standard Date
-        const parsed = Date.parse(dateStr);
-        if (!isNaN(parsed)) return new Date(parsed);
-        
-        return new Date(0);
-    };
-
     const weeksArray = Array.from(new Set(dataForOrigin.map(item => item.week || 'Sin Semana')));
     const cleanWeeksArray = weeksArray
         .filter(w => w && w !== 'undefined' && w !== 'Sin Semana')
@@ -798,13 +592,13 @@ function performDashboardUpdate() {
         let codesHtml = '';
         if (originsWithCodes.length === 1) {
             const org = originsWithCodes[0];
-            const code = client.clientCodesByOrigin[org];
-            codesHtml = `<span class="client-code-badge"><i class="fas fa-tag"></i> ${org}: ${code}</span>`;
+            const codes = Array.from(client.clientCodesByOrigin[org]).join(' | ');
+            codesHtml = `<span class="client-code-badge"><i class="fas fa-tag"></i> ${org}: ${codes}</span>`;
         } else if (originsWithCodes.length > 1) {
             const codesList = [];
             originsWithCodes.forEach(org => {
-                const code = client.clientCodesByOrigin[org];
-                codesList.push(`<span class="client-code-badge"><i class="fas fa-tag"></i> ${org}: ${code}</span>`);
+                const codes = Array.from(client.clientCodesByOrigin[org]).join(' | ');
+                codesList.push(`<span class="client-code-badge"><i class="fas fa-tag"></i> ${org}: ${codes}</span>`);
             });
             codesHtml = codesList.join(' ');
         }
@@ -949,7 +743,10 @@ window.showInvoices = function(clientName) {
     const codesByOrigin = {};
     invoices.forEach(inv => {
         if (inv.clientCode && inv.clientCode !== 'N/A') {
-            codesByOrigin[inv.origin] = inv.clientCode;
+            if (!codesByOrigin[inv.origin]) {
+                codesByOrigin[inv.origin] = new Set();
+            }
+            codesByOrigin[inv.origin].add(inv.clientCode);
         }
     });
     
@@ -959,14 +756,14 @@ window.showInvoices = function(clientName) {
         const originsWithCodes = Object.keys(codesByOrigin);
         if (originsWithCodes.length === 1) {
             const org = originsWithCodes[0];
-            const code = codesByOrigin[org];
-            codesEl.innerHTML = `<span class="client-code-badge"><i class="fas fa-tag"></i> ${org}: ${code}</span>`;
+            const codes = Array.from(codesByOrigin[org]).join(' | ');
+            codesEl.innerHTML = `<span class="client-code-badge"><i class="fas fa-tag"></i> ${org}: ${codes}</span>`;
         } else if (originsWithCodes.length > 1) {
             originsWithCodes.forEach(org => {
-                const code = codesByOrigin[org];
+                const codes = Array.from(codesByOrigin[org]).join(' | ');
                 const badge = document.createElement('span');
                 badge.className = 'client-code-badge';
-                badge.innerHTML = `<i class="fas fa-tag"></i> ${org}: ${code}`;
+                badge.innerHTML = `<i class="fas fa-tag"></i> ${org}: ${codes}`;
                 codesEl.appendChild(badge);
             });
         }
@@ -1065,12 +862,21 @@ function renderModalInvoices(originFilter, animate = true) {
         }
         
         const status = getDueDateStatus(inv.dueDate, inv.date, inv.amount);
-        
+        const originalAmt = (inv.originalAmount !== undefined && !isNaN(inv.originalAmount)) ? inv.originalAmount : inv.amount;
+        const paidAmt = (inv.paidAmount !== undefined && !isNaN(inv.paidAmount)) ? inv.paidAmount : 0;
         tr.innerHTML = `
-            <td>${inv.invoice} <span class="badge ${getOriginColorClass(inv.origin)}" style="font-size: 10px; padding: 2px 8px; margin-left: 8px; display: inline-block;">${inv.origin}</span></td>
+            <td style="display: flex; justify-content: space-between; align-items: center; gap: 12px; border-bottom: none;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span>${inv.invoice}</span>
+                    ${inv.clientCode && inv.clientCode !== 'N/A' ? `<span style="font-size: 11px; color: rgba(255,255,255,0.4); font-weight: 500;">(Cód. ${inv.clientCode})</span>` : ''}
+                </div>
+                <span class="badge ${getOriginColorClass(inv.origin)}" style="font-size: 10px; padding: 2px 0; width: 60px; text-align: center; display: inline-block; flex-shrink: 0;">${inv.origin}</span>
+            </td>
             <td>${formatDate(inv.date)}</td>
             <td class="text-center"><span class="badge ${status.class}" style="font-size: 10px; padding: 4px 10px; font-weight: 600; display: inline-flex; min-width: 80px; text-align: center; justify-content: center;">${status.text}</span></td>
-            <td class="text-right font-medium">${formatCurrency(inv.amount)}</td>
+            <td class="text-right font-medium" style="opacity: 0.8;">${formatCurrency(originalAmt)}</td>
+            <td class="text-right font-medium" style="color: #30d158; opacity: 0.95;">${formatCurrency(paidAmt)}</td>
+            <td class="text-right font-medium" style="color: var(--accent-color);">${formatCurrency(inv.amount)}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -1259,38 +1065,44 @@ function downloadClientPDF() {
     // Table rows data
     const tableBody = invoicesToExport.map(inv => {
         const status = getDueDateStatus(inv.dueDate, inv.date, inv.amount);
+        const originalAmt = (inv.originalAmount !== undefined && !isNaN(inv.originalAmount)) ? inv.originalAmount : inv.amount;
+        const paidAmt = (inv.paidAmount !== undefined && !isNaN(inv.paidAmount)) ? inv.paidAmount : 0;
         return [
             inv.invoice || 'N/A',
             formatCompanyName(inv.origin) || 'N/A',
             formatDate(inv.date),
             status.text || 'N/A',
+            formatCurrency(originalAmt),
+            formatCurrency(paidAmt),
             formatCurrency(inv.amount)
         ];
     });
 
     // Add Invoices Table
     doc.autoTable({
-        head: [['Comprobante', 'Empresa', 'Fecha Emisión', 'Estado', 'Importe']],
+        head: [['Comprobante', 'Empresa', 'Fecha', 'Estado', 'Importe', 'Canceló', 'Pendiente']],
         body: tableBody,
         startY: 68,
         theme: 'striped',
         headStyles: {
             fillColor: [11, 26, 48],
             textColor: [255, 255, 255],
-            fontSize: 9,
+            fontSize: 8.0,
             fontStyle: 'bold',
             halign: 'left',
             valign: 'middle'
         },
         columnStyles: {
-            0: { cellWidth: 'auto' },
-            1: { cellWidth: 32 },
-            2: { cellWidth: 32 },
-            3: { cellWidth: 35 },
-            4: { cellWidth: 38, halign: 'right' }
+            0: { cellWidth: 30 },
+            1: { cellWidth: 26 },
+            2: { cellWidth: 21 },
+            3: { cellWidth: 31 },
+            4: { cellWidth: 26, halign: 'right' },
+            5: { cellWidth: 26, halign: 'right' },
+            6: { cellWidth: 30, halign: 'right' }
         },
         didParseCell: function(data) {
-            if (data.section === 'head' && data.column.index === 4) {
+            if (data.section === 'head' && (data.column.index === 4 || data.column.index === 5 || data.column.index === 6)) {
                 data.cell.styles.halign = 'right';
             }
             if (data.section === 'body' && data.column.index === 3) {
@@ -1311,18 +1123,19 @@ function downloadClientPDF() {
             }
         },
         bodyStyles: {
-            fontSize: 8.5,
+            fontSize: 7.6,
             textColor: [30, 41, 59],
-            cellPadding: 4
+            cellPadding: 2.5
         },
         alternateRowStyles: {
             fillColor: [248, 250, 252]
         },
-        margin: { left: 15, right: 15, top: 15, bottom: 22 },
+        margin: { left: 10, right: 10, top: 15, bottom: 22 },
         styles: {
             font: 'helvetica',
             lineColor: [241, 245, 249],
-            lineWidth: 0.3
+            lineWidth: 0.3,
+            overflow: 'hidden'
         }
     });
 
@@ -1336,8 +1149,6 @@ function downloadClientPDF() {
         doc.setLineWidth(0.4);
         doc.line(15, 280, 195, 280);
 
-
-        
         // Page numbers
         doc.setFont('helvetica', 'normal');
         doc.text(`Página ${i} de ${totalPages}`, 195, 285, { align: 'right' });
@@ -1669,6 +1480,7 @@ function updateStatusPieChart(ok, vencido, critico) {
             },
             options: {
                 responsive: true,
+                resizeDelay: 150,
                 maintainAspectRatio: false,
                 plugins: {
                     legend: { display: false },
@@ -1702,6 +1514,7 @@ function updateStatusPieChart(ok, vencido, critico) {
         },
         options: {
             responsive: true,
+            resizeDelay: 150,
             maintainAspectRatio: false,
             plugins: {
                 legend: { display: false },
@@ -1781,6 +1594,7 @@ function updateTrendChart(weeks, balances) {
         },
         options: {
             responsive: true,
+            resizeDelay: 150,
             maintainAspectRatio: false,
             layout: {
                 padding: {
@@ -1895,5 +1709,43 @@ function detectMobile() {
 window.addEventListener('resize', detectMobile);
 window.addEventListener('DOMContentLoaded', detectMobile);
 detectMobile();
+
+// Función para consultar e imprimir la fecha y hora de la última sincronización en tiempo real
+async function loadSyncStatus() {
+    try {
+        const res = await fetch('/api/sync-status');
+        if (!res.ok) return;
+        const status = await res.json();
+        
+        const formatSyncDate = (isoStr) => {
+            if (!isoStr) return 'Nunca';
+            const d = new Date(isoStr);
+            if (isNaN(d.getTime())) return 'Nunca';
+            
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = String(d.getFullYear()).slice(-2);
+            const hour = String(d.getHours()).padStart(2, '0');
+            const minute = String(d.getMinutes()).padStart(2, '0');
+            const second = String(d.getSeconds()).padStart(2, '0');
+            
+            return `${day}/${month}/${year} ${hour}:${minute}:${second}`;
+        };
+        
+        const aguasEl = document.getElementById('sync-time-aguas');
+        const pepsicoEl = document.getElementById('sync-time-pepsico');
+        const salliqueloEl = document.getElementById('sync-time-salliquelo');
+        const trenqueEl = document.getElementById('sync-time-trenque');
+        
+        if (aguasEl) aguasEl.textContent = formatSyncDate(status.Aguas);
+        if (pepsicoEl) pepsicoEl.textContent = formatSyncDate(status.PepsiCo);
+        if (salliqueloEl) salliqueloEl.textContent = formatSyncDate(status.Salliquelo);
+        if (trenqueEl) trenqueEl.textContent = formatSyncDate(status['Trenque Lauquen']);
+    } catch (e) {
+        console.error("Error al cargar estado de sincronización:", e);
+    }
+}
+
+
 
 

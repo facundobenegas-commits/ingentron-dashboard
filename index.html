@@ -6,7 +6,6 @@
     <title>Ingentron Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
@@ -56,7 +55,9 @@
                         </div>
                     </div>
                     <div>
-                        <h2 id="view-title">Dashboard</h2>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <h2 id="view-title">Dashboard</h2>
+                        </div>
                         <p id="view-subtitle">Resumen de cuentas corrientes</p>
                     </div>
                 </div>
@@ -258,10 +259,12 @@
                     <table class="invoice-table" id="invoices-table">
                     <thead>
                         <tr>
-                            <th>Comprobante</th>
-                            <th>Fecha</th>
-                            <th class="text-center">Estado</th>
-                            <th class="text-right">Importe</th>
+                            <th><i class="fas fa-file-invoice" style="margin-right: 6px; color: var(--accent-color); opacity: 0.9;"></i>Comprobante</th>
+                            <th><i class="fas fa-calendar-alt" style="margin-right: 6px; color: #bf5af2; opacity: 0.9;"></i>Fecha</th>
+                            <th class="text-center"><i class="fas fa-info-circle" style="margin-right: 6px; color: #64d2ff; opacity: 0.9;"></i>Estado</th>
+                            <th class="text-right"><i class="fas fa-dollar-sign" style="margin-right: 4px; color: #ffd60a; opacity: 0.9;"></i>Importe</th>
+                            <th class="text-right"><i class="fas fa-check-circle" style="margin-right: 4px; color: #30d158; opacity: 0.9;"></i>Canceló</th>
+                            <th class="text-right"><i class="fas fa-exclamation-circle" style="margin-right: 4px; color: #ff9f0a; opacity: 0.9;"></i>Pendiente</th>
                         </tr>
                     </thead>
                     <tbody id="invoices-tbody">
@@ -271,6 +274,27 @@
                 </table>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Sync Status Panel -->
+    <div id="sync-status-panel" class="glass-card" style="position: fixed; bottom: 20px; right: 20px; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; font-size: 10.5px; background: rgba(10, 10, 12, 0.4); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; backdrop-filter: blur(20px); z-index: 99; width: max-content; transition: opacity 0.3s; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+        <div style="font-weight: 600; opacity: 0.5; text-transform: uppercase; font-size: 8.5px; letter-spacing: 0.5px; margin-bottom: 2px;">ÚLTIMA SINCRONIZACIÓN</div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #0a84ff;"></span>
+            <span style="opacity: 0.85;">Calvo (Aguas): <span id="sync-time-aguas" style="font-weight: 500;">Cargando...</span></span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #bf5af2;"></span>
+            <span style="opacity: 0.85;">Gescom (PepsiCo): <span id="sync-time-pepsico" style="font-weight: 500;">Cargando...</span></span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #30d158;"></span>
+            <span style="opacity: 0.85;">Calvo (Salliqueló): <span id="sync-time-salliquelo" style="font-weight: 500;">Cargando...</span></span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #ffd60a;"></span>
+            <span style="opacity: 0.85;">Gescom (Trenque Lauquen): <span id="sync-time-trenque" style="font-weight: 500;">Cargando...</span></span>
         </div>
     </div>
 
@@ -286,6 +310,6 @@
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=4"></script>
 </body>
 </html>
