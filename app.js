@@ -395,10 +395,16 @@ const NORMALIZED_ACCOUNTS_TO_HIDE = new Set(
     Array.from(ACCOUNTS_TO_HIDE).map(code => String(code).trim().replace(/^0+/, ''))
 );
 
-function shouldHideAccount(clientCode) {
+function shouldHideAccount(clientCode, invoice) {
     const checkbox = document.getElementById('hide-compensar-checkbox');
     const isChecked = checkbox ? checkbox.checked : true;
     if (!isChecked) return false;
+
+    // Ocultar si el comprobante comienza con "RPX" (ej: "RPX 0001-00001234")
+    if (invoice && String(invoice).trim().toUpperCase().startsWith('RPX')) {
+        return true;
+    }
+
     if (!clientCode) return false;
     
     // Normalize input clientCode: convert to string, trim, and remove any leading zeros
@@ -428,7 +434,7 @@ function performDashboardUpdate() {
     if (currentWeekFilter === 'LATEST') {
         const applicableWeeks = new Set();
         globalData.forEach(item => {
-            if (shouldHideAccount(item.clientCode)) return;
+            if (shouldHideAccount(item.clientCode, item.invoice)) return;
             if (currentEmpresaFilter !== '') {
                 const allowed = empresaToOrigins[currentEmpresaFilter] || [];
                 if (!allowed.includes(item.origin)) return;
@@ -444,7 +450,7 @@ function performDashboardUpdate() {
 
     // Filter Data
     const filteredData = globalData.filter(item => {
-        if (shouldHideAccount(item.clientCode)) return false;
+        if (shouldHideAccount(item.clientCode, item.invoice)) return false;
         
         // Empresa filter
         if (currentEmpresaFilter !== '') {
@@ -515,7 +521,7 @@ function performDashboardUpdate() {
     
     // Group weekly balances for the trend chart depending on selected origin
     const dataForOrigin = globalData.filter(item => {
-        if (shouldHideAccount(item.clientCode)) return false;
+        if (shouldHideAccount(item.clientCode, item.invoice)) return false;
         if (currentEmpresaFilter !== '') {
             const allowedOrigins = empresaToOrigins[currentEmpresaFilter] || [];
             if (!allowedOrigins.includes(item.origin)) return false;
@@ -702,14 +708,14 @@ window.showInvoices = function(clientName) {
     // Filter invoices for this client with current dashboard filters
     const invoices = globalData.filter(item => {
         if (item.client !== clientName) return false;
-        if (shouldHideAccount(item.clientCode)) return false;
+        if (shouldHideAccount(item.clientCode, item.invoice)) return false;
         
         // Apply global origin filter if any
         if (currentOriginFilter !== '' && item.origin !== currentOriginFilter) return false;
         
         if (currentWeekFilter === 'LATEST') {
             const originWeeks = Array.from(new Set(globalData.filter(d => {
-                if (shouldHideAccount(d.clientCode)) return false;
+                if (shouldHideAccount(d.clientCode, d.invoice)) return false;
                 return d.origin === item.origin;
             }).map(d => d.week))).sort();
             const latestForThisOrigin = originWeeks[originWeeks.length - 1];
