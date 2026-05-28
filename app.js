@@ -528,8 +528,13 @@ function updateWeekSelectorForCurrentOrigin() {
         }
     });
     
-    weekEl.value = 'LATEST';
-    currentWeekFilter = 'LATEST';
+    if (weeksForOrigin.has('Tiempo Real')) {
+        weekEl.value = 'Tiempo Real';
+        currentWeekFilter = 'Tiempo Real';
+    } else {
+        weekEl.value = 'LATEST';
+        currentWeekFilter = 'LATEST';
+    }
     
     // Rebuild or build the custom dropdown for the week select
     if (weekEl._macRebuild) {
