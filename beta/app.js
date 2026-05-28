@@ -1687,6 +1687,25 @@ document.addEventListener('click', (event) => {
     }
 });
 
+// Mobile Filters Toggle Logic
+const mobileFilterToggle = document.getElementById('mobile-filter-toggle');
+if (mobileFilterToggle && filtersContainer) {
+    mobileFilterToggle.addEventListener('click', () => {
+        const isCollapsed = !filtersContainer.classList.contains('show-mobile');
+        if (isCollapsed) {
+            filtersContainer.classList.add('show-mobile');
+            mobileFilterToggle.classList.add('active');
+            mobileFilterToggle.querySelector('span').textContent = 'Ocultar Filtros';
+            mobileFilterToggle.querySelector('i').className = 'fas fa-chevron-up';
+        } else {
+            filtersContainer.classList.remove('show-mobile');
+            mobileFilterToggle.classList.remove('active');
+            mobileFilterToggle.querySelector('span').textContent = 'Mostrar Filtros';
+            mobileFilterToggle.querySelector('i').className = 'fas fa-filter';
+        }
+    });
+}
+
 // Close mobile sidebar drawer when selecting a navigation menu item
 const navItems = document.querySelectorAll('.nav-item');
 navItems.forEach(item => {

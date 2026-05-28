@@ -982,8 +982,65 @@ tbody tr:hover {
     }
 }
 
+/* Mobile filter toggle button - hidden on desktop */
+.mobile-filter-toggle-btn {
+    display: none;
+}
+
 /* Mobile: single column everything */
 @media (max-width: 640px) {
+    /* Toggle button for filters on mobile */
+    .mobile-filter-toggle-btn {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        padding: 10px 16px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        color: var(--text-primary);
+        font-weight: 600;
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        margin-top: 5px;
+    }
+    
+    .mobile-filter-toggle-btn:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(255, 255, 255, 0.15);
+    }
+    
+    .mobile-filter-toggle-btn.active {
+        background: rgba(10, 132, 255, 0.15);
+        border-color: var(--accent-color);
+        color: var(--accent-color);
+    }
+
+    /* Collapse selector group on mobile by default */
+    .selector-group:not(.show-mobile) {
+        display: none !important;
+    }
+    
+    /* Spacing and animations when active */
+    .selector-group.show-mobile {
+        margin-top: 10px;
+        animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-8px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
     :root {
         --sidebar-width: 0px;
     }
