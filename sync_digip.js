@@ -41,7 +41,7 @@ if (!fs.existsSync(screenshotsDir)) {
     fs.mkdirSync(screenshotsDir, { recursive: true });
 }
 
-// Helper para buscar el archivo de Excel más reciente y válido
+// Helper para buscar el archivo descargado más reciente y válido (Excel o CSV)
 function findNewestExcelFile(dir) {
     const files = fs.readdirSync(dir);
     let newestFile = null;
@@ -50,7 +50,7 @@ function findNewestExcelFile(dir) {
     for (const file of files) {
         const fullPath = path.join(dir, file);
         const ext = path.extname(file).toLowerCase();
-        if ((ext === '.xlsx' || ext === '.xls') && !file.startsWith('~$')) {
+        if ((ext === '.xlsx' || ext === '.xls' || ext === '.csv') && !file.startsWith('~$')) {
             const stats = fs.statSync(fullPath);
             if (stats.mtimeMs > newestTime) {
                 newestTime = stats.mtimeMs;
@@ -96,6 +96,102 @@ function parseExcelDate(val) {
     }
     
     return '';
+}
+
+// Parser de fechas robusto para formatos típicos en archivos CSV (DD/MM/YYYY)
+function parseCsvDate(val) {
+    if (!val) return '';
+    const clean = String(val).trim();
+    const match = clean.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (match) {
+        const day = match[1].padStart(2, '0');
+        const month = match[2].padStart(2, '0');
+        const year = match[3];
+        return `${year}-${month}-${day}`;
+    }
+    return '';
+}
+
+// Parseador de CSV robusto con delimitador punto y coma (;)
+function parseCsvContent(csvText) {
+    if (!csvText) return [];
+    
+    // Separar por saltos de línea (soportando LF y CRLF)
+    const lines = csvText.split(/\r?\n/);
+    if (lines.length === 0) return [];
+    
+    const headerLine = lines[0];
+    const headers = headerLine.split(';').map(h => {
+        let clean = h.trim();
+        if (clean.startsWith('"') && clean.endsWith('"')) {
+            clean = clean.slice(1, -1).trim();
+        }
+        return clean;
+    });
+    
+    // Encontrar índices de columnas ignorando diferencias de codificación y tildes
+    const colCodigoIdx = headers.findIndex(h => /ArticuloCodigo/i.test(h));
+    const colProductoIdx = headers.findIndex(h => /ArticuloDescrip/i.test(h));
+    const colVencIdx = headers.findIndex(h => /FechaVenc/i.test(h));
+    const colCantIdx = headers.findIndex(h => /Cantidad/i.test(h));
+    const colLoteIdx = headers.findIndex(h => /Lote/i.test(h));
+    
+    console.log(`[CSV Parser] Mapeos identificados:`);
+    console.log(` - Código:     Idx ${colCodigoIdx} ("${headers[colCodigoIdx] || ''}")`);
+    console.log(` - Producto:   Idx ${colProductoIdx} ("${headers[colProductoIdx] || ''}")`);
+    console.log(` - Vencimiento: Idx ${colVencIdx} ("${headers[colVencIdx] || ''}")`);
+    console.log(` - Cantidad:   Idx ${colCantIdx} ("${headers[colCantIdx] || ''}")`);
+    console.log(` - Lote:       Idx ${colLoteIdx} ("${headers[colLoteIdx] || ''}")`);
+    
+    if (colCodigoIdx === -1 || colProductoIdx === -1 || colCantIdx === -1) {
+        throw new Error("El archivo CSV no posee el formato de columnas requerido (ArticuloCodigo, ArticuloDescripcion/Descripción, Cantidad).");
+    }
+    
+    const parsedData = [];
+    for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        
+        const cells = line.split(';').map(c => {
+            let clean = c.trim();
+            if (clean.startsWith('"') && clean.endsWith('"')) {
+                clean = clean.slice(1, -1).trim();
+            }
+            return clean;
+        });
+        
+        const codigo = colCodigoIdx < cells.length ? cells[colCodigoIdx] : '';
+        const producto = colProductoIdx < cells.length ? cells[colProductoIdx] : 'Sin Nombre';
+        const lote = (colLoteIdx !== -1 && colLoteIdx < cells.length) ? cells[colLoteIdx] : 'S/L';
+        const cantidadRaw = colCantIdx < cells.length ? cells[colCantIdx] : '0';
+        const cantidad = parseFloat(cantidadRaw.replace(',', '.')) || 0;
+        const vencRaw = colVencIdx < cells.length ? cells[colVencIdx] : '';
+        const fechaVencimiento = parseCsvDate(vencRaw);
+        
+        if (!codigo && producto === 'Sin Nombre') continue;
+        
+        // Asignación de categorías inteligente
+        let categoria = 'Almacén';
+        const prodLower = producto.toLowerCase();
+        if (/queso|lact|yog|manteca|crema|leche/i.test(prodLower)) {
+            categoria = 'Lácteos';
+        } else if (/bebida|coca|fanta|sprite|cerveza|agua|gaseosa|jugo/i.test(prodLower)) {
+            categoria = 'Bebidas';
+        } else if (/jam[oó]n|salame|fiambr|mortadela|panceta/i.test(prodLower)) {
+            categoria = 'Fiambrería';
+        }
+        
+        parsedData.push({
+            codigo,
+            producto,
+            categoria,
+            lote: lote || 'S/L',
+            cantidad,
+            fechaVencimiento
+        });
+    }
+    
+    return parsedData;
 }
 
 // Proceso principal de Scraping y Carga
@@ -257,68 +353,75 @@ async function runDigipScraper() {
         }
 
         if (!excelDescargado) {
-            throw new Error("Tiempo de espera agotado sin detectar el archivo de Excel descargado.");
+            throw new Error("Tiempo de espera agotado sin detectar el archivo descargado (Excel o CSV).");
         }
-        console.log(`[Parser] ¡Excel detectado en disco!: ${excelDescargado}`);
+        console.log(`[Parser] ¡Archivo detectado en disco!: ${excelDescargado}`);
 
-        // Leer y procesar el reporte de Excel usando XLSX
-        console.log(`[Parser] Procesando y parseando hoja de cálculo...`);
-        const workbook = XLSX.readFile(excelDescargado);
-        const firstSheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[firstSheetName];
-        const filasPlanas = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+        const extDesc = path.extname(excelDescargado).toLowerCase();
+        let stockResult = [];
 
-        console.log(`[Parser] Leidas ${filasPlanas.length} filas del archivo Excel.`);
+        if (extDesc === '.csv') {
+            console.log(`[Parser] Detectado formato CSV. Procesando y parseando con parseCsvContent...`);
+            const csvText = fs.readFileSync(excelDescargado, 'utf8');
+            stockResult = parseCsvContent(csvText);
+        } else {
+            console.log(`[Parser] Detectado formato Excel. Procesando y parseando con XLSX...`);
+            const workbook = XLSX.readFile(excelDescargado);
+            const firstSheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[firstSheetName];
+            const filasPlanas = XLSX.utils.sheet_to_json(sheet, { defval: "" });
 
-        const stockResult = [];
-        if (filasPlanas.length > 0) {
-            // Analizar la primera fila para identificar indices/columnas de forma dinámica e insensible a mayusculas
-            const primerRegistro = filasPlanas[0];
-            const columnasDisponibles = Object.keys(primerRegistro);
+            console.log(`[Parser] Leidas ${filasPlanas.length} filas del archivo Excel.`);
 
-            const colCodigo = columnasDisponibles.find(k => /ean|bar|c[oó]digo.*bar|c[oó]digo/i.test(k));
-            const colProducto = columnasDisponibles.find(k => /descrip|prod|art[ií]culo|nombre/i.test(k));
-            const colLote = columnasDisponibles.find(k => /lote|partida|batch/i.test(k));
-            const colCantidad = columnasDisponibles.find(k => /cant|stock|fisico|dispon|unidades/i.test(k));
-            const colVencimiento = columnasDisponibles.find(k => /venc|f\..*venc|caducidad|expir/i.test(k));
+            if (filasPlanas.length > 0) {
+                // Analizar la primera fila para identificar indices/columnas de forma dinámica e insensible a mayusculas
+                const primerRegistro = filasPlanas[0];
+                const columnasDisponibles = Object.keys(primerRegistro);
 
-            console.log(`[Parser] Mapeos dinamicos de columnas resueltos:`);
-            console.log(` - EAN/Código:    "${colCodigo || 'No detectado'}"`);
-            console.log(` - Producto/Desc: "${colProducto || 'No detectado'}"`);
-            console.log(` - Lote/Partida:  "${colLote || 'No detectado'}"`);
-            console.log(` - Cantidad/Stk:  "${colCantidad || 'No detectado'}"`);
-            console.log(` - Vencimiento:   "${colVencimiento || 'No detectado'}"`);
+                const colCodigo = columnasDisponibles.find(k => /ean|bar|c[oó]digo.*bar|c[oó]digo/i.test(k));
+                const colProducto = columnasDisponibles.find(k => /descrip|prod|art[ií]culo|nombre/i.test(k));
+                const colLote = columnasDisponibles.find(k => /lote|partida|batch/i.test(k));
+                const colCantidad = columnasDisponibles.find(k => /cant|stock|fisico|dispon|unidades/i.test(k));
+                const colVencimiento = columnasDisponibles.find(k => /venc|f\..*venc|caducidad|expir/i.test(k));
 
-            for (const row of filasPlanas) {
-                const codigo = colCodigo ? String(row[colCodigo]).trim() : '';
-                const producto = colProducto ? String(row[colProducto]).trim() : 'Sin Nombre';
-                const lote = colLote ? String(row[colLote]).trim() : 'S/L';
-                const cantidad = colCantidad ? parseFloat(row[colCantidad]) || 0 : 0;
-                const vencRaw = colVencimiento ? row[colVencimiento] : '';
-                const fechaVencimiento = parseExcelDate(vencRaw);
+                console.log(`[Parser] Mapeos dinamicos de columnas resueltos:`);
+                console.log(` - EAN/Código:    "${colCodigo || 'No detectado'}"`);
+                console.log(` - Producto/Desc: "${colProducto || 'No detectado'}"`);
+                console.log(` - Lote/Partida:  "${colLote || 'No detectado'}"`);
+                console.log(` - Cantidad/Stk:  "${colCantidad || 'No detectado'}"`);
+                console.log(` - Vencimiento:   "${colVencimiento || 'No detectado'}"`);
 
-                // Omitir filas invalidas o vacias
-                if (!codigo && producto === 'Sin Nombre') continue;
+                for (const row of filasPlanas) {
+                    const codigo = colCodigo ? String(row[colCodigo]).trim() : '';
+                    const producto = colProducto ? String(row[colProducto]).trim() : 'Sin Nombre';
+                    const lote = colLote ? String(row[colLote]).trim() : 'S/L';
+                    const cantidad = colCantidad ? parseFloat(row[colCantidad]) || 0 : 0;
+                    const vencRaw = colVencimiento ? row[colVencimiento] : '';
+                    const fechaVencimiento = parseExcelDate(vencRaw);
 
-                // Categoria inteligente basada en palabras clave
-                let categoria = 'Almacén';
-                const prodLower = producto.toLowerCase();
-                if (/queso|lact|yog|manteca|crema|leche/i.test(prodLower)) {
-                    categoria = 'Lácteos';
-                } else if (/bebida|coca|fanta|sprite|cerveza|agua|gaseosa|jugo/i.test(prodLower)) {
-                    categoria = 'Bebidas';
-                } else if (/jam[oó]n|salame|fiambr|mortadela|panceta/i.test(prodLower)) {
-                    categoria = 'Fiambrería';
+                    // Omitir filas invalidas o vacias
+                    if (!codigo && producto === 'Sin Nombre') continue;
+
+                    // Categoria inteligente basada en palabras clave
+                    let categoria = 'Almacén';
+                    const prodLower = producto.toLowerCase();
+                    if (/queso|lact|yog|manteca|crema|leche/i.test(prodLower)) {
+                        categoria = 'Lácteos';
+                    } else if (/bebida|coca|fanta|sprite|cerveza|agua|gaseosa|jugo/i.test(prodLower)) {
+                        categoria = 'Bebidas';
+                    } else if (/jam[oó]n|salame|fiambr|mortadela|panceta/i.test(prodLower)) {
+                        categoria = 'Fiambrería';
+                    }
+
+                    stockResult.push({
+                        codigo,
+                        producto,
+                        categoria,
+                        lote,
+                        cantidad,
+                        fechaVencimiento
+                    });
                 }
-
-                stockResult.push({
-                    codigo,
-                    producto,
-                    categoria,
-                    lote,
-                    cantidad,
-                    fechaVencimiento
-                });
             }
         }
 

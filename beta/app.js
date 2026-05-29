@@ -1790,6 +1790,7 @@ const fallbackStockData = [
 ];
 
 let stockData = [...fallbackStockData];
+let stockHistory = {};
 let isRealStockLoaded = false;
 
 // Función asíncrona para cargar stock real del backend
@@ -1798,9 +1799,21 @@ async function loadRealStockData() {
         const response = await fetch('/api/stock');
         if (response.ok) {
             const data = await response.json();
-            if (Array.isArray(data) && data.length > 0) {
+            
+            let rawList = [];
+            if (Array.isArray(data)) {
+                // Formato antiguo
+                rawList = data;
+                stockHistory = {};
+            } else if (data && Array.isArray(data.current)) {
+                // Nuevo formato estructurado con histórico
+                rawList = data.current;
+                stockHistory = data.history || {};
+            }
+            
+            if (rawList.length > 0) {
                 // Mapear campos normalizándolos por robustez
-                stockData = data.map(item => ({
+                stockData = rawList.map(item => ({
                     codigo: String(item.codigo || item.ean || '').trim(),
                     producto: String(item.producto || item.descripcion || 'Sin Nombre').trim(),
                     categoria: String(item.categoria || 'Almacén').trim(),
@@ -1819,8 +1832,70 @@ async function loadRealStockData() {
     // Fallback si no hay datos o falló la conexión
     if (!isRealStockLoaded) {
         stockData = [...fallbackStockData];
+        stockHistory = {};
     }
     return false;
+}
+
+// Helper para calcular la variación de cantidad respecto al snapshot anterior
+function getStockVariation(item) {
+    if (!stockHistory || Object.keys(stockHistory).length === 0) return '';
+    
+    // Obtener fechas disponibles en el histórico
+    const availableDates = Object.keys(stockHistory).sort();
+    if (availableDates.length === 0) return '';
+    
+    // Encontrar el último snapshot histórico anterior a la fecha de hoy ("2026-05-29")
+    let prevDate = '';
+    for (let i = availableDates.length - 1; i >= 0; i--) {
+        if (availableDates[i] < '2026-05-29') {
+            prevDate = availableDates[i];
+            break;
+        }
+    }
+    
+    if (!prevDate) return '';
+    
+    const yesterdayData = stockHistory[prevDate] || [];
+    const key = `${String(item.codigo).trim()}_${String(item.fechaVencimiento).trim()}`;
+    
+    // Cachear el mapa de cantidades del día anterior
+    if (!window.yesterdayQtyMap || window.yesterdayQtyMapDate !== prevDate) {
+        window.yesterdayQtyMap = new Map();
+        yesterdayData.forEach(yItem => {
+            const yKey = `${String(yItem.codigo || yItem.ean || '').trim()}_${String(yItem.fechaVencimiento || yItem.vencimiento || '').trim()}`;
+            const currentQty = window.yesterdayQtyMap.get(yKey) || 0;
+            window.yesterdayQtyMap.set(yKey, currentQty + parseFloat(yItem.cantidad || 0));
+        });
+        window.yesterdayQtyMapDate = prevDate;
+    }
+    
+    // Cachear el mapa de cantidades de hoy agrupado por codigo+vencimiento para comparar correctamente
+    if (!window.todayQtyMap) {
+        window.todayQtyMap = new Map();
+        stockData.forEach(tItem => {
+            const tKey = `${String(tItem.codigo).trim()}_${String(tItem.fechaVencimiento).trim()}`;
+            const currentQty = window.todayQtyMap.get(tKey) || 0;
+            window.todayQtyMap.set(tKey, currentQty + parseFloat(tItem.cantidad || 0));
+        });
+    }
+    
+    const yesterdayTotal = window.yesterdayQtyMap.get(key);
+    if (yesterdayTotal === undefined) {
+        // Artículo nuevo
+        return `<span style="font-size: 10px; color: #60a5fa; background: rgba(96, 165, 250, 0.15); border: 1px solid rgba(96, 165, 250, 0.25); padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; font-weight: 500;"><i class="fas fa-plus-circle"></i> Nuevo</span>`;
+    }
+    
+    const todayTotal = window.todayQtyMap.get(key) || 0;
+    const variation = todayTotal - yesterdayTotal;
+    
+    if (variation > 0) {
+        return `<span class="badge badge-ok" style="font-size: 10px; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; font-weight: 600;"><i class="fas fa-arrow-up"></i> +${variation}</span>`;
+    } else if (variation < 0) {
+        return `<span class="badge badge-expired" style="font-size: 10px; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; font-weight: 600;"><i class="fas fa-arrow-down"></i> ${variation}</span>`;
+    } else {
+        return `<span class="badge" style="font-size: 10px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: rgba(255, 255, 255, 0.4); padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; font-weight: 500;"><i class="fas fa-minus"></i> Sin cambios</span>`;
+    }
 }
 
 // Helper para calcular días restantes entre la fecha actual y la de vencimiento (Referencia: 29/05/2026)
@@ -1873,6 +1948,8 @@ function updateStockKPIs() {
 
 // Renderizado dinámico de la tabla de stock
 function renderStockTable() {
+    window.todayQtyMap = null; // Reiniciar mapa de hoy para recálculo dinámico en cada dibujado
+    
     const tbody = document.getElementById('stock-table-body');
     if (!tbody) return;
     
@@ -1922,7 +1999,10 @@ function renderStockTable() {
             </td>
             <td>
                 <div style="font-weight: 500;">${item.lote}</div>
-                <div style="font-size: 11px; opacity: 0.65; margin-top: 2px;">${item.cantidad} un.</div>
+                <div style="font-size: 11px; opacity: 0.85; margin-top: 2px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
+                    <strong>${item.cantidad} un.</strong>
+                    ${getStockVariation(item)}
+                </div>
             </td>
             <td>${formatDateToES(item.fechaVencimiento)}</td>
             <td style="font-weight: 600; color: ${days <= 30 ? '#f87171' : 'inherit'};">${daysText}</td>

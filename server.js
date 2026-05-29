@@ -337,7 +337,31 @@ app.post('/api/update-stock', express.json({ limit: '15mb' }), (req, res) => {
         syncStatus.Digip = new Date().toISOString();
         fs.writeFileSync(statusPath, JSON.stringify(syncStatus));
         
-        console.log(`[Stock Sync] Recibidos ${payload.length} lotes de stock de Digip WMS.`);
+        // --- GUARDAR EN HISTÓRICO DIARIO (Zona horaria Argentina UTC-3) ---
+        const localDate = new Date(new Date().getTime() - 3 * 3600 * 1000);
+        const todayStr = localDate.toISOString().split('T')[0];
+        
+        const historyPath = path.join(__dirname, 'stock_history.json');
+        let history = {};
+        if (fs.existsSync(historyPath)) {
+            try {
+                history = JSON.parse(fs.readFileSync(historyPath, 'utf8')) || {};
+            } catch (err) {}
+        }
+        
+        history[todayStr] = payload;
+        
+        // Mantener solo los últimos 15 días de capturas para optimizar disco
+        const dates = Object.keys(history).sort();
+        if (dates.length > 15) {
+            const datesToRemove = dates.slice(0, dates.length - 15);
+            for (const d of datesToRemove) {
+                delete history[d];
+            }
+        }
+        fs.writeFileSync(historyPath, JSON.stringify(history));
+        
+        console.log(`[Stock Sync] Recibidos ${payload.length} lotes de stock de Digip WMS. Guardado en histórico del día: ${todayStr}.`);
         res.json({ success: true, count: payload.length });
     } catch (err) {
         console.error("Error escribiendo archivo de caché de stock:", err);
@@ -348,15 +372,28 @@ app.post('/api/update-stock', express.json({ limit: '15mb' }), (req, res) => {
 // Endpoint GET para servir el stock consolidado (usado por el dashboard beta)
 app.get('/api/stock', (req, res) => {
     const cachePath = path.join(__dirname, 'stock_cache.json');
+    const historyPath = path.join(__dirname, 'stock_history.json');
+    
+    let current = [];
+    let history = {};
+    
     if (fs.existsSync(cachePath)) {
         try {
-            const data = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
-            return res.json(data);
+            current = JSON.parse(fs.readFileSync(cachePath, 'utf8')) || [];
         } catch (err) {
             console.error("Error leyendo caché de stock:", err.message);
         }
     }
-    res.json([]);
+    
+    if (fs.existsSync(historyPath)) {
+        try {
+            history = JSON.parse(fs.readFileSync(historyPath, 'utf8')) || {};
+        } catch (err) {
+            console.error("Error leyendo histórico de stock:", err.message);
+        }
+    }
+    
+    res.json({ current, history });
 });
 
 // Endpoint para consultar el estado de la última sincronización de los servidores locales
