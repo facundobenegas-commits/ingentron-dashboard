@@ -7,6 +7,7 @@ servidor_deploy_gescom/config.json
 servidor_deploy_salliquelo/config.json
 servidor_deploy_calvo/config.json
 servidor_deploy_trenque/config.json
+servidor_deploy_digip/config.json
 
 # Descargas temporales del bot RPA
 downloads/

@@ -1761,11 +1761,13 @@ async function loadSyncStatus() {
         const pepsicoEl = document.getElementById('sync-time-pepsico');
         const salliqueloEl = document.getElementById('sync-time-salliquelo');
         const trenqueEl = document.getElementById('sync-time-trenque');
+        const digipEl = document.getElementById('sync-time-digip');
         
         if (aguasEl) aguasEl.textContent = formatSyncDate(status.Aguas);
         if (pepsicoEl) pepsicoEl.textContent = formatSyncDate(status.PepsiCo);
         if (salliqueloEl) salliqueloEl.textContent = formatSyncDate(status.Salliquelo);
         if (trenqueEl) trenqueEl.textContent = formatSyncDate(status['Trenque Lauquen']);
+        if (digipEl) digipEl.textContent = formatSyncDate(status.Digip);
     } catch (e) {
         console.error("Error al cargar estado de sincronización:", e);
     }

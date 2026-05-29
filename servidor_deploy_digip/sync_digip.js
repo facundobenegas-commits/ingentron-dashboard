@@ -506,14 +506,14 @@ function getMsUntilMidnight() {
 
 // Bucle inteligente de ejecución diaria a las 00:00 hs
 async function scheduleDailySync() {
-    console.log(`=============================================================`);
-    console.log(`🔄 SINCRONIZADOR DE VENCIMIENTOS DE STOCK - DIGIP WMS (RPA)`);
-    console.log(`Modo: Bucle Continuo - Sincronizacion diaria a las 00:00 hs`);
+    console.log("=============================================================");
+    console.log("🔄 SINCRONIZADOR DE VENCIMIENTOS DE STOCK - DIGIP WMS (RPA)");
+    console.log("Modo: Bucle Continuo - Sincronizacion diaria a las 00:00 hs");
     console.log(`URL Destino Render: ${config.syncUrl}`);
-    console.log(`=============================================================`);
+    console.log("=============================================================");
     
     // 1. Ejecutar inmediatamente al iniciar el proceso
-    console.log(`\n[Programador] Ejecutando sincronización de arranque inicial...`);
+    console.log("\n[Programador] Ejecutando sincronización de arranque inicial...");
     await runDigipScraper();
     
     // 2. Iniciar el bucle diario auto-calculable
@@ -521,11 +521,11 @@ async function scheduleDailySync() {
         const delayMs = getMsUntilMidnight();
         
         setTimeout(async () => {
-            console.log(`\n[Programador] ¡Es medianoche (00:00 hs)! Iniciando ciclo automático de stock...`);
+            console.log("\n[Programador] ¡Es medianoche (00:00 hs)! Iniciando ciclo automático de stock...");
             try {
                 await runDigipScraper();
             } catch (err) {
-                console.error(`[Programador] Error durante la ejecución del corte diario:`, err.message);
+                console.error("[Programador] Error durante la ejecución del corte diario:", err.message);
             }
             // Programar el siguiente corte diario de forma recursiva
             runNext();

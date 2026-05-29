@@ -3,7 +3,7 @@ title Sincronizador Ingentron - Control de Stock Digip WMS
 color 0e
 
 echo ======================================================================
-echo      Sincronizador Ingentron - Control de Stock Digip WMS (Gescom PC)
+echo      Sincronizador Ingentron - Control de Stock Digip WMS (RPA)
 echo ======================================================================
 echo.
 echo * Automatizando la extraccion de stock desde Digip WMS e integrando...
