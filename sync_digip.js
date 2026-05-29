@@ -212,42 +212,24 @@ async function runDigipScraper() {
             console.log(`[RPA] Sesion activa o acceso directo correcto. Saltando login.`);
         }
 
-        // Navegar explícitamente si por alguna razón no estamos en la sección de Stock
-        if (!page.url().includes('/Reportes/Stock')) {
-            console.log(`[RPA] Redirigiendo explicitamente a la url de stock...`);
-            await page.goto('https://app.digipwms.com/Reportes/Stock', {
-                waitUntil: 'networkidle2',
-                timeout: 30000
-            });
-        }
-
-        console.log(`[RPA] Esperando la renderizacion completa del listado de Stock...`);
-        await delay(5000); // 5 segundos para que se carguen tablas dinámicas o llamadas ajax
-
-        // Registrar archivos existentes en la carpeta de descargas antes de clickear para detectar el nuevo archivo
+        // Registrar archivos existentes en la carpeta de descargas antes de iniciar la descarga
         const archivoInicial = findNewestExcelFile(downloadDir);
         const archivoInicialTime = archivoInicial ? fs.statSync(archivoInicial).mtimeMs : 0;
 
-        console.log(`[RPA] Localizando y presionando el boton de exportacion a Excel...`);
-        const seHizoClick = await page.evaluate(() => {
-            const botones = Array.from(document.querySelectorAll('button, a, input[type="button"], .btn'));
-            const target = botones.find(b => {
-                const text = (b.innerText || b.value || '').toLowerCase();
-                const cumpleTexto = text.includes('excel') || text.includes('exportar') || text.includes('descargar');
-                const cumpleIcono = b.querySelector('.fa-file-excel') || b.querySelector('.fa-download') || b.className.includes('excel') || b.id.includes('excel');
-                return cumpleTexto || cumpleIcono;
+        // Optimización masiva: Acceder directamente a la URL de descarga de Excel para mayor rapidez y estabilidad
+        const DIRECT_DOWNLOAD_URL = 'https://app.digipwms.com/Reportes/Stock/DescargarStockDetalle?AreaId=0&PropiedadDetalleId=0&ArticuloId=0';
+        console.log(`[RPA] Descargando Excel de stock directamente desde: ${DIRECT_DOWNLOAD_URL}`);
+        
+        try {
+            await page.goto(DIRECT_DOWNLOAD_URL, {
+                waitUntil: 'networkidle2',
+                timeout: 30000
             });
-            if (target) {
-                target.click();
-                return true;
-            }
-            return false;
-        });
-
-        if (!seHizoClick) {
-            throw new Error("No se pudo localizar el boton de exportacion a Excel en la interfaz de Digip WMS.");
+        } catch (gotoErr) {
+            // Nota: En Puppeteer, navegar a un enlace de descarga de archivo directo a veces lanza un error de navegacion abortada.
+            // Esto es normal y esperado ya que Chromium no renderiza una pagina HTML, sino que descarga el archivo.
+            console.log(`[RPA] Descarga directa iniciada (Navegacion finalizada: ${gotoErr.message})`);
         }
-        console.log(`[RPA] Boton de exportacion clickeado con exito.`);
 
         // Esperar la descarga del Excel
         console.log(`[RPA] Esperando que se complete la descarga del reporte...`);
