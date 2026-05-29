@@ -32,10 +32,13 @@ exit /b
 :: Verificar si existe node_modules, si no, goto a install
 if exist node_modules goto :node_modules_ok
 echo [INFO] No se encontro la carpeta node_modules. Instalando dependencias necesarias (Puppeteer + SheetJS)...
+set PUPPETEER_SKIP_DOWNLOAD=true
 call npm install
+set PUPPETEER_SKIP_DOWNLOAD=
 if errorlevel 1 goto :install_error
 echo [INFO] Descargando e instalando el navegador Chromium de Puppeteer...
-call npx puppeteer browsers install chrome
+rmdir /s /q "%USERPROFILE%\.cache\puppeteer" 2>nul
+call npx puppeteer install chrome
 echo [INFO] Dependencias instaladas con exito.
 echo.
 goto :node_modules_ok
@@ -54,8 +57,10 @@ if /i "%rta_clean%"=="S" (
     echo [INFO] Limpiando cache corrupta de Puppeteer en %USERPROFILE%\.cache\puppeteer...
     rmdir /s /q "%USERPROFILE%\.cache\puppeteer" 2>nul
     echo.
-    echo [INFO] Reintentando instalacion fresca...
+    echo [INFO] Reintentando instalacion fresca sin descargas automaticas...
+    set PUPPETEER_SKIP_DOWNLOAD=true
     call npm install
+    set PUPPETEER_SKIP_DOWNLOAD=
     if errorlevel 1 (
         echo.
         echo [ERROR] Volvio a fallar. Por favor revise su conexion de red.
@@ -64,7 +69,7 @@ if /i "%rta_clean%"=="S" (
     )
     echo.
     echo [INFO] Instalando el navegador Chromium en la cache limpia...
-    call npx puppeteer browsers install chrome
+    call npx puppeteer install chrome
     echo.
     echo [INFO] Dependencias y navegador instalados con exito!
     echo.
@@ -99,7 +104,7 @@ if /i "%rta%"=="S" (
     rmdir /s /q "%USERPROFILE%\.cache\puppeteer" 2>nul
     echo.
     echo [INFO] Descargando e instalando Chromium de forma automatica...
-    call npx puppeteer browsers install chrome
+    call npx puppeteer install chrome
     echo.
     echo [INFO] Instalacion finalizada. Reejecutando el sincronizador...
     echo.
