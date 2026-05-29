@@ -481,14 +481,59 @@ async function runDigipScraper() {
     }
 }
 
-// Loop de Sincronizacion
-const INTERVALO_MILISEGUNDOS = config.intervalHours * 60 * 60 * 1000;
-console.log(`=============================================================`);
-console.log(`🔄 SINCRONIZADOR DE VENCIMIENTOS DE STOCK - DIGIP WMS (RPA)`);
-console.log(`Intervalo de sincronizacion: cada ${config.intervalHours} horas.`);
-console.log(`URL Destino Render: ${config.syncUrl}`);
-console.log(`=============================================================`);
+// Función para calcular los milisegundos restantes hasta el próximo corte diario (00:00:00 hs de Argentina, UTC-3)
+function getMsUntilMidnight() {
+    const now = new Date();
+    const argOffset = -3; // UTC-3 para Argentina
+    
+    // Obtener fecha y hora desplazada a la zona horaria de Argentina
+    const nowArg = new Date(now.getTime() + (argOffset * 60 + now.getTimezoneOffset()) * 60 * 1000);
+    
+    // Crear el objeto de fecha para la medianoche del día siguiente
+    const midnightArg = new Date(nowArg);
+    midnightArg.setDate(nowArg.getDate() + 1);
+    midnightArg.setHours(0, 0, 0, 0);
+    
+    // Calcular diferencia en tiempo absoluto real
+    const diffMs = midnightArg.getTime() - nowArg.getTime();
+    
+    console.log(`[Programador] Hora actual local (Arg): ${nowArg.toLocaleString()}`);
+    console.log(`[Programador] Siguiente corte diario programado (Arg): ${midnightArg.toLocaleString()}`);
+    console.log(`[Programador] Tiempo restante hasta el corte diario: ${Math.round(diffMs / 1000 / 60)} minutos.`);
+    
+    return diffMs;
+}
 
-// Primer ejecucion al levantar y programar intervalo continuo
-runDigipScraper();
-setInterval(runDigipScraper, INTERVALO_MILISEGUNDOS);
+// Bucle inteligente de ejecución diaria a las 00:00 hs
+async function scheduleDailySync() {
+    console.log(`=============================================================`);
+    console.log(`🔄 SINCRONIZADOR DE VENCIMIENTOS DE STOCK - DIGIP WMS (RPA)`);
+    console.log(`Modo: Bucle Continuo - Sincronizacion diaria a las 00:00 hs`);
+    console.log(`URL Destino Render: ${config.syncUrl}`);
+    console.log(`=============================================================`);
+    
+    // 1. Ejecutar inmediatamente al iniciar el proceso
+    console.log(`\n[Programador] Ejecutando sincronización de arranque inicial...`);
+    await runDigipScraper();
+    
+    // 2. Iniciar el bucle diario auto-calculable
+    const runNext = () => {
+        const delayMs = getMsUntilMidnight();
+        
+        setTimeout(async () => {
+            console.log(`\n[Programador] ¡Es medianoche (00:00 hs)! Iniciando ciclo automático de stock...`);
+            try {
+                await runDigipScraper();
+            } catch (err) {
+                console.error(`[Programador] Error durante la ejecución del corte diario:`, err.message);
+            }
+            // Programar el siguiente corte diario de forma recursiva
+            runNext();
+        }, delayMs);
+    };
+    
+    runNext();
+}
+
+// Iniciar programador continuo
+scheduleDailySync();
