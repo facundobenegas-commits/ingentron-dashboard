@@ -89,11 +89,14 @@ exit /b
 :sync_error
 echo.
 echo [ALERTA] El sincronizador se detuvo con errores.
-echo Es probable que falte el navegador Chromium en la cache de Puppeteer.
+echo Es probable que falte el navegador Chromium o este corrupto en la cache.
 echo.
-echo Desea intentar instalar/descargar el navegador Chromium ahora mismo?
-set /p rta="Escriba 'S' para instalar de forma automatica, o pulse Enter para salir: "
+echo Desea intentar limpiar la cache corrupta y descargar Chromium ahora mismo?
+set /p rta="Escriba 'S' para limpiar cache e instalar, o pulse Enter para salir: "
 if /i "%rta%"=="S" (
+    echo.
+    echo [INFO] Limpiando cache corrupta de Puppeteer en %USERPROFILE%\.cache\puppeteer...
+    rmdir /s /q "%USERPROFILE%\.cache\puppeteer" 2>nul
     echo.
     echo [INFO] Descargando e instalando Chromium de forma automatica...
     call npx puppeteer browsers install chrome
