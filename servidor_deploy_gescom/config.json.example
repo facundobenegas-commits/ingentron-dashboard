@@ -1,0 +1,17 @@
+{
+  "comment_1": "=========================================================================",
+  "comment_2": "INSTRUCCIONES DE CONFIGURACION DEL BOT DE STOCK (DIGIP WMS)",
+  "comment_3": "1. Cambie el nombre de este archivo de 'config.json.example' a 'config.json'.",
+  "comment_4": "2. Complete las variables 'digipUser' y 'digipPass' con sus datos de Digip WMS.",
+  "comment_5": "3. Si desea ver el navegador abrirse para depurar, configure 'headless' en false.",
+  "comment_6": "4. El intervalo por defecto es cada 2 horas.",
+  "comment_7": "=========================================================================",
+  
+  "digipUser": "ingrese_aqui_su_usuario_de_digip",
+  "digipPass": "ingrese_aqui_su_contraseña_de_digip",
+  "syncToken": "TokenIngentronSeguro2026",
+  "syncUrl": "https://ingentron.onrender.com/api/update-stock",
+  "intervalHours": 2,
+  "headless": true,
+  "downloadPath": "./downloads"
+}

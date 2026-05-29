@@ -307,6 +307,58 @@ app.post('/api/update-saldos', express.json({ limit: '15mb' }), (req, res) => {
     }
 });
 
+// --- SISTEMA DE CONTROL DE VENCIMIENTOS DE STOCK (DIGIP WMS NUBE) ---
+
+// Endpoint POST para recibir actualizaciones de stock desde el bot rpa
+app.post('/api/update-stock', express.json({ limit: '15mb' }), (req, res) => {
+    const clientToken = req.headers['x-sync-token'];
+    if (clientToken !== SYNC_TOKEN) {
+        console.warn("[Stock Sync] Intento de sincronización no autorizado.");
+        return res.status(401).json({ error: "No autorizado" });
+    }
+    
+    const payload = req.body;
+    if (!Array.isArray(payload)) {
+        return res.status(400).json({ error: "El payload debe ser un array de stock." });
+    }
+    
+    try {
+        const cachePath = path.join(__dirname, 'stock_cache.json');
+        fs.writeFileSync(cachePath, JSON.stringify(payload));
+        
+        // Registrar hora de sinc de Digip
+        const statusPath = path.join(__dirname, 'sync_status.json');
+        let syncStatus = { Aguas: null, PepsiCo: null, 'Trenque Lauquen': null, Salliquelo: null, Digip: null };
+        if (fs.existsSync(statusPath)) {
+            try {
+                syncStatus = JSON.parse(fs.readFileSync(statusPath, 'utf8')) || syncStatus;
+            } catch (err) {}
+        }
+        syncStatus.Digip = new Date().toISOString();
+        fs.writeFileSync(statusPath, JSON.stringify(syncStatus));
+        
+        console.log(`[Stock Sync] Recibidos ${payload.length} lotes de stock de Digip WMS.`);
+        res.json({ success: true, count: payload.length });
+    } catch (err) {
+        console.error("Error escribiendo archivo de caché de stock:", err);
+        res.status(500).json({ error: "Error interno al escribir caché de stock." });
+    }
+});
+
+// Endpoint GET para servir el stock consolidado (usado por el dashboard beta)
+app.get('/api/stock', (req, res) => {
+    const cachePath = path.join(__dirname, 'stock_cache.json');
+    if (fs.existsSync(cachePath)) {
+        try {
+            const data = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+            return res.json(data);
+        } catch (err) {
+            console.error("Error leyendo caché de stock:", err.message);
+        }
+    }
+    res.json([]);
+});
+
 // Endpoint para consultar el estado de la última sincronización de los servidores locales
 app.get('/api/sync-status', (req, res) => {
     const statusPath = path.join(__dirname, 'sync_status.json');

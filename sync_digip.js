@@ -1,0 +1,409 @@
+const puppeteer = require('puppeteer');
+const XLSX = require('xlsx');
+const fs = require('fs');
+const path = require('path');
+
+// Helper para retardo
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+// Cargar configuración local de config.json, variables de entorno o fallbacks
+let config = {
+    digipUser: process.env.DIGIP_USER || 'usuario_placeholder',
+    digipPass: process.env.DIGIP_PASS || 'pass_placeholder',
+    syncToken: process.env.SYNC_TOKEN || 'TokenIngentronSeguro2026',
+    syncUrl: 'https://ingentron.onrender.com/api/update-stock',
+    intervalHours: 2,
+    headless: true,
+    downloadPath: './downloads'
+};
+
+const configPath = path.join(__dirname, 'config.json');
+if (fs.existsSync(configPath)) {
+    try {
+        const loadedConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        config = { ...config, ...loadedConfig };
+        console.log(`[Config] Archivo config.json cargado correctamente.`);
+    } catch (e) {
+        console.error(`[Config] Error parseando config.json, usando variables de entorno o valores por defecto.`, e.message);
+    }
+} else {
+    console.log(`[Config] No se encontro config.json. Usando variables de entorno o valores por defecto.`);
+}
+
+// Asegurar directorios de descargas y capturas de pantalla
+const downloadDir = path.resolve(__dirname, config.downloadPath || './downloads');
+if (!fs.existsSync(downloadDir)) {
+    fs.mkdirSync(downloadDir, { recursive: true });
+}
+
+const screenshotsDir = path.resolve(__dirname, './screenshots');
+if (!fs.existsSync(screenshotsDir)) {
+    fs.mkdirSync(screenshotsDir, { recursive: true });
+}
+
+// Helper para buscar el archivo de Excel más reciente y válido
+function findNewestExcelFile(dir) {
+    const files = fs.readdirSync(dir);
+    let newestFile = null;
+    let newestTime = 0;
+
+    for (const file of files) {
+        const fullPath = path.join(dir, file);
+        const ext = path.extname(file).toLowerCase();
+        if ((ext === '.xlsx' || ext === '.xls') && !file.startsWith('~$')) {
+            const stats = fs.statSync(fullPath);
+            if (stats.mtimeMs > newestTime) {
+                newestTime = stats.mtimeMs;
+                newestFile = fullPath;
+            }
+        }
+    }
+    return newestFile;
+}
+
+// Parser de fechas robusto de Excel y strings
+function parseExcelDate(val) {
+    if (!val) return '';
+    
+    // Si viene como número de fecha de Excel (ej: 46161)
+    if (typeof val === 'number') {
+        const date = new Date((val - 25569) * 86400 * 1000);
+        if (!isNaN(date.getTime())) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+    }
+    
+    // Si viene como string
+    if (typeof val === 'string') {
+        const clean = val.trim();
+        // Formato estándar YYYY-MM-DD
+        if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) return clean;
+        
+        // Formato DD/MM/YYYY o DD-MM-YYYY
+        const match = clean.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+        if (match) {
+            const day = match[1].padStart(2, '0');
+            const month = match[2].padStart(2, '0');
+            let year = match[3];
+            if (year.length === 2) {
+                year = '20' + year;
+            }
+            return `${year}-${month}-${day}`;
+        }
+    }
+    
+    return '';
+}
+
+// Proceso principal de Scraping y Carga
+async function runDigipScraper() {
+    const timestamp = new Date().toLocaleString();
+    console.log(`\n[${timestamp}] 🔄 Iniciando ciclo de scraping de Digip WMS...`);
+
+    // Validar si las credenciales son las predeterminadas
+    if (config.digipUser === 'usuario_placeholder' || config.digipPass === 'pass_placeholder') {
+        console.warn(`[⚠️ ADVERTENCIA] Las credenciales de Digip WMS no estan configuradas.`);
+        console.warn(`Por favor, complete su usuario y clave en 'config.json' para iniciar.`);
+        return;
+    }
+
+    let browser;
+    try {
+        console.log(`[RPA] Levantando navegador headless (Chromium)...`);
+        browser = await puppeteer.launch({
+            headless: config.headless !== false ? 'new' : false,
+            defaultViewport: null,
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
+
+        const page = await browser.newPage();
+        
+        // Configurar la descarga en Puppeteer headless mediante CDP
+        console.log(`[RPA] Configurando carpeta de descargas: ${downloadDir}`);
+        const client = await page.target().createCDPSession();
+        await client.send('Page.setDownloadBehavior', {
+            behavior: 'allow',
+            downloadPath: downloadDir
+        });
+
+        console.log(`[RPA] Navegando a la zona de Reportes de Stock...`);
+        await page.goto('https://app.digipwms.com/Reportes/Stock', {
+            waitUntil: 'networkidle2',
+            timeout: 60000
+        });
+
+        const urlActual = page.url();
+        console.log(`[RPA] URL cargada: ${urlActual}`);
+
+        // Detectar si fuimos redirigidos al Login o si la página requiere autenticación
+        const necesitaAutenticacion = await page.evaluate(() => {
+            return !!(document.querySelector('input[type="password"]') || 
+                      document.querySelector('[name*="Login"]') || 
+                      document.querySelector('[href*="Login"]') ||
+                      document.querySelector('form[action*="Login" i]'));
+        });
+
+        if (necesitaAutenticacion) {
+            console.log(`[RPA] Formulario de inicio de sesion detectado. Iniciando sesion con el usuario: ${config.digipUser}...`);
+            
+            // Buscar campos usando selectores flexibles en cascada
+            const selectoresUsuario = ['input[type="text"]', 'input[type="email"]', 'input[name*="user" i]', 'input[name*="email" i]', '#Email', '#Username'];
+            const selectoresClave = ['input[type="password"]', 'input[name*="pass" i]', '#Password'];
+            const selectoresBoton = ['button[type="submit"]', 'input[type="submit"]', '.btn-primary', 'button.login-button', '#btnLogin', 'button'];
+
+            // Rellenar Usuario
+            let usuarioRellenado = false;
+            for (const selector of selectoresUsuario) {
+                try {
+                    if (await page.$(selector)) {
+                        await page.type(selector, config.digipUser);
+                        usuarioRellenado = true;
+                        console.log(`[RPA] Campo usuario cargado usando selector: "${selector}"`);
+                        break;
+                    }
+                } catch (e) {}
+            }
+            if (!usuarioRellenado) throw new Error("No se pudo localizar el campo del nombre de usuario en Digip WMS.");
+
+            // Rellenar Contraseña
+            let claveRellenada = false;
+            for (const selector of selectoresClave) {
+                try {
+                    if (await page.$(selector)) {
+                        await page.type(selector, config.digipPass);
+                        claveRellenada = true;
+                        console.log(`[RPA] Campo contraseña cargado usando selector: "${selector}"`);
+                        break;
+                    }
+                } catch (e) {}
+            }
+            if (!claveRellenada) throw new Error("No se pudo localizar el campo de contraseña en Digip WMS.");
+
+            // Hacer clic en Ingresar
+            let clickExitoso = false;
+            for (const selector of selectoresBoton) {
+                try {
+                    const btn = await page.$(selector);
+                    if (btn) {
+                        console.log(`[RPA] Presionando boton de ingreso con selector: "${selector}"`);
+                        await Promise.all([
+                            page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 45000 }),
+                            page.click(selector)
+                        ]);
+                        clickExitoso = true;
+                        break;
+                    }
+                } catch (e) {}
+            }
+
+            if (!clickExitoso) {
+                console.log(`[RPA] No se clickeo boton de forma directa. Intentando pulsar tecla Enter...`);
+                await Promise.all([
+                    page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 45000 }),
+                    page.keyboard.press('Enter')
+                ]);
+            }
+
+            console.log(`[RPA] Autenticacion enviada. URL actual: ${page.url()}`);
+        } else {
+            console.log(`[RPA] Sesion activa o acceso directo correcto. Saltando login.`);
+        }
+
+        // Navegar explícitamente si por alguna razón no estamos en la sección de Stock
+        if (!page.url().includes('/Reportes/Stock')) {
+            console.log(`[RPA] Redirigiendo explicitamente a la url de stock...`);
+            await page.goto('https://app.digipwms.com/Reportes/Stock', {
+                waitUntil: 'networkidle2',
+                timeout: 30000
+            });
+        }
+
+        console.log(`[RPA] Esperando la renderizacion completa del listado de Stock...`);
+        await delay(5000); // 5 segundos para que se carguen tablas dinámicas o llamadas ajax
+
+        // Registrar archivos existentes en la carpeta de descargas antes de clickear para detectar el nuevo archivo
+        const archivoInicial = findNewestExcelFile(downloadDir);
+        const archivoInicialTime = archivoInicial ? fs.statSync(archivoInicial).mtimeMs : 0;
+
+        console.log(`[RPA] Localizando y presionando el boton de exportacion a Excel...`);
+        const seHizoClick = await page.evaluate(() => {
+            const botones = Array.from(document.querySelectorAll('button, a, input[type="button"], .btn'));
+            const target = botones.find(b => {
+                const text = (b.innerText || b.value || '').toLowerCase();
+                const cumpleTexto = text.includes('excel') || text.includes('exportar') || text.includes('descargar');
+                const cumpleIcono = b.querySelector('.fa-file-excel') || b.querySelector('.fa-download') || b.className.includes('excel') || b.id.includes('excel');
+                return cumpleTexto || cumpleIcono;
+            });
+            if (target) {
+                target.click();
+                return true;
+            }
+            return false;
+        });
+
+        if (!seHizoClick) {
+            throw new Error("No se pudo localizar el boton de exportacion a Excel en la interfaz de Digip WMS.");
+        }
+        console.log(`[RPA] Boton de exportacion clickeado con exito.`);
+
+        // Esperar la descarga del Excel
+        console.log(`[RPA] Esperando que se complete la descarga del reporte...`);
+        let excelDescargado = null;
+        const timeoutDescarga = 90000; // 90 segundos
+        const startDownloadTime = Date.now();
+
+        while (Date.now() - startDownloadTime < timeoutDescarga) {
+            await delay(1000);
+            const candidato = findNewestExcelFile(downloadDir);
+            if (candidato) {
+                const stats = fs.statSync(candidato);
+                // Si es un archivo nuevo (modificado despues del click de descarga)
+                if (stats.mtimeMs > archivoInicialTime) {
+                    const ext = path.extname(candidato).toLowerCase();
+                    const temporal = ext === '.crdownload' || ext === '.tmp' || candidato.includes('.tmp');
+                    
+                    // Si no es temporal y no se ha modificado en los ultimos 2 segundos, consideramos la descarga finalizada
+                    if (!temporal && (Date.now() - stats.mtimeMs) > 1500) {
+                        excelDescargado = candidato;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!excelDescargado) {
+            throw new Error("Tiempo de espera agotado sin detectar el archivo de Excel descargado.");
+        }
+        console.log(`[Parser] ¡Excel detectado en disco!: ${excelDescargado}`);
+
+        // Leer y procesar el reporte de Excel usando XLSX
+        console.log(`[Parser] Procesando y parseando hoja de cálculo...`);
+        const workbook = XLSX.readFile(excelDescargado);
+        const firstSheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[firstSheetName];
+        const filasPlanas = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+        console.log(`[Parser] Leidas ${filasPlanas.length} filas del archivo Excel.`);
+
+        const stockResult = [];
+        if (filasPlanas.length > 0) {
+            // Analizar la primera fila para identificar indices/columnas de forma dinámica e insensible a mayusculas
+            const primerRegistro = filasPlanas[0];
+            const columnasDisponibles = Object.keys(primerRegistro);
+
+            const colCodigo = columnasDisponibles.find(k => /ean|bar|c[oó]digo.*bar|c[oó]digo/i.test(k));
+            const colProducto = columnasDisponibles.find(k => /descrip|prod|art[ií]culo|nombre/i.test(k));
+            const colLote = columnasDisponibles.find(k => /lote|partida|batch/i.test(k));
+            const colCantidad = columnasDisponibles.find(k => /cant|stock|fisico|dispon|unidades/i.test(k));
+            const colVencimiento = columnasDisponibles.find(k => /venc|f\..*venc|caducidad|expir/i.test(k));
+
+            console.log(`[Parser] Mapeos dinamicos de columnas resueltos:`);
+            console.log(` - EAN/Código:    "${colCodigo || 'No detectado'}"`);
+            console.log(` - Producto/Desc: "${colProducto || 'No detectado'}"`);
+            console.log(` - Lote/Partida:  "${colLote || 'No detectado'}"`);
+            console.log(` - Cantidad/Stk:  "${colCantidad || 'No detectado'}"`);
+            console.log(` - Vencimiento:   "${colVencimiento || 'No detectado'}"`);
+
+            for (const row of filasPlanas) {
+                const codigo = colCodigo ? String(row[colCodigo]).trim() : '';
+                const producto = colProducto ? String(row[colProducto]).trim() : 'Sin Nombre';
+                const lote = colLote ? String(row[colLote]).trim() : 'S/L';
+                const cantidad = colCantidad ? parseFloat(row[colCantidad]) || 0 : 0;
+                const vencRaw = colVencimiento ? row[colVencimiento] : '';
+                const fechaVencimiento = parseExcelDate(vencRaw);
+
+                // Omitir filas invalidas o vacias
+                if (!codigo && producto === 'Sin Nombre') continue;
+
+                // Categoria inteligente basada en palabras clave
+                let categoria = 'Almacén';
+                const prodLower = producto.toLowerCase();
+                if (/queso|lact|yog|manteca|crema|leche/i.test(prodLower)) {
+                    categoria = 'Lácteos';
+                } else if (/bebida|coca|fanta|sprite|cerveza|agua|gaseosa|jugo/i.test(prodLower)) {
+                    categoria = 'Bebidas';
+                } else if (/jam[oó]n|salame|fiambr|mortadela|panceta/i.test(prodLower)) {
+                    categoria = 'Fiambrería';
+                }
+
+                stockResult.push({
+                    codigo,
+                    producto,
+                    categoria,
+                    lote,
+                    cantidad,
+                    fechaVencimiento
+                });
+            }
+        }
+
+        console.log(`[Parser] Normalizados ${stockResult.length} registros listos para subir.`);
+
+        // Limpiar el Excel temporal de disco inmediatamente
+        try {
+            fs.unlinkSync(excelDescargado);
+            console.log(`[Parser] Limpieza exitosa: Archivo temporal de stock eliminado.`);
+        } catch (unlinkErr) {
+            console.warn(`[Parser] No se pudo eliminar el excel de stock: ${unlinkErr.message}`);
+        }
+
+        // Subir a Render
+        if (stockResult.length > 0) {
+            console.log(`[Render] Subiendo stock a la nube. Destino: ${config.syncUrl}`);
+            const resUpload = await fetch(config.syncUrl, {
+                method: 'POST',
+                headers: {
+                    'x-sync-token': config.syncToken,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(stockResult)
+            });
+
+            if (!resUpload.ok) {
+                throw new Error(`Servidor retorno codigo de respuesta HTTP: ${resUpload.status}`);
+            }
+            
+            const resultUploadJson = await resUpload.json();
+            console.log(`[Render] ¡Sincronizacion de Stock DIGIP EXITOSA!`, resultUploadJson);
+        } else {
+            console.log(`[RPA] No se encontraron registros de stock validos para sincronizar.`);
+        }
+
+    } catch (err) {
+        console.error(`[🔴 ERROR EN RPA DIGIP]:`, err.message);
+        
+        // Guardar captura de pantalla en caso de fallo para depurar selectors
+        if (browser) {
+            try {
+                const pages = await browser.pages();
+                if (pages.length > 0) {
+                    const errorScreenshotPath = path.join(screenshotsDir, 'error_sync_digip.png');
+                    await pages[0].screenshot({ path: errorScreenshotPath, fullPage: true });
+                    console.log(`[RPA] Captura de pantalla de error guardada en: ${errorScreenshotPath}`);
+                }
+            } catch (screenshotErr) {
+                console.error(`[RPA] No se pudo guardar la captura de error:`, screenshotErr.message);
+            }
+        }
+    } finally {
+        if (browser) {
+            console.log(`[RPA] Cerrando navegador Chromium.`);
+            await browser.close();
+        }
+    }
+}
+
+// Loop de Sincronizacion
+const INTERVALO_MILISEGUNDOS = config.intervalHours * 60 * 60 * 1000;
+console.log(`=============================================================`);
+console.log(`🔄 SINCRONIZADOR DE VENCIMIENTOS DE STOCK - DIGIP WMS (RPA)`);
+console.log(`Intervalo de sincronizacion: cada ${config.intervalHours} horas.`);
+console.log(`URL Destino Render: ${config.syncUrl}`);
+console.log(`=============================================================`);
+
+// Primer ejecucion al levantar y programar intervalo continuo
+runDigipScraper();
+setInterval(runDigipScraper, INTERVALO_MILISEGUNDOS);

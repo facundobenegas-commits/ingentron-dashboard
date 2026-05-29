@@ -4,6 +4,8 @@
   "description": "Sincronizador Ingentron de base de datos SQL Server (PepsiCo) a Render",
   "main": "sync_pepsi.js",
   "dependencies": {
-    "mssql": "^10.0.1"
+    "mssql": "^10.0.1",
+    "puppeteer": "^22.6.0",
+    "xlsx": "^0.18.5"
   }
 }

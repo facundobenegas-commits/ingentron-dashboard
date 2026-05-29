@@ -1775,8 +1775,8 @@ async function loadSyncStatus() {
 // MÓDULO DE GESTIÓN DE VENCIMIENTOS DE STOCK (BETA)
 // ═══════════════════════════════════════════════════════════════
 
-// Modelo de datos de lotes de stock
-let stockData = [
+// Modelo de datos de lotes de stock (Mock inicial que actúa como fallback)
+const fallbackStockData = [
     { codigo: '7790060023124', producto: 'Queso Cremoso La Paulina', categoria: 'Lácteos', lote: 'L-260401', cantidad: 45, fechaVencimiento: '2026-04-15' }, // Vencido
     { codigo: '7790150003218', producto: 'Dulce de Leche Sancor 400g', categoria: 'Almacén', lote: 'L-260510', cantidad: 30, fechaVencimiento: '2026-05-12' }, // Vencido
     { codigo: '7790070012053', producto: 'Yogur Entero Vainilla La Serenísima', categoria: 'Lácteos', lote: 'L-260520', cantidad: 120, fechaVencimiento: '2026-06-10' }, // Crítico
@@ -1788,6 +1788,40 @@ let stockData = [
     { codigo: '7790040120150', producto: 'Galletitas Criollitas 3x100g', categoria: 'Almacén', lote: 'L-260605', cantidad: 95, fechaVencimiento: '2026-11-20' }, // OK
     { codigo: '7791122001541', producto: 'Manteca La Serenísima 200g', categoria: 'Lácteos', lote: 'L-260610', cantidad: 50, fechaVencimiento: '2026-06-18' } // Crítico
 ];
+
+let stockData = [...fallbackStockData];
+let isRealStockLoaded = false;
+
+// Función asíncrona para cargar stock real del backend
+async function loadRealStockData() {
+    try {
+        const response = await fetch('/api/stock');
+        if (response.ok) {
+            const data = await response.json();
+            if (Array.isArray(data) && data.length > 0) {
+                // Mapear campos normalizándolos por robustez
+                stockData = data.map(item => ({
+                    codigo: String(item.codigo || item.ean || '').trim(),
+                    producto: String(item.producto || item.descripcion || 'Sin Nombre').trim(),
+                    categoria: String(item.categoria || 'Almacén').trim(),
+                    lote: String(item.lote || 'S/L').trim(),
+                    cantidad: parseFloat(item.cantidad || 0),
+                    fechaVencimiento: String(item.fechaVencimiento || item.vencimiento || '').trim()
+                }));
+                isRealStockLoaded = true;
+                console.log(`[Stock Engine] Poblado con ${stockData.length} registros reales de Digip WMS.`);
+                return true;
+            }
+        }
+    } catch (e) {
+        console.error("[Stock Engine] Error consultando /api/stock, usando mock data:", e);
+    }
+    // Fallback si no hay datos o falló la conexión
+    if (!isRealStockLoaded) {
+        stockData = [...fallbackStockData];
+    }
+    return false;
+}
 
 // Helper para calcular días restantes entre la fecha actual y la de vencimiento (Referencia: 29/05/2026)
 function getDaysRemaining(expiryStr) {
@@ -2060,10 +2094,12 @@ function initNavigation() {
                 if (titleEl) titleEl.textContent = 'Vencimientos de Stock';
                 if (subtitleEl) subtitleEl.textContent = 'Módulo de control de caducidades';
                 
-                // Cargar datos y gráficos
-                updateStockKPIs();
-                renderStockTable();
-                updateStockCharts();
+                // Cargar datos reales de stock asíncronamente y refrescar la interfaz
+                loadRealStockData().finally(() => {
+                    updateStockKPIs();
+                    renderStockTable();
+                    updateStockCharts();
+                });
             }
         });
     });
