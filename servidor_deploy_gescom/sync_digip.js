@@ -8,8 +8,8 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 // Cargar configuración local de config.json, variables de entorno o fallbacks
 let config = {
-    digipUser: process.env.DIGIP_USER || 'usuario_placeholder',
-    digipPass: process.env.DIGIP_PASS || 'pass_placeholder',
+    digipUser: process.env.DIGIP_USER || 'facundo benegas',
+    digipPass: process.env.DIGIP_PASS || 'Facundo2026',
     syncToken: process.env.SYNC_TOKEN || 'TokenIngentronSeguro2026',
     syncUrl: 'https://ingentron.onrender.com/api/update-stock',
     intervalHours: 2,

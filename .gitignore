@@ -1,0 +1,23 @@
+# Dependencias de Node
+node_modules/
+
+# Archivos de configuracion con credenciales activas (Proteccion de Seguridad)
+config.json
+servidor_deploy_gescom/config.json
+servidor_deploy_salliquelo/config.json
+servidor_deploy_calvo/config.json
+servidor_deploy_trenque/config.json
+
+# Descargas temporales del bot RPA
+downloads/
+**/downloads/
+
+# Capturas de pantalla de error generadas por Puppeteer
+screenshots/
+**/screenshots/
+
+# Archivos temporales de Excel y SO
+.DS_Store
+Thumbs.db
+~$*.xlsx
+*.log
