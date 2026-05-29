@@ -43,8 +43,33 @@ goto :node_modules_ok
 :install_error
 echo.
 echo [ERROR] Hubo un error al ejecutar 'npm install'.
-echo Por favor, asegurese de estar conectado a Internet y tener Node.js instalado correctamente.
+echo Detectamos que puede haber una descarga corrupta del navegador o carpetas bloqueadas.
 echo.
+echo Desea que el script limpie la cache de Puppeteer e intente de nuevo?
+set /p rta_clean="Escriba 'S' para limpiar cache e instalar, o pulse Enter para salir: "
+if /i "%rta_clean%"=="S" (
+    echo.
+    echo [INFO] Limpiando carpeta node_modules local...
+    rmdir /s /q node_modules 2>nul
+    echo [INFO] Limpiando cache corrupta de Puppeteer en %USERPROFILE%\.cache\puppeteer...
+    rmdir /s /q "%USERPROFILE%\.cache\puppeteer" 2>nul
+    echo.
+    echo [INFO] Reintentando instalacion fresca...
+    call npm install
+    if errorlevel 1 (
+        echo.
+        echo [ERROR] Volvio a fallar. Por favor revise su conexion de red.
+        pause
+        exit /b
+    )
+    echo.
+    echo [INFO] Instalando el navegador Chromium en la cache limpia...
+    call npx puppeteer browsers install chrome
+    echo.
+    echo [INFO] Dependencias y navegador instalados con exito!
+    echo.
+    goto :node_modules_ok
+)
 pause
 exit /b
 
