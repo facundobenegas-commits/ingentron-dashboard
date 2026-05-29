@@ -27,7 +27,10 @@
             </div>
             <nav class="nav-menu">
                 <div class="nav-item active" data-view="dashboard">
-                    <i class="fas fa-home"></i> <span>Resumen</span>
+                    <i class="fas fa-home"></i> <span>Cuentas Corrientes</span>
+                </div>
+                <div class="nav-item" data-view="stock-expiration">
+                    <i class="fas fa-boxes"></i> <span>Vencimientos Stock</span>
                 </div>
                 <div style="flex: 1;"></div>
                 <div class="nav-item stable-link" onclick="window.location.href='/'">
@@ -277,6 +280,94 @@
                     </tbody>
 
                 </table>
+                </div>
+            </div>
+    </div>
+
+    <!-- Stock Expiration View -->
+    <div id="stock-expiration-view" class="view-section" style="display: none;">
+        <!-- KPI Cards -->
+        <div class="kpi-grid">
+            <div class="kpi-card glass-card">
+                <div class="kpi-icon blue"><i class="fas fa-cubes"></i></div>
+                <div class="kpi-info">
+                    <h4>Stock Monitoreado</h4>
+                    <h2 id="stock-kpi-total">0</h2>
+                </div>
+            </div>
+            <div class="kpi-card glass-card">
+                <div class="kpi-icon red"><i class="fas fa-exclamation-triangle"></i></div>
+                <div class="kpi-info">
+                    <h4>Lotes Vencidos</h4>
+                    <h2 id="stock-kpi-expired">0</h2>
+                </div>
+            </div>
+            <div class="kpi-card glass-card">
+                <div class="kpi-icon yellow"><i class="fas fa-hourglass-half"></i></div>
+                <div class="kpi-info">
+                    <h4>Alerta Crítica (≤30d)</h4>
+                    <h2 id="stock-kpi-critical">0</h2>
+                </div>
+            </div>
+            <div class="kpi-card glass-card">
+                <div class="kpi-icon green"><i class="fas fa-check-circle"></i></div>
+                <div class="kpi-info">
+                    <h4>Stock en Regla</h4>
+                    <h2 id="stock-kpi-ok">0</h2>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Grid -->
+        <div class="dashboard-grid" style="margin-top: 24px;">
+            <!-- Left Column: Batches Table -->
+            <div class="table-section glass-card" style="padding: 24px;">
+                <div class="table-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+                    <h3 style="font-size: 18px; font-weight: 600; color: var(--accent-color);">Control de Lotes y Caducidades</h3>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; flex: 1; justify-content: flex-end;">
+                        <input type="text" id="search-stock" class="glass-input" placeholder="Buscar producto..." style="max-width: 200px; font-size: 13px; padding: 6px 12px; border-radius: 8px;">
+                        <select id="filter-stock-status" class="glass-select" style="font-size: 13px; padding: 6px 12px; border-radius: 8px;">
+                            <option value="">Todos los estados</option>
+                            <option value="VENCIDO">Vencido</option>
+                            <option value="CRITICO">Alerta Crítica (≤30d)</option>
+                            <option value="PROXIMO">Próximo (31-90d)</option>
+                            <option value="OK">En Regla (>90d)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-container" style="overflow-x: auto;">
+                    <table class="data-table" id="stock-table">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Producto / Categoría</th>
+                                <th>Lote / Cantidad</th>
+                                <th>Vencimiento</th>
+                                <th>Restante</th>
+                                <th>Estado</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stock-table-body">
+                            <!-- Injected dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Right Column: Charts -->
+            <div style="display: flex; flex-direction: column; gap: 24px;">
+                <div class="chart-section glass-card" style="min-height: 280px; padding: 20px; display: flex; flex-direction: column;">
+                    <h3 style="font-size: 15px; font-weight: 600; margin-bottom: 12px; color: var(--text-secondary);">Distribución de Riesgos</h3>
+                    <div style="flex: 1; min-height: 180px; display: flex; align-items: center; justify-content: center; position: relative;">
+                        <canvas id="stock-risk-chart" style="max-height: 180px; max-width: 100%;"></canvas>
+                    </div>
+                </div>
+                <div class="chart-section glass-card" style="min-height: 280px; padding: 20px; display: flex; flex-direction: column;">
+                    <h3 style="font-size: 15px; font-weight: 600; margin-bottom: 12px; color: var(--text-secondary);">Caducidades por Mes</h3>
+                    <div style="flex: 1; min-height: 180px; display: flex; align-items: center; justify-content: center; position: relative;">
+                        <canvas id="stock-timeline-chart" style="max-height: 180px; max-width: 100%;"></canvas>
+                    </div>
                 </div>
             </div>
         </div>

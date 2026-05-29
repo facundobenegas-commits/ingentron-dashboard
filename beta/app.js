@@ -1771,6 +1771,315 @@ async function loadSyncStatus() {
     }
 }
 
+// ═══════════════════════════════════════════════════════════════
+// MÓDULO DE GESTIÓN DE VENCIMIENTOS DE STOCK (BETA)
+// ═══════════════════════════════════════════════════════════════
+
+// Modelo de datos de lotes de stock
+let stockData = [
+    { codigo: '7790060023124', producto: 'Queso Cremoso La Paulina', categoria: 'Lácteos', lote: 'L-260401', cantidad: 45, fechaVencimiento: '2026-04-15' }, // Vencido
+    { codigo: '7790150003218', producto: 'Dulce de Leche Sancor 400g', categoria: 'Almacén', lote: 'L-260510', cantidad: 30, fechaVencimiento: '2026-05-12' }, // Vencido
+    { codigo: '7790070012053', producto: 'Yogur Entero Vainilla La Serenísima', categoria: 'Lácteos', lote: 'L-260520', cantidad: 120, fechaVencimiento: '2026-06-10' }, // Crítico
+    { codigo: '7790240000158', producto: 'Jamón Cocido Campo Austral', categoria: 'Fiambrería', lote: 'L-260525', cantidad: 15, fechaVencimiento: '2026-06-22' }, // Crítico
+    { codigo: '7791290790124', producto: 'Leche Entera UAT La Serenísima 1L', categoria: 'Lácteos', lote: 'L-260528', cantidad: 200, fechaVencimiento: '2026-07-15' }, // Próximo
+    { codigo: '7790010002131', producto: 'Fideos Tallarines Lucchetti 500g', categoria: 'Almacén', lote: 'L-260530', cantidad: 150, fechaVencimiento: '2026-08-20' }, // Próximo
+    { codigo: '7790895000456', producto: 'Gaseosa Coca-Cola Original 2.25L', categoria: 'Bebidas', lote: 'L-260601', cantidad: 80, fechaVencimiento: '2026-09-30' }, // OK
+    { codigo: '7790580402011', producto: 'Cerveza Quilmes Clásica Lata 473ml', categoria: 'Bebidas', lote: 'L-260603', cantidad: 240, fechaVencimiento: '2026-10-15' }, // OK
+    { codigo: '7790040120150', producto: 'Galletitas Criollitas 3x100g', categoria: 'Almacén', lote: 'L-260605', cantidad: 95, fechaVencimiento: '2026-11-20' }, // OK
+    { codigo: '7791122001541', producto: 'Manteca La Serenísima 200g', categoria: 'Lácteos', lote: 'L-260610', cantidad: 50, fechaVencimiento: '2026-06-18' } // Crítico
+];
+
+// Helper para calcular días restantes entre la fecha actual y la de vencimiento (Referencia: 29/05/2026)
+function getDaysRemaining(expiryStr) {
+    const today = new Date("2026-05-29T00:00:00");
+    const expiry = new Date(expiryStr + "T00:00:00");
+    const diffTime = expiry - today;
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+}
+
+// Clasificación de lotes por estado
+function getStockStatus(days) {
+    if (days <= 0) return { text: 'VENCIDO', class: 'badge-expired' };
+    if (days <= 30) return { text: 'ALERTA CRÍTICA', class: 'badge-critical' };
+    if (days <= 90) return { text: 'PRÓXIMO', class: 'badge-upcoming' };
+    return { text: 'EN REGLA', class: 'badge-ok' };
+}
+
+// Formatear fecha AAAA-MM-DD a DD/MM/AA
+function formatDateToES(dateStr) {
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    return `${parts[2]}/${parts[1]}/${parts[0].slice(2, 4)}`;
+}
+
+// Actualización de KPIs del módulo de stock
+function updateStockKPIs() {
+    let total = stockData.length;
+    let expired = 0;
+    let critical = 0;
+    let ok = 0;
+    
+    stockData.forEach(item => {
+        const days = getDaysRemaining(item.fechaVencimiento);
+        if (days <= 0) expired++;
+        else if (days <= 30) critical++;
+        else ok++;
+    });
+    
+    const kpiTotalEl = document.getElementById('stock-kpi-total');
+    const kpiExpiredEl = document.getElementById('stock-kpi-expired');
+    const kpiCriticalEl = document.getElementById('stock-kpi-critical');
+    const kpiOkEl = document.getElementById('stock-kpi-ok');
+    
+    if (kpiTotalEl) kpiTotalEl.textContent = total;
+    if (kpiExpiredEl) kpiExpiredEl.textContent = expired;
+    if (kpiCriticalEl) kpiCriticalEl.textContent = critical;
+    if (kpiOkEl) kpiOkEl.textContent = ok;
+}
+
+// Renderizado dinámico de la tabla de stock
+function renderStockTable() {
+    const tbody = document.getElementById('stock-table-body');
+    if (!tbody) return;
+    
+    const searchVal = (document.getElementById('search-stock')?.value || '').toLowerCase();
+    const statusVal = document.getElementById('filter-stock-status')?.value || '';
+    
+    tbody.innerHTML = '';
+    
+    let filtered = stockData.filter(item => {
+        const days = getDaysRemaining(item.fechaVencimiento);
+        
+        // Filtro por buscador
+        const matchSearch = item.producto.toLowerCase().includes(searchVal) || 
+                            item.codigo.includes(searchVal) ||
+                            item.categoria.toLowerCase().includes(searchVal);
+                            
+        // Filtro por select de estado
+        let matchStatus = true;
+        if (statusVal === 'VENCIDO') matchStatus = days <= 0;
+        else if (statusVal === 'CRITICO') matchStatus = days > 0 && days <= 30;
+        else if (statusVal === 'PROXIMO') matchStatus = days > 30 && days <= 90;
+        else if (statusVal === 'OK') matchStatus = days > 90;
+        
+        return matchSearch && matchStatus;
+    });
+    
+    if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="opacity: 0.5; padding: 30px;">No se encontraron lotes con los filtros seleccionados</td></tr>`;
+        return;
+    }
+    
+    filtered.forEach(item => {
+        const days = getDaysRemaining(item.fechaVencimiento);
+        const statusObj = getStockStatus(days);
+        
+        let daysText = '';
+        if (days < 0) daysText = `Venció hace ${Math.abs(days)}d`;
+        else if (days === 0) daysText = 'Vence Hoy';
+        else daysText = `${days}d restante${days > 1 ? 's' : ''}`;
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><code style="font-size: 11px; opacity: 0.85;">${item.codigo}</code></td>
+            <td>
+                <div style="font-weight: 600; color: var(--text-primary);">${item.producto}</div>
+                <div style="font-size: 11px; opacity: 0.65; margin-top: 2px;">${item.categoria}</div>
+            </td>
+            <td>
+                <div style="font-weight: 500;">${item.lote}</div>
+                <div style="font-size: 11px; opacity: 0.65; margin-top: 2px;">${item.cantidad} un.</div>
+            </td>
+            <td>${formatDateToES(item.fechaVencimiento)}</td>
+            <td style="font-weight: 600; color: ${days <= 30 ? '#f87171' : 'inherit'};">${daysText}</td>
+            <td><span class="badge ${statusObj.class}">${statusObj.text}</span></td>
+            <td class="text-center">
+                <button class="btn-icon" onclick="removeStockItem('${item.codigo}', '${item.lote}')" style="background: rgba(248, 113, 113, 0.1); border: 1px solid rgba(248, 113, 113, 0.2); color: #f87171; padding: 6px 12px; border-radius: 8px; font-size: 11px; cursor: pointer; transition: all 0.2s; min-height: auto;">
+                    <i class="fas fa-trash-alt" style="margin-right: 4px;"></i> Retirar
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// Variables para los gráficos
+let stockRiskChart = null;
+let stockTimelineChart = null;
+
+// Lógica de dibujo y actualización de gráficos
+function updateStockCharts() {
+    let expired = 0;
+    let critical = 0;
+    let upcoming = 0;
+    let ok = 0;
+    
+    stockData.forEach(item => {
+        const days = getDaysRemaining(item.fechaVencimiento);
+        if (days <= 0) expired++;
+        else if (days <= 30) critical++;
+        else if (days <= 90) upcoming++;
+        else ok++;
+    });
+    
+    // 1. Gráfico de Dona: Distribución de Riesgo
+    const canvasRisk = document.getElementById('stock-risk-chart');
+    if (canvasRisk) {
+        const ctxRisk = canvasRisk.getContext('2d');
+        if (stockRiskChart) stockRiskChart.destroy();
+        
+        stockRiskChart = new Chart(ctxRisk, {
+            type: 'doughnut',
+            data: {
+                labels: ['Vencido', 'Alerta Crítica', 'Próximo', 'En Regla'],
+                datasets: [{
+                    data: [expired, critical, upcoming, ok],
+                    backgroundColor: ['#f87171', '#fbbf24', '#60a5fa', '#34d399'],
+                    borderColor: 'rgba(10, 10, 12, 0.6)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            font: { size: 10, family: 'Inter' }
+                        }
+                    }
+                },
+                cutout: '70%'
+            }
+        });
+    }
+    
+    // 2. Gráfico de Barras: Cronograma por Mes
+    const canvasTimeline = document.getElementById('stock-timeline-chart');
+    if (canvasTimeline) {
+        const ctxTimeline = canvasTimeline.getContext('2d');
+        if (stockTimelineChart) stockTimelineChart.destroy();
+        
+        const monthsGroup = {};
+        stockData.forEach(item => {
+            const parts = item.fechaVencimiento.split('-');
+            const yearMonth = `${parts[0]}-${parts[1]}`;
+            if (!monthsGroup[yearMonth]) monthsGroup[yearMonth] = 0;
+            monthsGroup[yearMonth] += item.cantidad;
+        });
+        
+        const sortedMonths = Object.keys(monthsGroup).sort();
+        const monthLabels = sortedMonths.map(ym => {
+            const parts = ym.split('-');
+            const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            return `${months[parseInt(parts[1]) - 1]} '${parts[0].slice(2, 4)}`;
+        });
+        const timelineData = sortedMonths.map(ym => monthsGroup[ym]);
+        
+        stockTimelineChart = new Chart(ctxTimeline, {
+            type: 'bar',
+            data: {
+                labels: monthLabels,
+                datasets: [{
+                    label: 'Unidades a vencer',
+                    data: timelineData,
+                    backgroundColor: 'rgba(10, 132, 255, 0.3)',
+                    borderColor: '#0a84ff',
+                    borderWidth: 1.5,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.6)',
+                            font: { size: 10, family: 'Inter' }
+                        }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.6)',
+                            font: { size: 10, family: 'Inter' }
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
+
+// Acción interactiva: Retirar lote de stock
+window.removeStockItem = function(codigo, lote) {
+    stockData = stockData.filter(item => !(item.codigo === codigo && item.lote === lote));
+    updateStockKPIs();
+    renderStockTable();
+    updateStockCharts();
+};
+
+// Controlador y ruteo de Vistas en el Frontend
+function initNavigation() {
+    const navItems = document.querySelectorAll('.nav-menu .nav-item[data-view]');
+    const views = document.querySelectorAll('.view-section');
+    const mobileFilterToggle = document.getElementById('mobile-filter-toggle');
+    const filtersContainer = document.getElementById('filters-container');
+    const titleEl = document.getElementById('view-title');
+    const subtitleEl = document.getElementById('view-subtitle');
+    
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            const selectedView = item.getAttribute('data-view');
+            
+            // Alternar clase activa en menú
+            navItems.forEach(nav => nav.classList.remove('active'));
+            item.classList.add('active');
+            
+            // Ocultar todas las secciones y mostrar la elegida
+            views.forEach(v => v.style.display = 'none');
+            const targetView = document.getElementById(`${selectedView}-view`);
+            if (targetView) targetView.style.display = 'block';
+            
+            // Ajustar visualización de la cabecera dinámica de filtros (Cuentas Corrientes vs Stock)
+            if (selectedView === 'dashboard') {
+                if (mobileFilterToggle) mobileFilterToggle.style.setProperty('display', '', 'important');
+                if (filtersContainer) filtersContainer.style.setProperty('display', '', 'important');
+                if (titleEl) titleEl.textContent = 'Dashboard';
+                if (subtitleEl) subtitleEl.textContent = 'Resumen de cuentas corrientes';
+            } else if (selectedView === 'stock-expiration') {
+                if (mobileFilterToggle) mobileFilterToggle.style.setProperty('display', 'none', 'important');
+                if (filtersContainer) filtersContainer.style.setProperty('display', 'none', 'important');
+                if (titleEl) titleEl.textContent = 'Vencimientos de Stock';
+                if (subtitleEl) subtitleEl.textContent = 'Módulo de control de caducidades';
+                
+                // Cargar datos y gráficos
+                updateStockKPIs();
+                renderStockTable();
+                updateStockCharts();
+            }
+        });
+    });
+}
+
+// Iniciar eventos del buscador y select de stock al cargarse el documento
+document.addEventListener('DOMContentLoaded', () => {
+    initNavigation();
+    
+    const searchStockEl = document.getElementById('search-stock');
+    const filterStockStatusEl = document.getElementById('filter-stock-status');
+    
+    if (searchStockEl) searchStockEl.addEventListener('input', renderStockTable);
+    if (filterStockStatusEl) filterStockStatusEl.addEventListener('change', renderStockTable);
+});
+
 
 
 
