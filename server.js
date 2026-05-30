@@ -540,7 +540,7 @@ app.get('/api/saldos', async (req, res) => {
 });
 
 // Catch-all para la versión Beta para soportar SPA routing (HTML5 History API)
-app.get('/beta/*', (req, res) => {
+app.get(/^\/beta/, (req, res) => {
     res.sendFile(path.join(__dirname, 'beta', 'index.html'));
 });
 
