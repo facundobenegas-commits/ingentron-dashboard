@@ -286,10 +286,11 @@ app.post('/api/update-saldos', express.json({ limit: '15mb' }), (req, res) => {
         
         // Guardar la fecha y hora de la última sincronización exitosa por origen
         const statusPath = path.join(__dirname, 'sync_status.json');
-        let syncStatus = { Aguas: null, PepsiCo: null, 'Trenque Lauquen': null, Salliquelo: null };
+        let syncStatus = { Aguas: null, PepsiCo: null, 'Trenque Lauquen': null, Salliquelo: null, Digip: null };
         if (fs.existsSync(statusPath)) {
             try {
-                syncStatus = JSON.parse(fs.readFileSync(statusPath, 'utf8')) || syncStatus;
+                const parsed = JSON.parse(fs.readFileSync(statusPath, 'utf8'));
+                syncStatus = { ...syncStatus, ...parsed };
             } catch (err) {}
         }
         
@@ -331,7 +332,8 @@ app.post('/api/update-stock', express.json({ limit: '15mb' }), (req, res) => {
         let syncStatus = { Aguas: null, PepsiCo: null, 'Trenque Lauquen': null, Salliquelo: null, Digip: null };
         if (fs.existsSync(statusPath)) {
             try {
-                syncStatus = JSON.parse(fs.readFileSync(statusPath, 'utf8')) || syncStatus;
+                const parsed = JSON.parse(fs.readFileSync(statusPath, 'utf8'));
+                syncStatus = { ...syncStatus, ...parsed };
             } catch (err) {}
         }
         syncStatus.Digip = new Date().toISOString();
