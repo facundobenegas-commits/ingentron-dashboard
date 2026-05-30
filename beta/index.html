@@ -127,7 +127,7 @@
                             <p style="color: var(--text-secondary); font-size: 16px;">Selecciona el módulo al que deseas acceder para comenzar a operar</p>
                         </div>
 
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; justify-content: center;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 340px)); gap: 24px; justify-content: center; max-width: 720px; margin: 0 auto;">
                             
                             <!-- Card: Cuentas Corrientes -->
                             <div class="module-card glass-card" onclick="navigateToModule('CuentasCorrientes')" style="padding: 32px; border-radius: 20px; cursor: pointer; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); border: 1px solid rgba(255, 255, 255, 0.08); display: flex; flex-direction: column; gap: 20px; position: relative; overflow: hidden; background: rgba(255, 255, 255, 0.02); min-height: 220px;">
@@ -136,7 +136,7 @@
                                 </div>
                                 <div>
                                     <h3 style="font-size: 20px; font-weight: 600; color: #fff; margin-bottom: 8px;">Cuentas Corrientes</h3>
-                                    <p style="color: var(--text-secondary); font-size: 13px; line-height: 1.5;">Monitoreo de saldos de clientes, facturas pendientes, evolución histórica de deudas e integración en tiempo real con Aguas y PepsiCo.</p>
+                                    <p style="color: var(--text-secondary); font-size: 13px; line-height: 1.5;">Monitoreo de saldos de clientes, facturas pendientes y evolución histórica de deudas.</p>
                                 </div>
                                 <div style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #3b82f6; margin-top: auto;">
                                     <span>Acceder</span> <i class="fas fa-chevron-right" style="font-size: 10px; margin-top: 1px; transition: transform 0.2s;"></i>
@@ -150,21 +150,10 @@
                                 </div>
                                 <div>
                                     <h3 style="font-size: 20px; font-weight: 600; color: #fff; margin-bottom: 8px;">Control de Vencimientos</h3>
-                                    <p style="color: var(--text-secondary); font-size: 13px; line-height: 1.5;">Gestión inteligente de stock y caducidad de artículos. Integrado de forma automatizada mediante RPA con Digip WMS.</p>
+                                    <p style="color: var(--text-secondary); font-size: 13px; line-height: 1.5;">Gestión de caducidad de artículos sincronizada con DIGIP WMS.</p>
                                 </div>
                                 <div style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #8b5cf6; margin-top: auto;">
                                     <span>Acceder</span> <i class="fas fa-chevron-right" style="font-size: 10px; margin-top: 1px; transition: transform 0.2s;"></i>
-                                </div>
-                            </div>
-
-                            <!-- Card: Próximos Módulos (Placeholder) -->
-                            <div class="glass-card" style="padding: 32px; border-radius: 20px; border: 1px dashed rgba(255, 255, 255, 0.06); display: flex; flex-direction: column; gap: 20px; background: transparent; min-height: 220px; opacity: 0.65; justify-content: center; align-items: center; text-align: center;">
-                                <div style="width: 56px; height: 56px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); color: var(--text-secondary); display: flex; align-items: center; justify-content: center; font-size: 24px;">
-                                    <i class="fas fa-plus-circle"></i>
-                                </div>
-                                <div>
-                                    <h3 style="font-size: 18px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px;">Más módulos próximamente</h3>
-                                    <p style="color: rgba(255,255,255,0.3); font-size: 12px; line-height: 1.4;">Seguimos diseñando nuevas soluciones a medida para optimizar el negocio.</p>
                                 </div>
                             </div>
 

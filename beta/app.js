@@ -178,8 +178,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         populateFilters();
         
         loadingIndicator.classList.remove('show');
-        dashboardView.style.display = 'block';
-        filtersContainer.style.display = 'flex';
+        applyRouteFromLocation();
         
     } catch (error) {
         console.error(error);
