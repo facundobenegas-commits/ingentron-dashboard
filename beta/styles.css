@@ -1602,8 +1602,8 @@ tbody tr:hover {
     justify-content: center;
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
-    width: 240px;
-    height: 68px;
+    width: 270px;
+    height: 72px;
     box-sizing: border-box;
 }
 
