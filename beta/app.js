@@ -1999,7 +1999,7 @@ function renderStockTable() {
     });
     
     if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="opacity: 0.5; padding: 30px;">No se encontraron lotes con los filtros seleccionados</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="opacity: 0.5; padding: 30px;">No se encontraron lotes con los filtros seleccionados</td></tr>`;
         return;
     }
     
@@ -2018,9 +2018,6 @@ function renderStockTable() {
             <td>
                 <div style="font-weight: 600; color: var(--text-primary);">${item.producto}</div>
                 <div style="font-size: 11px; opacity: 0.65; margin-top: 2px;">${item.categoria}</div>
-            </td>
-            <td>
-                <div style="font-weight: 500; color: var(--text-primary);">${item.lote}</div>
             </td>
             <td>
                 <div style="font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap;">
