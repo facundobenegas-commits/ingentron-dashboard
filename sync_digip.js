@@ -194,6 +194,25 @@ function parseCsvContent(csvText) {
     return parsedData;
 }
 
+function getSystemChromePath() {
+    const paths = [
+        'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+        'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+        'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+        'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+        process.env.USERPROFILE + '\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe',
+        process.env.LOCALAPPDATA + '\\Google\\Chrome\\Application\\chrome.exe'
+    ];
+    
+    for (const p of paths) {
+        if (p && fs.existsSync(p)) {
+            console.log(`[RPA] Detectado navegador del sistema en: ${p}`);
+            return p;
+        }
+    }
+    return null;
+}
+
 // Proceso principal de Scraping y Carga
 async function runDigipScraper() {
     const timestamp = new Date().toLocaleString();
@@ -208,12 +227,21 @@ async function runDigipScraper() {
 
     let browser;
     try {
-        console.log(`[RPA] Levantando navegador headless (Chromium)...`);
-        browser = await puppeteer.launch({
+        const systemChromePath = getSystemChromePath();
+        const launchOptions = {
             headless: config.headless !== false ? 'new' : false,
             defaultViewport: null,
             args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
+        };
+        
+        if (systemChromePath) {
+            launchOptions.executablePath = systemChromePath;
+        } else {
+            console.log(`[RPA] Usando Chromium por defecto de Puppeteer en la cache...`);
+        }
+        
+        console.log(`[RPA] Levantando navegador headless (${systemChromePath ? 'Nativo del Sistema' : 'Chromium Cache'})...`);
+        browser = await puppeteer.launch(launchOptions);
 
         const page = await browser.newPage();
         
