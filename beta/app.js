@@ -1709,13 +1709,12 @@ if (mobileFilterToggle && filtersContainer) {
     });
 }
 
-// Close mobile sidebar drawer when selecting a navigation menu item
+// Close sidebar drawer when selecting a navigation menu item (both PC and mobile)
 const navItems = document.querySelectorAll('.nav-item');
 navItems.forEach(item => {
     item.addEventListener('click', () => {
         const sidebar = document.getElementById('sidebar');
-        const isMobile = window.innerWidth <= 768;
-        if (isMobile && sidebar && !sidebar.classList.contains('collapsed')) {
+        if (sidebar && !sidebar.classList.contains('collapsed')) {
             sidebar.classList.add('collapsed');
             const mainContent = document.getElementById('main-content');
             if (mainContent) mainContent.classList.add('expanded');
