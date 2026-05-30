@@ -14,6 +14,9 @@ echo.
 
 cd /d "%~dp0"
 
+:: Configurar directorio local de cache para Puppeteer (Garantiza portabilidad y evita problemas de permisos de Windows)
+set PUPPETEER_CACHE_DIR=%~dp0.cache
+
 :: Verificar si existe el archivo config.json, si no, copiarlo y salir
 if exist config.json goto :config_ok
 echo [ALERTA] No se encontro el archivo config.json.
@@ -37,7 +40,7 @@ call npm install
 set PUPPETEER_SKIP_DOWNLOAD=
 if errorlevel 1 goto :install_error
 echo [INFO] Descargando e instalando el navegador Chromium de Puppeteer...
-rmdir /s /q "%USERPROFILE%\.cache\puppeteer" 2>nul
+rmdir /s /q "%PUPPETEER_CACHE_DIR%" 2>nul
 call node node_modules\puppeteer\install.mjs
 echo [INFO] Dependencias instaladas con exito.
 echo.
@@ -54,8 +57,8 @@ if /i "%rta_clean%"=="S" (
     echo.
     echo [INFO] Limpiando carpeta node_modules local...
     rmdir /s /q node_modules 2>nul
-    echo [INFO] Limpiando cache corrupta de Puppeteer en %USERPROFILE%\.cache\puppeteer...
-    rmdir /s /q "%USERPROFILE%\.cache\puppeteer" 2>nul
+    echo [INFO] Limpiando cache corrupta de Puppeteer en %PUPPETEER_CACHE_DIR%...
+    rmdir /s /q "%PUPPETEER_CACHE_DIR%" 2>nul
     echo.
     echo [INFO] Reintentando instalacion fresca sin descargas automaticas...
     set PUPPETEER_SKIP_DOWNLOAD=true
@@ -100,8 +103,8 @@ echo Desea intentar limpiar la cache corrupta y descargar Chromium ahora mismo?
 set /p rta="Escriba 'S' para limpiar cache e instalar, o pulse Enter para salir: "
 if /i "%rta%"=="S" (
     echo.
-    echo [INFO] Limpiando cache corrupta de Puppeteer en %USERPROFILE%\.cache\puppeteer...
-    rmdir /s /q "%USERPROFILE%\.cache\puppeteer" 2>nul
+    echo [INFO] Limpiando cache corrupta de Puppeteer en %PUPPETEER_CACHE_DIR%...
+    rmdir /s /q "%PUPPETEER_CACHE_DIR%" 2>nul
     echo.
     echo [INFO] Descargando e instalando Chromium de forma automatica...
     call node node_modules\puppeteer\install.mjs
