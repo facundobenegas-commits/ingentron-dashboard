@@ -1998,6 +1998,8 @@ function renderStockTable() {
         return matchSearch && matchStatus;
     });
     
+    window.currentFilteredStock = filtered;
+    
     if (filtered.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="opacity: 0.5; padding: 30px;">No se encontraron lotes con los filtros seleccionados</td></tr>`;
         return;
@@ -2159,51 +2161,260 @@ window.removeStockItem = function(codigo, lote) {
 // Controlador y ruteo de Vistas en el Frontend
 function initNavigation() {
     const navItems = document.querySelectorAll('.nav-menu .nav-item[data-view]');
-    const views = document.querySelectorAll('.view-section');
-    const mobileFilterToggle = document.getElementById('mobile-filter-toggle');
-    const filtersContainer = document.getElementById('filters-container');
-    const titleEl = document.getElementById('view-title');
-    const subtitleEl = document.getElementById('view-subtitle');
     
     navItems.forEach(item => {
         item.addEventListener('click', () => {
             const selectedView = item.getAttribute('data-view');
             
-            // Alternar clase activa en menú
-            navItems.forEach(nav => nav.classList.remove('active'));
-            item.classList.add('active');
+            // Si es móvil, colapsar el menú lateral (hamburguesa) al tocar un módulo
+            const isMobile = window.innerWidth <= 768;
+            if (isMobile) {
+                const sidebar = document.getElementById('sidebar');
+                const mainContent = document.getElementById('main-content');
+                if (sidebar) sidebar.classList.add('collapsed');
+                if (mainContent) mainContent.classList.add('expanded');
+            }
             
-            // Ocultar todas las secciones y mostrar la elegida
-            views.forEach(v => v.style.display = 'none');
-            const targetView = document.getElementById(`${selectedView}-view`);
-            if (targetView) targetView.style.display = 'block';
-            
-            // Ajustar visualización de la cabecera dinámica de filtros (Cuentas Corrientes vs Stock)
             if (selectedView === 'dashboard') {
-                if (mobileFilterToggle) mobileFilterToggle.style.setProperty('display', '', 'important');
-                if (filtersContainer) filtersContainer.style.setProperty('display', '', 'important');
-                if (titleEl) titleEl.textContent = 'Dashboard';
-                if (subtitleEl) subtitleEl.textContent = 'Resumen de cuentas corrientes';
+                navigateToModule('CuentasCorrientes');
             } else if (selectedView === 'stock-expiration') {
-                if (mobileFilterToggle) mobileFilterToggle.style.setProperty('display', 'none', 'important');
-                if (filtersContainer) filtersContainer.style.setProperty('display', 'none', 'important');
-                if (titleEl) titleEl.textContent = 'Vencimientos de Stock';
-                if (subtitleEl) subtitleEl.textContent = 'Módulo de control de caducidades';
-                
-                // Cargar datos reales de stock asíncronamente y refrescar la interfaz
-                loadRealStockData().finally(() => {
-                    updateStockKPIs();
-                    renderStockTable();
-                    updateStockCharts();
-                });
+                navigateToModule('ControlVencimientos');
             }
         });
     });
 }
 
+// Navegar a un módulo actualizando la URL y el historial de navegación (SPA)
+window.navigateToModule = function(moduleName) {
+    let path = '/beta/';
+    if (moduleName === 'CuentasCorrientes') {
+        path = '/beta/CuentasCorrientes';
+    } else if (moduleName === 'ControlVencimientos') {
+        path = '/beta/ControlVencimientos';
+    }
+    
+    history.pushState({ module: moduleName }, '', path);
+    applyRoute(moduleName);
+};
+
+// Aplicar visualmente la ruta activa (mostrar/ocultar vistas, filtros, cabeceras)
+function applyRoute(moduleName) {
+    const views = document.querySelectorAll('.view-section');
+    const navItems = document.querySelectorAll('.nav-menu .nav-item[data-view]');
+    const mobileFilterToggle = document.getElementById('mobile-filter-toggle');
+    const filtersContainer = document.getElementById('filters-container');
+    const titleEl = document.getElementById('view-title');
+    const subtitleEl = document.getElementById('view-subtitle');
+    
+    // Ocultar todas las vistas
+    views.forEach(v => v.style.display = 'none');
+    
+    // Quitar clase activa de todos los botones de navegación lateral
+    navItems.forEach(nav => nav.classList.remove('active'));
+    
+    if (moduleName === 'CuentasCorrientes') {
+        const targetView = document.getElementById('dashboard-view');
+        if (targetView) targetView.style.display = 'block';
+        
+        const navItem = Array.from(navItems).find(n => n.getAttribute('data-view') === 'dashboard');
+        if (navItem) navItem.classList.add('active');
+        
+        if (mobileFilterToggle) mobileFilterToggle.style.setProperty('display', '', 'important');
+        if (filtersContainer) filtersContainer.style.setProperty('display', '', 'important');
+        if (titleEl) titleEl.textContent = 'Dashboard';
+        if (subtitleEl) subtitleEl.textContent = 'Resumen de cuentas corrientes';
+        
+    } else if (moduleName === 'ControlVencimientos') {
+        const targetView = document.getElementById('stock-expiration-view');
+        if (targetView) targetView.style.display = 'block';
+        
+        const navItem = Array.from(navItems).find(n => n.getAttribute('data-view') === 'stock-expiration');
+        if (navItem) navItem.classList.add('active');
+        
+        if (mobileFilterToggle) mobileFilterToggle.style.setProperty('display', 'none', 'important');
+        if (filtersContainer) filtersContainer.style.setProperty('display', 'none', 'important');
+        if (titleEl) titleEl.textContent = 'Vencimientos de Stock';
+        if (subtitleEl) subtitleEl.textContent = 'Módulo de control de caducidades';
+        
+        // Cargar datos de stock actualizados
+        loadRealStockData().finally(() => {
+            updateStockKPIs();
+            renderStockTable();
+            updateStockCharts();
+        });
+        
+    } else {
+        // Vista Home (Landing de Selección de Módulos)
+        const targetView = document.getElementById('home-view');
+        if (targetView) targetView.style.display = 'block';
+        
+        if (mobileFilterToggle) mobileFilterToggle.style.setProperty('display', 'none', 'important');
+        if (filtersContainer) filtersContainer.style.setProperty('display', 'none', 'important');
+        if (titleEl) titleEl.textContent = 'Módulos Ingentron';
+        if (subtitleEl) subtitleEl.textContent = 'Panel de selección de módulos';
+    }
+}
+
+// Analizar la URL actual y aplicar la ruta correspondiente
+function applyRouteFromLocation() {
+    const path = window.location.pathname;
+    if (path.includes('/CuentasCorrientes')) {
+        applyRoute('CuentasCorrientes');
+    } else if (path.includes('/ControlVencimientos')) {
+        applyRoute('ControlVencimientos');
+    } else {
+        applyRoute('home');
+    }
+}
+
+// Exportar listado de vencimientos de stock filtrado a PDF
+window.exportStockToPDF = function(event) {
+    if (event) event.preventDefault();
+    const dataToExport = window.currentFilteredStock || stockData;
+    if (dataToExport.length === 0) {
+        alert("No hay datos de stock disponibles para exportar.");
+        return;
+    }
+    
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    // Título principal
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text("Reporte de Vencimientos de Stock - Ingentron", 14, 20);
+    
+    // Datos de creación y metadatos
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    const dateStr = new Date().toLocaleDateString('es-AR') + ' ' + new Date().toLocaleTimeString('es-AR');
+    doc.text(`Generado el: ${dateStr} | Total de registros: ${dataToExport.length}`, 14, 27);
+    
+    // Configuración de tabla
+    const tableColumns = ["Código Artículo", "Producto", "Categoría", "Cantidad", "Vencimiento", "Restante", "Estado"];
+    const tableRows = dataToExport.map(item => {
+        const days = getDaysRemaining(item.fechaVencimiento);
+        const statusObj = getStockStatus(days);
+        
+        let daysText = '';
+        if (days < 0) daysText = `Venció hace ${Math.abs(days)}d`;
+        else if (days === 0) daysText = 'Vence Hoy';
+        else daysText = `${days}d restante${days > 1 ? 's' : ''}`;
+        
+        return [
+            item.codigo,
+            item.producto,
+            item.categoria,
+            `${item.cantidad} un.`,
+            formatDateToES(item.fechaVencimiento),
+            daysText,
+            statusObj.text
+        ];
+    });
+    
+    doc.autoTable({
+        head: [tableColumns],
+        body: tableRows,
+        startY: 34,
+        theme: 'striped',
+        headStyles: { fillColor: [59, 130, 246] }, // Azul primario
+        styles: { fontSize: 8 },
+        columnStyles: {
+            0: { cellWidth: 26 }, // Código artículo
+            1: { cellWidth: 60 }  // Producto
+        }
+    });
+    
+    doc.save(`Reporte_Vencimientos_Stock_${new Date().toISOString().slice(0, 10)}.pdf`);
+};
+
+// Exportar listado de vencimientos de stock filtrado a Excel (XLSX)
+window.exportStockToExcel = function(event) {
+    if (event) event.preventDefault();
+    const dataToExport = window.currentFilteredStock || stockData;
+    if (dataToExport.length === 0) {
+        alert("No hay datos de stock disponibles para exportar.");
+        return;
+    }
+    
+    const rows = dataToExport.map(item => {
+        const days = getDaysRemaining(item.fechaVencimiento);
+        const statusObj = getStockStatus(days);
+        
+        let daysText = '';
+        if (days < 0) daysText = `Venció hace ${Math.abs(days)}d`;
+        else if (days === 0) daysText = 'Vence Hoy';
+        else daysText = `${days}d restante${days > 1 ? 's' : ''}`;
+        
+        return {
+            "Código Artículo": item.codigo,
+            "Producto": item.producto,
+            "Categoría": item.categoria,
+            "Cantidad": item.cantidad,
+            "Vencimiento": formatDateToES(item.fechaVencimiento),
+            "Días Restantes": days,
+            "Restante Detalle": daysText,
+            "Estado": statusObj.text
+        };
+    });
+    
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Vencimientos Stock");
+    
+    // Auto-ajustar anchos de columnas
+    worksheet['!cols'] = [
+        {wch: 16}, // Código
+        {wch: 40}, // Producto
+        {wch: 15}, // Categoría
+        {wch: 10}, // Cantidad
+        {wch: 12}, // Vencimiento
+        {wch: 15}, // Días restantes
+        {wch: 20}, // Restante Detalle
+        {wch: 15}  // Estado
+    ];
+    
+    XLSX.writeFile(workbook, `Reporte_Vencimientos_Stock_${new Date().toISOString().slice(0, 10)}.xlsx`);
+};
+
 // Iniciar eventos del buscador y select de stock al cargarse el documento
 document.addEventListener('DOMContentLoaded', () => {
     initNavigation();
+    
+    // Vincular logos superiores y laterales para que naveguen al Home
+    const logoIds = ['sidebar-logo-ingentron', 'sidebar-logo-gruya', 'header-logo-ingentron', 'header-logo-gruya'];
+    logoIds.forEach(id => {
+        const logoEl = document.getElementById(id);
+        if (logoEl) {
+            logoEl.style.cursor = 'pointer';
+            logoEl.addEventListener('click', () => {
+                navigateToModule('home');
+            });
+        }
+    });
+
+    // Control del desplegable de exportación de stock
+    const downloadBtn = document.getElementById('download-stock-btn');
+    const downloadDropdown = document.getElementById('download-dropdown');
+    if (downloadBtn && downloadDropdown) {
+        downloadBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const show = downloadDropdown.style.display === 'block';
+            downloadDropdown.style.display = show ? 'none' : 'block';
+        });
+        document.addEventListener('click', () => {
+            downloadDropdown.style.display = 'none';
+        });
+    }
+
+    // Escuchar el evento popstate para soportar navegación del historial (atrás/adelante)
+    window.addEventListener('popstate', () => {
+        applyRouteFromLocation();
+    });
+
+    // Aplicar la ruta inicial según la URL del navegador al cargar la página
+    applyRouteFromLocation();
     
     const searchStockEl = document.getElementById('search-stock');
     const filterStockStatusEl = document.getElementById('filter-stock-status');

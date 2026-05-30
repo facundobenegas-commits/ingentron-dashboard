@@ -9,8 +9,9 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
-    <link rel="icon" type="image/png" href="../favicon.png">
-    <link rel="stylesheet" href="styles.css?v=5">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <link rel="stylesheet" href="/beta/styles.css?v=5">
 </head>
 <body>
     <div class="app-container">
@@ -18,11 +19,11 @@
         <aside class="sidebar collapsed" id="sidebar">
             <div class="logo-container" style="display: flex; align-items: center; gap: 10px; justify-content: center; height: var(--header-height); border-bottom: 1px solid var(--surface-border); padding: 0 16px;">
                 <div class="logo-badge" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 4px 10px; border-radius: 8px; display: flex; align-items: center; justify-content: center; height: 32px;">
-                    <img id="sidebar-logo-ingentron" src="../logo_ingentron.png" alt="Ingentron S.R.L." style="max-height: 20px; width: auto; object-fit: contain;">
+                    <img id="sidebar-logo-ingentron" src="/logo_ingentron.png" alt="Ingentron S.R.L." style="max-height: 20px; width: auto; object-fit: contain;">
                 </div>
                 <div style="width: 1px; height: 18px; background: rgba(255,255,255,0.15);"></div>
                 <div class="logo-badge" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 4px 10px; border-radius: 8px; display: flex; align-items: center; justify-content: center; height: 32px;">
-                    <img id="sidebar-logo-gruya" src="../logo_gruya.jpg" alt="Gruya S.R.L." style="max-height: 20px; width: auto; object-fit: contain;">
+                    <img id="sidebar-logo-gruya" src="/logo_gruya.jpg" alt="Gruya S.R.L." style="max-height: 20px; width: auto; object-fit: contain;">
                 </div>
             </div>
             <nav class="nav-menu">
@@ -50,11 +51,11 @@
                     </button>
                     <div class="header-logo-container">
                         <div class="logo-badge" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 4px 10px; border-radius: 8px; display: flex; align-items: center; justify-content: center; height: 32px;">
-                            <img id="header-logo-ingentron" src="../logo_ingentron.png" alt="Ingentron S.R.L." style="max-height: 20px; width: auto; object-fit: contain;">
+                            <img id="header-logo-ingentron" src="/logo_ingentron.png" alt="Ingentron S.R.L." style="max-height: 20px; width: auto; object-fit: contain;">
                         </div>
                         <div style="width: 1px; height: 18px; background: rgba(255,255,255,0.15);"></div>
                         <div class="logo-badge" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 4px 10px; border-radius: 8px; display: flex; align-items: center; justify-content: center; height: 32px;">
-                            <img id="header-logo-gruya" src="../logo_gruya.jpg" alt="Gruya S.R.L." style="max-height: 20px; width: auto; object-fit: contain;">
+                            <img id="header-logo-gruya" src="/logo_gruya.jpg" alt="Gruya S.R.L." style="max-height: 20px; width: auto; object-fit: contain;">
                         </div>
                     </div>
                     <div>
@@ -118,6 +119,59 @@
             </header>
 
             <div class="content-area">
+                <!-- Home Landing View (Module Menu) -->
+                <div id="home-view" class="view-section" style="display: block;">
+                    <div style="max-width: 1000px; margin: 40px auto; padding: 0 20px;">
+                        <div style="text-align: center; margin-bottom: 48px;">
+                            <h1 style="font-size: 32px; font-weight: 700; background: linear-gradient(135deg, #fff 30%, var(--accent-color) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 12px; letter-spacing: -0.5px;">Módulos Ingentron</h1>
+                            <p style="color: var(--text-secondary); font-size: 16px;">Selecciona el módulo al que deseas acceder para comenzar a operar</p>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; justify-content: center;">
+                            
+                            <!-- Card: Cuentas Corrientes -->
+                            <div class="module-card glass-card" onclick="navigateToModule('CuentasCorrientes')" style="padding: 32px; border-radius: 20px; cursor: pointer; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); border: 1px solid rgba(255, 255, 255, 0.08); display: flex; flex-direction: column; gap: 20px; position: relative; overflow: hidden; background: rgba(255, 255, 255, 0.02); min-height: 220px;">
+                                <div class="module-icon-container" style="width: 56px; height: 56px; border-radius: 14px; background: rgba(59, 130, 246, 0.12); color: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 24px; transition: transform 0.2s;">
+                                    <i class="fas fa-wallet"></i>
+                                </div>
+                                <div>
+                                    <h3 style="font-size: 20px; font-weight: 600; color: #fff; margin-bottom: 8px;">Cuentas Corrientes</h3>
+                                    <p style="color: var(--text-secondary); font-size: 13px; line-height: 1.5;">Monitoreo de saldos de clientes, facturas pendientes, evolución histórica de deudas e integración en tiempo real con Aguas y PepsiCo.</p>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #3b82f6; margin-top: auto;">
+                                    <span>Acceder</span> <i class="fas fa-chevron-right" style="font-size: 10px; margin-top: 1px; transition: transform 0.2s;"></i>
+                                </div>
+                            </div>
+
+                            <!-- Card: Control de Vencimientos -->
+                            <div class="module-card glass-card" onclick="navigateToModule('ControlVencimientos')" style="padding: 32px; border-radius: 20px; cursor: pointer; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); border: 1px solid rgba(255, 255, 255, 0.08); display: flex; flex-direction: column; gap: 20px; position: relative; overflow: hidden; background: rgba(255, 255, 255, 0.02); min-height: 220px;">
+                                <div class="module-icon-container" style="width: 56px; height: 56px; border-radius: 14px; background: rgba(139, 92, 246, 0.12); color: #8b5cf6; display: flex; align-items: center; justify-content: center; font-size: 24px; transition: transform 0.2s;">
+                                    <i class="fas fa-boxes"></i>
+                                </div>
+                                <div>
+                                    <h3 style="font-size: 20px; font-weight: 600; color: #fff; margin-bottom: 8px;">Control de Vencimientos</h3>
+                                    <p style="color: var(--text-secondary); font-size: 13px; line-height: 1.5;">Gestión inteligente de stock y caducidad de artículos. Integrado de forma automatizada mediante RPA con Digip WMS.</p>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #8b5cf6; margin-top: auto;">
+                                    <span>Acceder</span> <i class="fas fa-chevron-right" style="font-size: 10px; margin-top: 1px; transition: transform 0.2s;"></i>
+                                </div>
+                            </div>
+
+                            <!-- Card: Próximos Módulos (Placeholder) -->
+                            <div class="glass-card" style="padding: 32px; border-radius: 20px; border: 1px dashed rgba(255, 255, 255, 0.06); display: flex; flex-direction: column; gap: 20px; background: transparent; min-height: 220px; opacity: 0.65; justify-content: center; align-items: center; text-align: center;">
+                                <div style="width: 56px; height: 56px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); color: var(--text-secondary); display: flex; align-items: center; justify-content: center; font-size: 24px;">
+                                    <i class="fas fa-plus-circle"></i>
+                                </div>
+                                <div>
+                                    <h3 style="font-size: 18px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px;">Más módulos próximamente</h3>
+                                    <p style="color: rgba(255,255,255,0.3); font-size: 12px; line-height: 1.4;">Seguimos diseñando nuevas soluciones a medida para optimizar el negocio.</p>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Dashboard View -->
                 <div id="dashboard-view" class="view-section" style="display: none;">
                     
@@ -325,7 +379,7 @@
             <div class="table-section glass-card" style="padding: 24px;">
                 <div class="table-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
                     <h3 style="font-size: 18px; font-weight: 600; color: var(--accent-color);">Control de Lotes y Caducidades</h3>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap; flex: 1; justify-content: flex-end;">
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; flex: 1; justify-content: flex-end; align-items: center;">
                         <input type="text" id="search-stock" class="glass-input" placeholder="Buscar producto..." style="max-width: 200px; font-size: 13px; padding: 6px 12px; border-radius: 8px;">
                         <select id="filter-stock-status" class="glass-select" style="font-size: 13px; padding: 6px 12px; border-radius: 8px;">
                             <option value="">Todos los estados</option>
@@ -334,6 +388,15 @@
                             <option value="PROXIMO">Próximo (31-90d)</option>
                             <option value="OK">En Regla (>90d)</option>
                         </select>
+                        <div class="dropdown" style="position: relative; display: inline-block;">
+                            <button type="button" id="download-stock-btn" class="glass-btn" style="font-size: 13px; padding: 6px 12px; border-radius: 8px; display: flex; align-items: center; gap: 8px; cursor: pointer; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: #fff; height: 34px; transition: all 0.2s;">
+                                <i class="fas fa-download"></i> <span>Exportar</span> <i class="fas fa-chevron-down" style="font-size: 10px;"></i>
+                            </button>
+                            <div id="download-dropdown" class="dropdown-content glass-card" style="display: none; position: absolute; right: 0; top: 110%; min-width: 160px; z-index: 1000; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08); background: rgba(25, 28, 36, 0.95); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
+                                <a href="#" onclick="exportStockToPDF(event)" style="color: #fff; padding: 10px 16px; text-decoration: none; display: flex; align-items: center; gap: 8px; font-size: 13px; transition: background 0.2s; border-bottom: 1px solid rgba(255,255,255,0.05); border-radius: 8px 8px 0 0;"><i class="fas fa-file-pdf" style="color: #ff453a;"></i> Descargar PDF</a>
+                                <a href="#" onclick="exportStockToExcel(event)" style="color: #fff; padding: 10px 16px; text-decoration: none; display: flex; align-items: center; gap: 8px; font-size: 13px; transition: background 0.2s; border-radius: 0 0 8px 8px;"><i class="fas fa-file-excel" style="color: #30d158;"></i> Descargar Excel</a>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="table-container" style="overflow-x: auto;">
@@ -410,6 +473,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=6"></script>
+    <script src="/beta/app.js?v=6"></script>
 </body>
 </html>

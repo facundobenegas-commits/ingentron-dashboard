@@ -1559,5 +1559,30 @@ tbody tr:hover {
     #stock-table tbody td:nth-child(7)::before { content: "Acción:"; font-weight: 600; color: var(--text-secondary); }
 }
 
+/* --- ESTILOS DE MÓDULOS DE LANDING (HOME) --- */
+.module-card {
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}
+
+.module-card:hover {
+    transform: translateY(-6px) !important;
+    border-color: rgba(255, 255, 255, 0.18) !important;
+    background: rgba(255, 255, 255, 0.04) !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+}
+
+.module-card:hover .module-icon-container {
+    transform: scale(1.08) !important;
+}
+
+.module-card:hover div i {
+    transform: translateX(4px) !important;
+}
+
+/* --- ESTILOS DE EXPORTACIÓN (DROPDOWN) --- */
+.dropdown-content a:hover {
+    background: rgba(255, 255, 255, 0.05) !important;
+}
+
 
 

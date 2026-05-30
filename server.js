@@ -537,6 +537,11 @@ app.get('/api/saldos', async (req, res) => {
     res.json(globalData);
 });
 
+// Catch-all para la versión Beta para soportar SPA routing (HTML5 History API)
+app.get('/beta/*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'beta', 'index.html'));
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n======================================================`);
