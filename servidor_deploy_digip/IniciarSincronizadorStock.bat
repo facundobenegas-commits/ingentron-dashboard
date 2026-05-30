@@ -38,7 +38,7 @@ set PUPPETEER_SKIP_DOWNLOAD=
 if errorlevel 1 goto :install_error
 echo [INFO] Descargando e instalando el navegador Chromium de Puppeteer...
 rmdir /s /q "%USERPROFILE%\.cache\puppeteer" 2>nul
-call npx puppeteer install chrome
+call node node_modules\puppeteer\install.mjs
 echo [INFO] Dependencias instaladas con exito.
 echo.
 goto :node_modules_ok
@@ -69,7 +69,7 @@ if /i "%rta_clean%"=="S" (
     )
     echo.
     echo [INFO] Instalando el navegador Chromium en la cache limpia...
-    call npx puppeteer install chrome
+    call node node_modules\puppeteer\install.mjs
     echo.
     echo [INFO] Dependencias y navegador instalados con exito!
     echo.
@@ -104,7 +104,7 @@ if /i "%rta%"=="S" (
     rmdir /s /q "%USERPROFILE%\.cache\puppeteer" 2>nul
     echo.
     echo [INFO] Descargando e instalando Chromium de forma automatica...
-    call npx puppeteer install chrome
+    call node node_modules\puppeteer\install.mjs
     echo.
     echo [INFO] Instalacion finalizada. Reejecutando el sincronizador...
     echo.
