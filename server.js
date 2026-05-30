@@ -399,10 +399,11 @@ app.get('/api/stock', (req, res) => {
 // Endpoint para consultar el estado de la última sincronización de los servidores locales
 app.get('/api/sync-status', (req, res) => {
     const statusPath = path.join(__dirname, 'sync_status.json');
-    let syncStatus = { Aguas: null, PepsiCo: null, 'Trenque Lauquen': null, Salliquelo: null };
+    let syncStatus = { Aguas: null, PepsiCo: null, 'Trenque Lauquen': null, Salliquelo: null, Digip: null };
     if (fs.existsSync(statusPath)) {
         try {
-            syncStatus = JSON.parse(fs.readFileSync(statusPath, 'utf8')) || syncStatus;
+            const parsed = JSON.parse(fs.readFileSync(statusPath, 'utf8'));
+            syncStatus = { ...syncStatus, ...parsed };
         } catch (err) {}
     }
     res.json(syncStatus);

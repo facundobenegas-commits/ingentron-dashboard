@@ -451,6 +451,8 @@ body {
 .kpi-icon.blue { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
 .kpi-icon.green { background: rgba(16, 185, 129, 0.1); color: #10b981; }
 .kpi-icon.purple { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
+.kpi-icon.red { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+.kpi-icon.yellow { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
 
 .kpi-info h4 {
     color: var(--text-secondary);

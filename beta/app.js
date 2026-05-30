@@ -2020,20 +2020,17 @@ function renderStockTable() {
                 <div style="font-size: 11px; opacity: 0.65; margin-top: 2px;">${item.categoria}</div>
             </td>
             <td>
-                <div style="font-weight: 500;">${item.lote}</div>
-                <div style="font-size: 11px; opacity: 0.85; margin-top: 2px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
-                    <strong>${item.cantidad} un.</strong>
+                <div style="font-weight: 500; color: var(--text-primary);">${item.lote}</div>
+            </td>
+            <td>
+                <div style="font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap;">
+                    <span>${item.cantidad} un.</span>
                     ${getStockVariation(item)}
                 </div>
             </td>
             <td>${formatDateToES(item.fechaVencimiento)}</td>
             <td style="font-weight: 600; color: ${days <= 30 ? '#f87171' : 'inherit'};">${daysText}</td>
             <td><span class="badge ${statusObj.class}">${statusObj.text}</span></td>
-            <td class="text-center">
-                <button class="btn-icon" onclick="removeStockItem('${item.codigo}', '${item.lote}')" style="background: rgba(248, 113, 113, 0.1); border: 1px solid rgba(248, 113, 113, 0.2); color: #f87171; padding: 6px 12px; border-radius: 8px; font-size: 11px; cursor: pointer; transition: all 0.2s; min-height: auto;">
-                    <i class="fas fa-trash-alt" style="margin-right: 4px;"></i> Retirar
-                </button>
-            </td>
         `;
         tbody.appendChild(tr);
     });

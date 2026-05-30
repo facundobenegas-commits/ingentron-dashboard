@@ -41,21 +41,29 @@ if (!fs.existsSync(screenshotsDir)) {
     fs.mkdirSync(screenshotsDir, { recursive: true });
 }
 
-// Helper para buscar el archivo descargado más reciente y válido (Excel o CSV)
-function findNewestExcelFile(dir) {
-    const files = fs.readdirSync(dir);
+// Helper para buscar el archivo descargado más reciente y válido (Excel o CSV) en una o varias carpetas
+function findNewestExcelFile(dirs) {
+    const folders = Array.isArray(dirs) ? dirs : [dirs];
     let newestFile = null;
     let newestTime = 0;
 
-    for (const file of files) {
-        const fullPath = path.join(dir, file);
-        const ext = path.extname(file).toLowerCase();
-        if ((ext === '.xlsx' || ext === '.xls' || ext === '.csv') && !file.startsWith('~$')) {
-            const stats = fs.statSync(fullPath);
-            if (stats.mtimeMs > newestTime) {
-                newestTime = stats.mtimeMs;
-                newestFile = fullPath;
+    for (const dir of folders) {
+        if (!dir || !fs.existsSync(dir)) continue;
+        try {
+            const files = fs.readdirSync(dir);
+            for (const file of files) {
+                const fullPath = path.join(dir, file);
+                const ext = path.extname(file).toLowerCase();
+                if ((ext === '.xlsx' || ext === '.xls' || ext === '.csv') && !file.startsWith('~$')) {
+                    const stats = fs.statSync(fullPath);
+                    if (stats.mtimeMs > newestTime) {
+                        newestTime = stats.mtimeMs;
+                        newestFile = fullPath;
+                    }
+                }
             }
+        } catch (e) {
+            console.error(`[Scanner] Error leyendo directorio ${dir}:`, e.message);
         }
     }
     return newestFile;
@@ -337,7 +345,9 @@ async function runDigipScraper() {
         }
 
         // Registrar archivos existentes en la carpeta de descargas antes de iniciar la descarga
-        const archivoInicial = findNewestExcelFile(downloadDir);
+        const systemDownloadsDir = path.join(process.env.USERPROFILE || 'C:\\Users\\Usuario', 'Downloads');
+        const dirsToScan = [downloadDir, systemDownloadsDir];
+        const archivoInicial = findNewestExcelFile(dirsToScan);
         const archivoInicialTime = archivoInicial ? fs.statSync(archivoInicial).mtimeMs : 0;
 
         // Optimización masiva: Acceder directamente a la URL de descarga de Excel para mayor rapidez y estabilidad
@@ -363,7 +373,7 @@ async function runDigipScraper() {
 
         while (Date.now() - startDownloadTime < timeoutDescarga) {
             await delay(1000);
-            const candidato = findNewestExcelFile(downloadDir);
+            const candidato = findNewestExcelFile(dirsToScan);
             if (candidato) {
                 const stats = fs.statSync(candidato);
                 // Si es un archivo nuevo (modificado despues del click de descarga)
