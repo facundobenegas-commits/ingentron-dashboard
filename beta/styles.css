@@ -1602,6 +1602,9 @@ tbody tr:hover {
     justify-content: center;
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+    width: 240px;
+    height: 68px;
+    box-sizing: border-box;
 }
 
 .glowing-logo-badge::before {
@@ -1632,7 +1635,8 @@ tbody tr:hover {
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 68px;
+    height: 100%;
+    width: 100%;
     box-sizing: border-box;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
