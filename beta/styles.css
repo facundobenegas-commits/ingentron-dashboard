@@ -1584,5 +1584,66 @@ tbody tr:hover {
     background: rgba(255, 255, 255, 0.05) !important;
 }
 
+/* --- ANIMACIÓN DE BRILLO PARA LOGOS DEL HOME --- */
+@keyframes border-rotate {
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.glowing-logo-badge {
+    position: relative;
+    padding: 1px;
+    border-radius: 18px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+
+.glowing-logo-badge::before {
+    content: '';
+    position: absolute;
+    width: 200%;
+    height: 200%;
+    background: conic-gradient(
+        from 0deg,
+        transparent 30%,
+        rgba(255, 255, 255, 0.25) 45%,
+        rgba(255, 255, 255, 0.75) 50%,
+        rgba(255, 255, 255, 0.25) 55%,
+        transparent 70%
+    );
+    animation: border-rotate 5s linear infinite;
+    top: -50%;
+    left: -50%;
+    z-index: 1;
+}
+
+.glowing-logo-badge-inner {
+    position: relative;
+    z-index: 2;
+    background: rgba(12, 12, 14, 0.95);
+    border-radius: 17px;
+    padding: 12px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 68px;
+    box-sizing: border-box;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glowing-logo-badge:hover {
+    transform: scale(1.04);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5), 0 0 12px rgba(255, 255, 255, 0.08);
+}
+
+
 
 
