@@ -2211,6 +2211,31 @@ function applyRoute(moduleName) {
     // Quitar clase activa de todos los botones de navegación lateral
     navItems.forEach(nav => nav.classList.remove('active'));
     
+    // Control dinámico de la cabecera, barra lateral y layout en Home
+    const header = document.querySelector('.top-header');
+    const sidebar = document.getElementById('sidebar');
+    const mainContent = document.getElementById('main-content');
+    
+    if (moduleName === 'home') {
+        if (header) header.style.setProperty('display', 'none', 'important');
+        if (sidebar) sidebar.style.setProperty('display', 'none', 'important');
+        if (mainContent) {
+            mainContent.style.setProperty('margin-left', '0', 'important');
+            mainContent.style.setProperty('max-width', '100%', 'important');
+            mainContent.style.setProperty('width', '100%', 'important');
+            mainContent.style.setProperty('padding', '20px', 'important');
+        }
+    } else {
+        if (header) header.style.removeProperty('display');
+        if (sidebar) sidebar.style.removeProperty('display');
+        if (mainContent) {
+            mainContent.style.removeProperty('margin-left');
+            mainContent.style.removeProperty('max-width');
+            mainContent.style.removeProperty('width');
+            mainContent.style.removeProperty('padding');
+        }
+    }
+    
     if (moduleName === 'CuentasCorrientes') {
         const targetView = document.getElementById('dashboard-view');
         if (targetView) targetView.style.display = 'block';

@@ -17,7 +17,7 @@
     <div class="app-container">
         <!-- Sidebar -->
         <aside class="sidebar collapsed" id="sidebar">
-            <div class="logo-container" style="display: flex; align-items: center; gap: 10px; justify-content: center; height: var(--header-height); border-bottom: 1px solid var(--surface-border); padding: 0 16px;">
+            <div class="logo-container" onclick="navigateToModule('home')" style="display: flex; align-items: center; gap: 10px; justify-content: center; height: var(--header-height); border-bottom: 1px solid var(--surface-border); padding: 0 16px; cursor: pointer;">
                 <div class="logo-badge" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 4px 10px; border-radius: 8px; display: flex; align-items: center; justify-content: center; height: 32px;">
                     <img id="sidebar-logo-ingentron" src="/logo_ingentron.png" alt="Ingentron S.R.L." style="max-height: 20px; width: auto; object-fit: contain;">
                 </div>
@@ -28,7 +28,7 @@
             </div>
             <nav class="nav-menu">
                 <div class="nav-item active" data-view="dashboard">
-                    <i class="fas fa-home"></i> <span>Cuentas Corrientes</span>
+                    <i class="fas fa-wallet"></i> <span>Cuentas Corrientes</span>
                 </div>
                 <div class="nav-item" data-view="stock-expiration">
                     <i class="fas fa-boxes"></i> <span>Vencimientos Stock</span>
@@ -49,7 +49,7 @@
                         <span class="bar"></span>
                         <span class="bar"></span>
                     </button>
-                    <div class="header-logo-container">
+                    <div class="header-logo-container" onclick="navigateToModule('home')" style="cursor: pointer;">
                         <div class="logo-badge" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 4px 10px; border-radius: 8px; display: flex; align-items: center; justify-content: center; height: 32px;">
                             <img id="header-logo-ingentron" src="/logo_ingentron.png" alt="Ingentron S.R.L." style="max-height: 20px; width: auto; object-fit: contain;">
                         </div>
@@ -122,9 +122,14 @@
                 <!-- Home Landing View (Module Menu) -->
                 <div id="home-view" class="view-section" style="display: block;">
                     <div style="max-width: 1000px; margin: 40px auto; padding: 0 20px;">
-                        <div style="text-align: center; margin-bottom: 48px;">
-                            <h1 style="font-size: 32px; font-weight: 700; background: linear-gradient(135deg, #fff 30%, var(--accent-color) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 12px; letter-spacing: -0.5px;">Módulos Ingentron</h1>
-                            <p style="color: var(--text-secondary); font-size: 16px;">Selecciona el módulo al que deseas acceder para comenzar a operar</p>
+                        <div style="display: flex; align-items: center; gap: 16px; justify-content: center; margin-bottom: 48px;">
+                            <div class="logo-badge" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 8px 18px; border-radius: 12px; display: flex; align-items: center; justify-content: center; height: 50px;">
+                                <img src="/logo_ingentron.png" alt="Ingentron" style="max-height: 34px; width: auto; object-fit: contain;">
+                            </div>
+                            <div style="width: 1px; height: 28px; background: rgba(255,255,255,0.15);"></div>
+                            <div class="logo-badge" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 8px 18px; border-radius: 12px; display: flex; align-items: center; justify-content: center; height: 50px;">
+                                <img src="/logo_gruya.jpg" alt="Gruya" style="max-height: 34px; width: auto; object-fit: contain;">
+                            </div>
                         </div>
 
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 340px)); gap: 24px; justify-content: center; max-width: 720px; margin: 0 auto;">
