@@ -151,16 +151,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.logoIngentronObj = res;
         const sidebarImg = document.getElementById('sidebar-logo-ingentron');
         const headerImg = document.getElementById('header-logo-ingentron');
+        const homeImg = document.getElementById('home-logo-ingentron');
         if (sidebarImg) sidebarImg.src = res.dark;
         if (headerImg) headerImg.src = res.dark;
+        if (homeImg) homeImg.src = res.dark;
     });
 
     processLogo('../logo_gruya.jpg', true, (res) => {
         window.logoGruyaObj = res;
         const sidebarImg = document.getElementById('sidebar-logo-gruya');
         const headerImg = document.getElementById('header-logo-gruya');
+        const homeImg = document.getElementById('home-logo-gruya');
         if (sidebarImg) sidebarImg.src = res.dark;
         if (headerImg) headerImg.src = res.dark;
+        if (homeImg) homeImg.src = res.dark;
     });
     try {
         const response = await fetch('/api/saldos');
@@ -2270,7 +2274,7 @@ function applyRoute(moduleName) {
     } else {
         // Vista Home (Landing de Selección de Módulos)
         const targetView = document.getElementById('home-view');
-        if (targetView) targetView.style.display = 'block';
+        if (targetView) targetView.style.display = 'flex';
         
         if (mobileFilterToggle) mobileFilterToggle.style.setProperty('display', 'none', 'important');
         if (filtersContainer) filtersContainer.style.setProperty('display', 'none', 'important');
