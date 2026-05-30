@@ -1814,17 +1814,37 @@ async function loadRealStockData() {
             }
             
             if (rawList.length > 0) {
-                // Mapear campos normalizándolos por robustez
-                stockData = rawList.map(item => ({
-                    codigo: String(item.codigo || item.ean || '').trim(),
-                    producto: String(item.producto || item.descripcion || 'Sin Nombre').trim(),
-                    categoria: String(item.categoria || 'Almacén').trim(),
-                    lote: String(item.lote || 'S/L').trim(),
-                    cantidad: parseFloat(item.cantidad || 0),
-                    fechaVencimiento: String(item.fechaVencimiento || item.vencimiento || '').trim()
-                }));
+                // Agrupar y normalizar registros por Código, Producto, Lote y Vencimiento
+                const groupedMap = new Map();
+                rawList.forEach(item => {
+                    const codigo = String(item.codigo || item.ean || '').trim();
+                    const producto = String(item.producto || item.descripcion || 'Sin Nombre').trim();
+                    const categoria = String(item.categoria || 'Almacén').trim();
+                    const lote = String(item.lote || 'S/L').trim();
+                    const fechaVencimiento = String(item.fechaVencimiento || item.vencimiento || '').trim();
+                    const cantidad = parseFloat(item.cantidad || 0);
+
+                    // Clave compuesta única para la agrupación
+                    const key = `${codigo}_${producto}_${lote}_${fechaVencimiento}`;
+                    
+                    if (groupedMap.has(key)) {
+                        const existing = groupedMap.get(key);
+                        existing.cantidad += cantidad;
+                    } else {
+                        groupedMap.set(key, {
+                            codigo,
+                            producto,
+                            categoria,
+                            lote,
+                            cantidad,
+                            fechaVencimiento
+                        });
+                    }
+                });
+
+                stockData = Array.from(groupedMap.values());
                 isRealStockLoaded = true;
-                console.log(`[Stock Engine] Poblado con ${stockData.length} registros reales de Digip WMS.`);
+                console.log(`[Stock Engine] Poblado y agrupado con ${stockData.length} registros únicos reales de Digip WMS.`);
                 return true;
             }
         }
