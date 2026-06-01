@@ -1970,6 +1970,40 @@ function updateStockKPIs() {
     if (kpiOkEl) kpiOkEl.textContent = ok;
 }
 
+// Variables globales de ordenación de stock
+window.stockSortColumn = 'restante'; // Ordenar por fecha restante de forma predeterminada
+window.stockSortDirection = 'asc'; // De menor a mayor (más próximos a vencer primero)
+
+window.sortStockTable = function(column) {
+    if (window.stockSortColumn === column) {
+        window.stockSortDirection = window.stockSortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+        window.stockSortColumn = column;
+        window.stockSortDirection = 'asc';
+    }
+    window.updateSortIcons();
+    renderStockTable();
+};
+
+window.updateSortIcons = function() {
+    const columns = ['codigo', 'producto', 'cantidad', 'vencimiento', 'restante', 'estado'];
+    columns.forEach(col => {
+        const iconEl = document.getElementById(`sort-icon-${col}`);
+        const thEl = iconEl?.closest('th');
+        if (iconEl) {
+            if (col === window.stockSortColumn) {
+                if (thEl) thEl.classList.add('active-sort');
+                iconEl.innerHTML = window.stockSortDirection === 'asc' 
+                    ? '<i class="fas fa-sort-up"></i>' 
+                    : '<i class="fas fa-sort-down"></i>';
+            } else {
+                if (thEl) thEl.classList.remove('active-sort');
+                iconEl.innerHTML = '<i class="fas fa-sort"></i>';
+            }
+        }
+    });
+};
+
 // Renderizado dinámico de la tabla de stock
 function renderStockTable() {
     window.todayQtyMap = null; // Reiniciar mapa de hoy para recálculo dinámico en cada dibujado
@@ -1999,6 +2033,55 @@ function renderStockTable() {
         
         return matchSearch && matchStatus;
     });
+    
+    // Aplicar ordenación dinámica
+    if (window.stockSortColumn) {
+        filtered.sort((a, b) => {
+            let valA, valB;
+            
+            switch (window.stockSortColumn) {
+                case 'codigo':
+                    valA = a.codigo || '';
+                    valB = b.codigo || '';
+                    return window.stockSortDirection === 'asc' 
+                        ? valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' })
+                        : valB.localeCompare(valA, undefined, { numeric: true, sensitivity: 'base' });
+                
+                case 'producto':
+                    valA = (a.producto || '').toLowerCase();
+                    valB = (b.producto || '').toLowerCase();
+                    if (valA === valB) {
+                        const catA = (a.categoria || '').toLowerCase();
+                        const catB = (b.categoria || '').toLowerCase();
+                        return window.stockSortDirection === 'asc' ? catA.localeCompare(catB) : catB.localeCompare(catA);
+                    }
+                    return window.stockSortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                
+                case 'cantidad':
+                    valA = parseFloat(a.cantidad) || 0;
+                    valB = parseFloat(b.cantidad) || 0;
+                    break;
+                
+                case 'vencimiento':
+                    valA = a.fechaVencimiento ? new Date(a.fechaVencimiento).getTime() : 0;
+                    valB = b.fechaVencimiento ? new Date(b.fechaVencimiento).getTime() : 0;
+                    break;
+                
+                case 'restante':
+                case 'estado':
+                    valA = getDaysRemaining(a.fechaVencimiento);
+                    valB = getDaysRemaining(b.fechaVencimiento);
+                    break;
+                
+                default:
+                    return 0;
+            }
+            
+            if (valA < valB) return window.stockSortDirection === 'asc' ? -1 : 1;
+            if (valA > valB) return window.stockSortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }
     
     window.currentFilteredStock = filtered;
     
@@ -2448,6 +2531,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (searchStockEl) searchStockEl.addEventListener('input', renderStockTable);
     if (filterStockStatusEl) filterStockStatusEl.addEventListener('change', renderStockTable);
+    
+    // Inicializar íconos de ordenación de stock
+    window.updateSortIcons();
 });
 
 

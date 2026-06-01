@@ -400,12 +400,12 @@
                     <table class="data-table" id="stock-table">
                         <thead>
                             <tr>
-                                <th>Código Artículo</th>
-                                <th>Producto / Categoría</th>
-                                <th>Cantidad</th>
-                                <th>Vencimiento</th>
-                                <th>Restante</th>
-                                <th>Estado</th>
+                                <th onclick="sortStockTable('codigo')" style="cursor: pointer; user-select: none;">Código Artículo <span id="sort-icon-codigo" class="sort-icon"><i class="fas fa-sort"></i></span></th>
+                                <th onclick="sortStockTable('producto')" style="cursor: pointer; user-select: none;">Producto / Categoría <span id="sort-icon-producto" class="sort-icon"><i class="fas fa-sort"></i></span></th>
+                                <th onclick="sortStockTable('cantidad')" style="cursor: pointer; user-select: none;">Cantidad <span id="sort-icon-cantidad" class="sort-icon"><i class="fas fa-sort"></i></span></th>
+                                <th onclick="sortStockTable('vencimiento')" style="cursor: pointer; user-select: none;">Vencimiento <span id="sort-icon-vencimiento" class="sort-icon"><i class="fas fa-sort"></i></span></th>
+                                <th onclick="sortStockTable('restante')" style="cursor: pointer; user-select: none;">Restante <span id="sort-icon-restante" class="sort-icon"><i class="fas fa-sort"></i></span></th>
+                                <th onclick="sortStockTable('estado')" style="cursor: pointer; user-select: none;">Estado <span id="sort-icon-estado" class="sort-icon"><i class="fas fa-sort"></i></span></th>
                             </tr>
                         </thead>
                         <tbody id="stock-table-body">

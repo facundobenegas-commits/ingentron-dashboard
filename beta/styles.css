@@ -1648,6 +1648,24 @@ tbody tr:hover {
     box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5), 0 0 12px rgba(255, 255, 255, 0.08);
 }
 
+/* --- ESTILOS DE ORDENACIÓN DE TABLAS --- */
+.sort-icon {
+    margin-left: 6px;
+    font-size: 11px;
+    opacity: 0.4;
+    transition: opacity 0.2s ease, color 0.2s ease;
+    display: inline-block;
+}
+
+th:hover .sort-icon {
+    opacity: 0.8;
+}
+
+th.active-sort .sort-icon {
+    opacity: 1;
+    color: var(--accent-color);
+}
+
 
 
 
