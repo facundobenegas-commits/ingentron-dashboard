@@ -1779,19 +1779,8 @@ async function loadSyncStatus() {
 // MÓDULO DE GESTIÓN DE VENCIMIENTOS DE STOCK (BETA)
 // ═══════════════════════════════════════════════════════════════
 
-// Modelo de datos de lotes de stock (Mock inicial que actúa como fallback)
-const fallbackStockData = [
-    { codigo: '7790060023124', producto: 'Queso Cremoso La Paulina', categoria: 'Lácteos', lote: 'L-260401', cantidad: 45, fechaVencimiento: '2026-04-15' }, // Vencido
-    { codigo: '7790150003218', producto: 'Dulce de Leche Sancor 400g', categoria: 'Almacén', lote: 'L-260510', cantidad: 30, fechaVencimiento: '2026-05-12' }, // Vencido
-    { codigo: '7790070012053', producto: 'Yogur Entero Vainilla La Serenísima', categoria: 'Lácteos', lote: 'L-260520', cantidad: 120, fechaVencimiento: '2026-06-10' }, // Crítico
-    { codigo: '7790240000158', producto: 'Jamón Cocido Campo Austral', categoria: 'Fiambrería', lote: 'L-260525', cantidad: 15, fechaVencimiento: '2026-06-22' }, // Crítico
-    { codigo: '7791290790124', producto: 'Leche Entera UAT La Serenísima 1L', categoria: 'Lácteos', lote: 'L-260528', cantidad: 200, fechaVencimiento: '2026-07-15' }, // Próximo
-    { codigo: '7790010002131', producto: 'Fideos Tallarines Lucchetti 500g', categoria: 'Almacén', lote: 'L-260530', cantidad: 150, fechaVencimiento: '2026-08-20' }, // Próximo
-    { codigo: '7790895000456', producto: 'Gaseosa Coca-Cola Original 2.25L', categoria: 'Bebidas', lote: 'L-260601', cantidad: 80, fechaVencimiento: '2026-09-30' }, // OK
-    { codigo: '7790580402011', producto: 'Cerveza Quilmes Clásica Lata 473ml', categoria: 'Bebidas', lote: 'L-260603', cantidad: 240, fechaVencimiento: '2026-10-15' }, // OK
-    { codigo: '7790040120150', producto: 'Galletitas Criollitas 3x100g', categoria: 'Almacén', lote: 'L-260605', cantidad: 95, fechaVencimiento: '2026-11-20' }, // OK
-    { codigo: '7791122001541', producto: 'Manteca La Serenísima 200g', categoria: 'Lácteos', lote: 'L-260610', cantidad: 50, fechaVencimiento: '2026-06-18' } // Crítico
-];
+// Modelo de datos de lotes de stock (Mock inicial vacío para evitar datos falsos)
+const fallbackStockData = [];
 
 let stockData = [...fallbackStockData];
 let stockHistory = {};
@@ -2125,7 +2114,10 @@ function renderStockTable() {
     window.currentFilteredStock = filtered;
     
     if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="opacity: 0.5; padding: 30px;">No se encontraron lotes con los filtros seleccionados</td></tr>`;
+        const msg = isRealStockLoaded 
+            ? "No se encontraron lotes con los filtros seleccionados"
+            : "No hay datos de stock sincronizados. Esperando primera ejecución del sincronizador local de DIGIP WMS...";
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="opacity: 0.5; padding: 30px;">${msg}</td></tr>`;
         return;
     }
     
