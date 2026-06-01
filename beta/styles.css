@@ -1575,7 +1575,7 @@ tbody tr:hover {
     transform: scale(1.08) !important;
 }
 
-.module-card:hover div i {
+.module-card:hover .fa-chevron-right {
     transform: translateX(4px) !important;
 }
 
