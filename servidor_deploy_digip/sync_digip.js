@@ -542,11 +542,11 @@ function getMsUntilMidnight() {
     return diffMs;
 }
 
-// Bucle inteligente de ejecución diaria a las 00:00 hs
+// Bucle inteligente de ejecución diaria y periódica
 async function scheduleDailySync() {
     console.log("=============================================================");
     console.log("🔄 SINCRONIZADOR DE VENCIMIENTOS DE STOCK - DIGIP WMS (RPA)");
-    console.log("Modo: Bucle Continuo - Sincronizacion diaria a las 00:00 hs");
+    console.log(`Modo: Bucle Continuo - Cada ${config.intervalHours} horas y a las 00:00 hs`);
     console.log(`URL Destino Render: ${config.syncUrl}`);
     console.log("=============================================================");
     
@@ -554,7 +554,21 @@ async function scheduleDailySync() {
     console.log("\n[Programador] Ejecutando sincronización de arranque inicial...");
     await runDigipScraper();
     
-    // 2. Iniciar el bucle diario auto-calculable
+    // 2. Iniciar el bucle de intervalo periódico (ej: cada 2 horas)
+    if (config.intervalHours && config.intervalHours > 0) {
+        const intervalMs = config.intervalHours * 60 * 60 * 1000;
+        console.log(`[Programador] Programando sincronizaciones periódicas cada ${config.intervalHours} horas.`);
+        setInterval(async () => {
+            console.log(`\n[Programador] Iniciando sincronización periódica automática (intervalo de ${config.intervalHours}h)...`);
+            try {
+                await runDigipScraper();
+            } catch (err) {
+                console.error("[Programador] Error durante la sincronización periódica:", err.message);
+            }
+        }, intervalMs);
+    }
+    
+    // 3. Iniciar el bucle diario auto-calculable
     const runNext = () => {
         const delayMs = getMsUntilMidnight();
         
