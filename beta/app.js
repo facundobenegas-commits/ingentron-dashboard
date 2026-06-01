@@ -114,11 +114,68 @@ function processLogo(imgSrc, isGruya, callback) {
             ctxDark.putImageData(imgDataDark, 0, 0);
             ctxLight.putImageData(imgDataLight, 0, 0);
             
+            // Scan for visible bounding box after transparency/colors are applied
+            let minX = canvasDark.width;
+            let minY = canvasDark.height;
+            let maxX = 0;
+            let maxY = 0;
+            let hasVisiblePixels = false;
+            
+            const finalDataDark = ctxDark.getImageData(0, 0, canvasDark.width, canvasDark.height).data;
+            
+            for (let y = 0; y < canvasDark.height; y++) {
+                for (let x = 0; x < canvasDark.width; x++) {
+                    const idx = (y * canvasDark.width + x) * 4;
+                    const a = finalDataDark[idx + 3];
+                    if (a > 0) { // Visible non-transparent pixel
+                        hasVisiblePixels = true;
+                        if (x < minX) minX = x;
+                        if (x > maxX) maxX = x;
+                        if (y < minY) minY = y;
+                        if (y > maxY) maxY = y;
+                    }
+                }
+            }
+            
+            let finalCanvasDark = canvasDark;
+            let finalCanvasLight = canvasLight;
+            let finalWidth = img.width;
+            let finalHeight = img.height;
+            
+            if (hasVisiblePixels) {
+                // Add a small 2px padding to avoid subpixel clipping
+                const padding = 2;
+                minX = Math.max(0, minX - padding);
+                minY = Math.max(0, minY - padding);
+                maxX = Math.min(canvasDark.width - 1, maxX + padding);
+                maxY = Math.min(canvasDark.height - 1, maxY + padding);
+                
+                const croppedWidth = maxX - minX + 1;
+                const croppedHeight = maxY - minY + 1;
+                
+                const croppedCanvasDark = document.createElement('canvas');
+                croppedCanvasDark.width = croppedWidth;
+                croppedCanvasDark.height = croppedHeight;
+                const croppedCtxDark = croppedCanvasDark.getContext('2d');
+                croppedCtxDark.drawImage(canvasDark, minX, minY, croppedWidth, croppedHeight, 0, 0, croppedWidth, croppedHeight);
+                
+                const croppedCanvasLight = document.createElement('canvas');
+                croppedCanvasLight.width = croppedWidth;
+                croppedCanvasLight.height = croppedHeight;
+                const croppedCtxLight = croppedCanvasLight.getContext('2d');
+                croppedCtxLight.drawImage(canvasLight, minX, minY, croppedWidth, croppedHeight, 0, 0, croppedWidth, croppedHeight);
+                
+                finalCanvasDark = croppedCanvasDark;
+                finalCanvasLight = croppedCanvasLight;
+                finalWidth = croppedWidth;
+                finalHeight = croppedHeight;
+            }
+            
             callback({
-                dark: canvasDark.toDataURL('image/png'),
-                light: canvasLight.toDataURL('image/png'),
-                width: img.width,
-                height: img.height
+                dark: finalCanvasDark.toDataURL('image/png'),
+                light: finalCanvasLight.toDataURL('image/png'),
+                width: finalWidth,
+                height: finalHeight
             });
         } catch (e) {
             console.error("Error processing images on canvas:", e);
