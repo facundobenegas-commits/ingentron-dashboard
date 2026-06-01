@@ -1861,7 +1861,7 @@ async function loadRealStockData() {
     return false;
 }
 
-// Helper para calcular la variación de cantidad respecto al snapshot anterior
+// Helper para calcular la variación de cantidad respecto al snapshot anterior (Dinámico)
 function getStockVariation(item) {
     if (!stockHistory || Object.keys(stockHistory).length === 0) return '';
     
@@ -1869,16 +1869,20 @@ function getStockVariation(item) {
     const availableDates = Object.keys(stockHistory).sort();
     if (availableDates.length === 0) return '';
     
-    // Encontrar el último snapshot histórico anterior a la fecha de hoy ("2026-05-29")
+    // Obtener el día de hoy en hora local (Argentina UTC-3)
+    const localDate = new Date(new Date().getTime() - 3 * 3600 * 1000);
+    const todayStr = localDate.toISOString().split('T')[0];
+    
+    // Encontrar el último snapshot histórico anterior a hoy
     let prevDate = '';
     for (let i = availableDates.length - 1; i >= 0; i--) {
-        if (availableDates[i] < '2026-05-29') {
+        if (availableDates[i] < todayStr) {
             prevDate = availableDates[i];
             break;
         }
     }
     
-    if (!prevDate) return '';
+    if (!prevDate) prevDate = availableDates[0]; // Fallback al registro disponible
     
     const yesterdayData = stockHistory[prevDate] || [];
     const key = `${String(item.codigo).trim()}_${String(item.fechaVencimiento).trim()}`;
@@ -1907,19 +1911,48 @@ function getStockVariation(item) {
     const yesterdayTotal = window.yesterdayQtyMap.get(key);
     if (yesterdayTotal === undefined) {
         // Artículo nuevo
-        return `<span style="font-size: 10px; color: #60a5fa; background: rgba(96, 165, 250, 0.15); border: 1px solid rgba(96, 165, 250, 0.25); padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; font-weight: 500;"><i class="fas fa-plus-circle"></i> Nuevo</span>`;
+        return `<span style="font-size: 10px; color: #60a5fa; background: rgba(96, 165, 250, 0.15); border: 1px solid rgba(96, 165, 250, 0.25); padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; font-weight: 500;"><i class="fas fa-plus-circle"></i> Nuevo</span>`;
     }
     
     const todayTotal = window.todayQtyMap.get(key) || 0;
     const variation = todayTotal - yesterdayTotal;
     
     if (variation > 0) {
-        return `<span class="badge badge-ok" style="font-size: 10px; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; font-weight: 600;"><i class="fas fa-arrow-up"></i> +${variation}</span>`;
+        return `<span class="badge badge-ok" style="font-size: 10px; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;"><i class="fas fa-arrow-up"></i> +${variation}</span>`;
     } else if (variation < 0) {
-        return `<span class="badge badge-expired" style="font-size: 10px; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; font-weight: 600;"><i class="fas fa-arrow-down"></i> ${variation}</span>`;
+        return `<span class="badge badge-expired" style="font-size: 10px; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;"><i class="fas fa-arrow-down"></i> ${variation}</span>`;
     } else {
-        return `<span class="badge" style="font-size: 10px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: rgba(255, 255, 255, 0.4); padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; font-weight: 500;"><i class="fas fa-minus"></i> Sin cambios</span>`;
+        return `<span class="badge" style="font-size: 10px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: rgba(255, 255, 255, 0.4); padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; font-weight: 500;"><i class="fas fa-minus"></i> Sin cambios</span>`;
     }
+}
+
+// Helper numérico de variación para ordenación
+function getStockVariationValue(item) {
+    if (!stockHistory || Object.keys(stockHistory).length === 0) return 0;
+    const availableDates = Object.keys(stockHistory).sort();
+    if (availableDates.length === 0) return 0;
+    
+    const localDate = new Date(new Date().getTime() - 3 * 3600 * 1000);
+    const todayStr = localDate.toISOString().split('T')[0];
+    
+    let prevDate = '';
+    for (let i = availableDates.length - 1; i >= 0; i--) {
+        if (availableDates[i] < todayStr) {
+            prevDate = availableDates[i];
+            break;
+        }
+    }
+    if (!prevDate) prevDate = availableDates[0];
+    
+    const key = `${String(item.codigo).trim()}_${String(item.fechaVencimiento).trim()}`;
+    
+    const yesterdayTotal = window.yesterdayQtyMap ? window.yesterdayQtyMap.get(key) : undefined;
+    if (yesterdayTotal === undefined) {
+        return parseFloat(item.cantidad) || 0; // Tratar como cantidad actual si es nuevo
+    }
+    
+    const todayTotal = parseFloat(item.cantidad) || 0;
+    return todayTotal - yesterdayTotal;
 }
 
 // Helper para calcular días restantes entre la fecha actual y la de vencimiento (Referencia: 29/05/2026)
@@ -1986,7 +2019,7 @@ window.sortStockTable = function(column) {
 };
 
 window.updateSortIcons = function() {
-    const columns = ['codigo', 'producto', 'cantidad', 'vencimiento', 'restante', 'estado'];
+    const columns = ['codigo', 'producto', 'cantidad', 'variacion', 'vencimiento', 'restante'];
     columns.forEach(col => {
         const iconEl = document.getElementById(`sort-icon-${col}`);
         const thEl = iconEl?.closest('th');
@@ -2050,16 +2083,16 @@ function renderStockTable() {
                 case 'producto':
                     valA = (a.producto || '').toLowerCase();
                     valB = (b.producto || '').toLowerCase();
-                    if (valA === valB) {
-                        const catA = (a.categoria || '').toLowerCase();
-                        const catB = (b.categoria || '').toLowerCase();
-                        return window.stockSortDirection === 'asc' ? catA.localeCompare(catB) : catB.localeCompare(catA);
-                    }
                     return window.stockSortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
                 
                 case 'cantidad':
                     valA = parseFloat(a.cantidad) || 0;
                     valB = parseFloat(b.cantidad) || 0;
+                    break;
+                
+                case 'variacion':
+                    valA = getStockVariationValue(a);
+                    valB = getStockVariationValue(b);
                     break;
                 
                 case 'vencimiento':
@@ -2068,7 +2101,6 @@ function renderStockTable() {
                     break;
                 
                 case 'restante':
-                case 'estado':
                     valA = getDaysRemaining(a.fechaVencimiento);
                     valB = getDaysRemaining(b.fechaVencimiento);
                     break;
@@ -2104,17 +2136,11 @@ function renderStockTable() {
             <td><code style="font-size: 11px; opacity: 0.85;">${item.codigo}</code></td>
             <td>
                 <div style="font-weight: 600; color: var(--text-primary);">${item.producto}</div>
-                <div style="font-size: 11px; opacity: 0.65; margin-top: 2px;">${item.categoria}</div>
             </td>
-            <td>
-                <div style="font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap;">
-                    <span>${item.cantidad} un.</span>
-                    ${getStockVariation(item)}
-                </div>
-            </td>
+            <td style="font-weight: 600; color: var(--text-primary);">${item.cantidad} un.</td>
+            <td>${getStockVariation(item)}</td>
             <td>${formatDateToES(item.fechaVencimiento)}</td>
             <td style="font-weight: 600; color: ${days <= 30 ? '#f87171' : 'inherit'};">${daysText}</td>
-            <td><span class="badge ${statusObj.class}">${statusObj.text}</span></td>
         `;
         tbody.appendChild(tr);
     });
