@@ -2364,7 +2364,7 @@ function applyRoute(moduleName) {
         
         if (mobileFilterToggle) mobileFilterToggle.style.setProperty('display', '', 'important');
         if (filtersContainer) filtersContainer.style.setProperty('display', '', 'important');
-        if (titleEl) titleEl.textContent = 'Dashboard';
+        if (titleEl) titleEl.textContent = 'Cuentas Corrientes';
         if (subtitleEl) subtitleEl.textContent = 'Resumen de cuentas corrientes';
         
     } else if (moduleName === 'ControlVencimientos') {
