@@ -11,7 +11,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link rel="icon" type="image/png" href="/favicon.png">
-    <link rel="stylesheet" href="/beta/styles.css?v=5">
+    <link rel="stylesheet" href="/beta/styles.css?v=12">
 </head>
 <body>
     <div class="app-container">
@@ -290,6 +290,12 @@
                                     <option value="PROXIMO">Próximo (31-90d)</option>
                                     <option value="OK">En Regla (>90d)</option>
                                 </select>
+                                <div class="premium-checkbox-wrapper" style="margin-left: 6px; margin-right: 6px;">
+                                    <label>
+                                        <input type="checkbox" id="hide-expired-checkbox" checked>
+                                        Ocultar vencidos
+                                    </label>
+                                </div>
                                 <div class="dropdown" style="position: relative; display: inline-block;">
                                     <button type="button" id="download-stock-btn" class="glass-btn" style="font-size: 13px; padding: 6px 12px; border-radius: 8px; display: flex; align-items: center; gap: 8px; cursor: pointer; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: #fff; height: 34px; transition: all 0.2s;">
                                         <i class="fas fa-download"></i> <span>Exportar</span> <i class="fas fa-chevron-down" style="font-size: 10px;"></i>
@@ -306,7 +312,7 @@
                                 <thead>
                                     <tr>
                                         <th onclick="sortStockTable('codigo')" style="cursor: pointer; user-select: none;">Código Artículo <span id="sort-icon-codigo" class="sort-icon"><i class="fas fa-sort"></i></span></th>
-                                        <th onclick="sortStockTable('producto')" style="cursor: pointer; user-select: none;">Producto / Categoría <span id="sort-icon-producto" class="sort-icon"><i class="fas fa-sort"></i></span></th>
+                                        <th onclick="sortStockTable('producto')" style="cursor: pointer; user-select: none;">Producto <span id="sort-icon-producto" class="sort-icon"><i class="fas fa-sort"></i></span></th>
                                         <th onclick="sortStockTable('cantidad')" style="cursor: pointer; user-select: none;">Cantidad <span id="sort-icon-cantidad" class="sort-icon"><i class="fas fa-sort"></i></span></th>
                                         <th onclick="sortStockTable('variacion')" style="cursor: pointer; user-select: none;">Variación (24h) <span id="sort-icon-variacion" class="sort-icon"><i class="fas fa-sort"></i></span></th>
                                         <th onclick="sortStockTable('vencimiento')" style="cursor: pointer; user-select: none;">Vencimiento <span id="sort-icon-vencimiento" class="sort-icon"><i class="fas fa-sort"></i></span></th>
@@ -420,6 +426,6 @@
         </div>
     </div>
 
-    <script src="/beta/app.js?v=6"></script>
+    <script src="/beta/app.js?v=12"></script>
 </body>
 </html>

@@ -2046,6 +2046,7 @@ function renderStockTable() {
     
     const searchVal = (document.getElementById('search-stock')?.value || '').toLowerCase();
     const statusVal = document.getElementById('filter-stock-status')?.value || '';
+    const hideExpired = document.getElementById('hide-expired-checkbox')?.checked || false;
     
     tbody.innerHTML = '';
     
@@ -2064,7 +2065,13 @@ function renderStockTable() {
         else if (statusVal === 'PROXIMO') matchStatus = days > 30 && days <= 90;
         else if (statusVal === 'OK') matchStatus = days > 90;
         
-        return matchSearch && matchStatus;
+        // Filtro "Ocultar vencidos"
+        let matchExpired = true;
+        if (hideExpired) {
+            matchExpired = days > 0;
+        }
+        
+        return matchSearch && matchStatus && matchExpired;
     });
     
     // Aplicar ordenación dinámica
@@ -2428,10 +2435,9 @@ window.exportStockToPDF = function(event) {
     doc.text(`Generado el: ${dateStr} | Total de registros: ${dataToExport.length}`, 14, 27);
     
     // Configuración de tabla
-    const tableColumns = ["Código Artículo", "Producto", "Categoría", "Cantidad", "Vencimiento", "Restante", "Estado"];
+    const tableColumns = ["Código Artículo", "Producto", "Cantidad", "Vencimiento", "Restante"];
     const tableRows = dataToExport.map(item => {
         const days = getDaysRemaining(item.fechaVencimiento);
-        const statusObj = getStockStatus(days);
         
         let daysText = '';
         if (days < 0) daysText = `Venció hace ${Math.abs(days)}d`;
@@ -2441,11 +2447,9 @@ window.exportStockToPDF = function(event) {
         return [
             item.codigo,
             item.producto,
-            item.categoria,
             `${item.cantidad} un.`,
             formatDateToES(item.fechaVencimiento),
-            daysText,
-            statusObj.text
+            daysText
         ];
     });
     
@@ -2457,8 +2461,8 @@ window.exportStockToPDF = function(event) {
         headStyles: { fillColor: [59, 130, 246] }, // Azul primario
         styles: { fontSize: 8 },
         columnStyles: {
-            0: { cellWidth: 26 }, // Código artículo
-            1: { cellWidth: 60 }  // Producto
+            0: { cellWidth: 35 }, // Código artículo
+            1: { cellWidth: 85 }  // Producto
         }
     });
     
@@ -2476,7 +2480,6 @@ window.exportStockToExcel = function(event) {
     
     const rows = dataToExport.map(item => {
         const days = getDaysRemaining(item.fechaVencimiento);
-        const statusObj = getStockStatus(days);
         
         let daysText = '';
         if (days < 0) daysText = `Venció hace ${Math.abs(days)}d`;
@@ -2486,12 +2489,10 @@ window.exportStockToExcel = function(event) {
         return {
             "Código Artículo": item.codigo,
             "Producto": item.producto,
-            "Categoría": item.categoria,
             "Cantidad": item.cantidad,
             "Vencimiento": formatDateToES(item.fechaVencimiento),
             "Días Restantes": days,
-            "Restante Detalle": daysText,
-            "Estado": statusObj.text
+            "Restante Detalle": daysText
         };
     });
     
@@ -2501,14 +2502,12 @@ window.exportStockToExcel = function(event) {
     
     // Auto-ajustar anchos de columnas
     worksheet['!cols'] = [
-        {wch: 16}, // Código
-        {wch: 40}, // Producto
-        {wch: 15}, // Categoría
-        {wch: 10}, // Cantidad
-        {wch: 12}, // Vencimiento
+        {wch: 16}, // Código Artículo
+        {wch: 50}, // Producto
+        {wch: 12}, // Cantidad
+        {wch: 15}, // Vencimiento
         {wch: 15}, // Días restantes
-        {wch: 20}, // Restante Detalle
-        {wch: 15}  // Estado
+        {wch: 22}  // Restante Detalle
     ];
     
     XLSX.writeFile(workbook, `Reporte_Vencimientos_Stock_${new Date().toISOString().slice(0, 10)}.xlsx`);
@@ -2554,9 +2553,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const searchStockEl = document.getElementById('search-stock');
     const filterStockStatusEl = document.getElementById('filter-stock-status');
+    const hideExpiredEl = document.getElementById('hide-expired-checkbox');
     
     if (searchStockEl) searchStockEl.addEventListener('input', renderStockTable);
     if (filterStockStatusEl) filterStockStatusEl.addEventListener('change', renderStockTable);
+    if (hideExpiredEl) hideExpiredEl.addEventListener('change', renderStockTable);
     
     // Inicializar íconos de ordenación de stock
     window.updateSortIcons();
