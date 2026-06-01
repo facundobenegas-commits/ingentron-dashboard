@@ -588,6 +588,7 @@ function performDashboardUpdate() {
     const tbody = document.getElementById('clients-tbody');
     tbody.innerHTML = '';
     
+    const fragment = document.createDocumentFragment();
     aggregatedClients.forEach(client => {
         const tr = document.createElement('tr');
         
@@ -628,7 +629,7 @@ function performDashboardUpdate() {
         tr.innerHTML = `
             <td>
                 <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                    <span style="font-weight: 700; font-size: 15px; color: var(--text-primary);">${client.client}</span>
+                     <span style="font-weight: 700; font-size: 15px; color: var(--text-primary);">${client.client}</span>
                     ${codesHtml ? `<div style="display: inline-flex; gap: 6px; flex-wrap: wrap; align-items: center;">${codesHtml}</div>` : ''}
                 </div>
             </td>
@@ -642,8 +643,9 @@ function performDashboardUpdate() {
                 </button>
             </td>
         `;
-        tbody.appendChild(tr);
+        fragment.appendChild(tr);
     });
+    tbody.appendChild(fragment);
 }
 
 window.resetStatusFilter = function() {
@@ -862,6 +864,7 @@ function renderModalInvoices(originFilter, animate = true) {
         
     let filterTotal = 0;
         
+    const fragment = document.createDocumentFragment();
     invoicesToRender.forEach((inv, index) => {
         filterTotal += inv.amount;
         const tr = document.createElement('tr');
@@ -887,8 +890,9 @@ function renderModalInvoices(originFilter, animate = true) {
             <td class="text-right font-medium" style="color: #30d158; opacity: 0.95;">${formatCurrency(paidAmt)}</td>
             <td class="text-right font-medium" style="color: var(--accent-color);">${formatCurrency(inv.amount)}</td>
         `;
-        tbody.appendChild(tr);
+        fragment.appendChild(tr);
     });
+    tbody.appendChild(fragment);
     
     const totalEl = document.getElementById('modal-total-amount');
     if (totalEl) totalEl.textContent = formatCurrency(filterTotal);
@@ -2121,6 +2125,7 @@ function renderStockTable() {
         return;
     }
     
+    const fragment = document.createDocumentFragment();
     filtered.forEach(item => {
         const days = getDaysRemaining(item.fechaVencimiento);
         const statusObj = getStockStatus(days);
@@ -2141,8 +2146,9 @@ function renderStockTable() {
             <td>${formatDateToES(item.fechaVencimiento)}</td>
             <td style="font-weight: 600; color: ${days <= 30 ? '#f87171' : 'inherit'};">${daysText}</td>
         `;
-        tbody.appendChild(tr);
+        fragment.appendChild(tr);
     });
+    tbody.appendChild(fragment);
 }
 
 // Variables para los gráficos
