@@ -221,6 +221,44 @@ function getSystemChromePath() {
     return null;
 }
 
+// Función para subir el snapshot local de stock al servidor (ligero y rápido)
+async function uploadLocalSnapshot() {
+    const localSnapshotPath = path.join(__dirname, 'stock_local_snapshot.json');
+    if (!fs.existsSync(localSnapshotPath)) {
+        console.log(`[Lightweight Sync] No existe un archivo de snapshot local (${localSnapshotPath}) para subir.`);
+        return false;
+    }
+    
+    try {
+        const payload = JSON.parse(fs.readFileSync(localSnapshotPath, 'utf8'));
+        if (!Array.isArray(payload) || payload.length === 0) {
+            console.log(`[Lightweight Sync] El archivo de snapshot local está vacío o es inválido.`);
+            return false;
+        }
+        
+        console.log(`[Lightweight Sync] Subiendo snapshot local persistido (${payload.length} lotes) a ${config.syncUrl}...`);
+        const resUpload = await fetch(config.syncUrl, {
+            method: 'POST',
+            headers: {
+                'x-sync-token': config.syncToken,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!resUpload.ok) {
+            throw new Error(`Servidor retorno codigo de respuesta HTTP: ${resUpload.status}`);
+        }
+        
+        const resultUploadJson = await resUpload.json();
+        console.log(`[Lightweight Sync] ¡Carga del snapshot de stock local EXITOSA!`, resultUploadJson);
+        return true;
+    } catch (err) {
+        console.error(`[Lightweight Sync] Error durante la carga del snapshot local:`, err.message);
+        return false;
+    }
+}
+
 // Proceso principal de Scraping y Carga
 async function runDigipScraper() {
     const timestamp = new Date().toLocaleString();
@@ -473,24 +511,15 @@ async function runDigipScraper() {
             console.warn(`[Parser] No se pudo eliminar el excel de stock: ${unlinkErr.message}`);
         }
 
-        // Subir a Render
+        // Guardar snapshot local y subir a Render
         if (stockResult.length > 0) {
-            console.log(`[Render] Subiendo stock a la nube. Destino: ${config.syncUrl}`);
-            const resUpload = await fetch(config.syncUrl, {
-                method: 'POST',
-                headers: {
-                    'x-sync-token': config.syncToken,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(stockResult)
-            });
-
-            if (!resUpload.ok) {
-                throw new Error(`Servidor retorno codigo de respuesta HTTP: ${resUpload.status}`);
-            }
+            // Guardar el snapshot localmente para persistencia y reintentos ligeros
+            const localSnapshotPath = path.join(__dirname, 'stock_local_snapshot.json');
+            fs.writeFileSync(localSnapshotPath, JSON.stringify(stockResult, null, 2));
+            console.log(`[Parser] Guardado snapshot local de stock (${stockResult.length} registros) en: ${localSnapshotPath}`);
             
-            const resultUploadJson = await resUpload.json();
-            console.log(`[Render] ¡Sincronizacion de Stock DIGIP EXITOSA!`, resultUploadJson);
+            // Subir de inmediato
+            await uploadLocalSnapshot();
         } else {
             console.log(`[RPA] No se encontraron registros de stock validos para sincronizar.`);
         }
@@ -546,34 +575,47 @@ function getMsUntilMidnight() {
 async function scheduleDailySync() {
     console.log("=============================================================");
     console.log("🔄 SINCRONIZADOR DE VENCIMIENTOS DE STOCK - DIGIP WMS (RPA)");
-    console.log(`Modo: Bucle Continuo - Cada ${config.intervalHours} horas y a las 00:00 hs`);
+    console.log(`Modo: Snapshot Estático de Medianoche (Carga continua de resiliencia cada 5 min)`);
     console.log(`URL Destino Render: ${config.syncUrl}`);
     console.log("=============================================================");
     
-    // 1. Ejecutar inmediatamente al iniciar el proceso
-    console.log("\n[Programador] Ejecutando sincronización de arranque inicial...");
-    await runDigipScraper();
-    
-    // 2. Iniciar el bucle de intervalo periódico (ej: cada 2 horas)
-    if (config.intervalHours && config.intervalHours > 0) {
-        const intervalMs = config.intervalHours * 60 * 60 * 1000;
-        console.log(`[Programador] Programando sincronizaciones periódicas cada ${config.intervalHours} horas.`);
-        setInterval(async () => {
-            console.log(`\n[Programador] Iniciando sincronización periódica automática (intervalo de ${config.intervalHours}h)...`);
-            try {
-                await runDigipScraper();
-            } catch (err) {
-                console.error("[Programador] Error durante la sincronización periódica:", err.message);
+    // 1. Verificar si ya tenemos el snapshot "foto" de hoy
+    const localSnapshotPath = path.join(__dirname, 'stock_local_snapshot.json');
+    let hasTodaySnapshot = false;
+    if (fs.existsSync(localSnapshotPath)) {
+        try {
+            const stats = fs.statSync(localSnapshotPath);
+            const todayStr = new Date(new Date().getTime() - 3 * 3600 * 1000).toISOString().split('T')[0];
+            const fileDateStr = new Date(stats.mtimeMs - 3 * 3600 * 1000).toISOString().split('T')[0];
+            if (todayStr === fileDateStr) {
+                hasTodaySnapshot = true;
             }
-        }, intervalMs);
+        } catch (e) {}
     }
     
-    // 3. Iniciar el bucle diario auto-calculable
+    if (hasTodaySnapshot) {
+        console.log(`\n[Programador] Encontrado snapshot local de hoy. Subiendo copia al servidor...`);
+        await uploadLocalSnapshot();
+    } else {
+        console.log(`\n[Programador] No se encontró snapshot de hoy. Iniciando Scraping RPA para tomar la foto diaria...`);
+        await runDigipScraper();
+    }
+    
+    // 2. Iniciar el bucle de sincronización ligera (subir el snapshot existente cada 5 minutos)
+    // Esto asegura que si Render reinicia y limpia su caché, recuperamos los datos en minutos con 0 consumo
+    const uploadIntervalMs = 5 * 60 * 1000; // 5 minutos
+    console.log(`[Programador] Programando reenvíos automáticos ligeros del snapshot cada 5 minutos.`);
+    setInterval(async () => {
+        console.log(`\n[Programador] Iniciando reenvío de resiliencia del snapshot local...`);
+        await uploadLocalSnapshot();
+    }, uploadIntervalMs);
+    
+    // 3. Iniciar el bucle diario auto-calculable para tomar la foto real a la medianoche (00:00 hs de Argentina)
     const runNext = () => {
         const delayMs = getMsUntilMidnight();
         
         setTimeout(async () => {
-            console.log("\n[Programador] ¡Es medianoche (00:00 hs)! Iniciando ciclo automático de stock...");
+            console.log("\n[Programador] ¡Es medianoche (00:00 hs)! Iniciando Scraping RPA para tomar la foto de stock diaria...");
             try {
                 await runDigipScraper();
             } catch (err) {
