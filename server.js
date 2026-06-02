@@ -322,13 +322,23 @@ app.post('/api/update-stock', express.json({ limit: '15mb' }), (req, res) => {
     }
     
     const payload = req.body;
-    if (!Array.isArray(payload)) {
-        return res.status(400).json({ error: "El payload debe ser un array de stock." });
+    let currentData = [];
+    let historyData = null;
+    
+    if (Array.isArray(payload)) {
+        // Formato clásico retrocompatible
+        currentData = payload;
+    } else if (payload && Array.isArray(payload.current)) {
+        // Nuevo formato robusto (snapshot actual + histórico)
+        currentData = payload.current;
+        historyData = payload.history;
+    } else {
+        return res.status(400).json({ error: "El payload de stock debe ser un array o un objeto estructurado {current, history}." });
     }
     
     try {
         const cachePath = path.join(DATA_DIR, 'stock_cache.json');
-        fs.writeFileSync(cachePath, JSON.stringify(payload));
+        fs.writeFileSync(cachePath, JSON.stringify(currentData));
         
         // Registrar hora de sinc de Digip
         const statusPath = path.join(DATA_DIR, 'sync_status.json');
@@ -342,19 +352,24 @@ app.post('/api/update-stock', express.json({ limit: '15mb' }), (req, res) => {
         syncStatus.Digip = new Date().toISOString();
         fs.writeFileSync(statusPath, JSON.stringify(syncStatus));
         
-        // --- GUARDAR EN HISTÓRICO DIARIO (Zona horaria Argentina UTC-3) ---
-        const localDate = new Date(new Date().getTime() - 3 * 3600 * 1000);
-        const todayStr = localDate.toISOString().split('T')[0];
-        
+        // --- GUARDAR EN HISTÓRICO DIARIO ---
         const historyPath = path.join(DATA_DIR, 'stock_history.json');
         let history = {};
-        if (fs.existsSync(historyPath)) {
-            try {
-                history = JSON.parse(fs.readFileSync(historyPath, 'utf8')) || {};
-            } catch (err) {}
-        }
         
-        history[todayStr] = payload;
+        if (historyData) {
+            // Si el sincronizador local envió el histórico completo, lo adoptamos directamente (resiliencia nube)
+            history = historyData;
+        } else {
+            // Fallback: lo generamos en el servidor a partir del cache actual
+            if (fs.existsSync(historyPath)) {
+                try {
+                    history = JSON.parse(fs.readFileSync(historyPath, 'utf8')) || {};
+                } catch (err) {}
+            }
+            const localDate = new Date(new Date().getTime() - 3 * 3600 * 1000);
+            const todayStr = localDate.toISOString().split('T')[0];
+            history[todayStr] = currentData;
+        }
         
         // Mantener solo los últimos 15 días de capturas para optimizar disco
         const dates = Object.keys(history).sort();
@@ -366,8 +381,8 @@ app.post('/api/update-stock', express.json({ limit: '15mb' }), (req, res) => {
         }
         fs.writeFileSync(historyPath, JSON.stringify(history));
         
-        console.log(`[Stock Sync] Recibidos ${payload.length} lotes de stock de Digip WMS. Guardado en histórico del día: ${todayStr}.`);
-        res.json({ success: true, count: payload.length });
+        console.log(`[Stock Sync] Recibidos ${currentData.length} lotes de stock de Digip WMS (Histórico: ${historyData ? 'Sincronizado' : 'Autogenerado'}).`);
+        res.json({ success: true, count: currentData.length });
     } catch (err) {
         console.error("Error escribiendo archivo de caché de stock:", err);
         res.status(500).json({ error: "Error interno al escribir caché de stock." });

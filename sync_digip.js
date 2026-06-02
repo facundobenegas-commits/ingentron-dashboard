@@ -236,14 +236,29 @@ async function uploadLocalSnapshot() {
             return false;
         }
         
-        console.log(`[Lightweight Sync] Subiendo snapshot local persistido (${payload.length} lotes) a ${config.syncUrl}...`);
+        // Cargar el histórico local para resiliencia en la nube
+        const localHistoryPath = path.join(__dirname, 'stock_history.json');
+        let localHistory = {};
+        if (fs.existsSync(localHistoryPath)) {
+            try {
+                localHistory = JSON.parse(fs.readFileSync(localHistoryPath, 'utf8')) || {};
+            } catch (e) {}
+        }
+        
+        // Estructura robusta para resiliencia total
+        const uploadPayload = {
+            current: payload,
+            history: localHistory
+        };
+        
+        console.log(`[Lightweight Sync] Subiendo snapshot e histórico local (${payload.length} lotes, ${Object.keys(localHistory).length} días de historial) a ${config.syncUrl}...`);
         const resUpload = await fetch(config.syncUrl, {
             method: 'POST',
             headers: {
                 'x-sync-token': config.syncToken,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(uploadPayload)
         });
 
         if (!resUpload.ok) {
@@ -251,7 +266,7 @@ async function uploadLocalSnapshot() {
         }
         
         const resultUploadJson = await resUpload.json();
-        console.log(`[Lightweight Sync] ¡Carga del snapshot de stock local EXITOSA!`, resultUploadJson);
+        console.log(`[Lightweight Sync] ¡Carga de resiliencia del stock local EXITOSA!`, resultUploadJson);
         return true;
     } catch (err) {
         console.error(`[Lightweight Sync] Error durante la carga del snapshot local:`, err.message);
@@ -517,6 +532,30 @@ async function runDigipScraper() {
             const localSnapshotPath = path.join(__dirname, 'stock_local_snapshot.json');
             fs.writeFileSync(localSnapshotPath, JSON.stringify(stockResult, null, 2));
             console.log(`[Parser] Guardado snapshot local de stock (${stockResult.length} registros) en: ${localSnapshotPath}`);
+            
+            // --- ACTUALIZAR HISTÓRICO DIARIO LOCAL ---
+            const localDate = new Date(new Date().getTime() - 3 * 3600 * 1000);
+            const todayStr = localDate.toISOString().split('T')[0];
+            
+            const localHistoryPath = path.join(__dirname, 'stock_history.json');
+            let localHistory = {};
+            if (fs.existsSync(localHistoryPath)) {
+                try {
+                    localHistory = JSON.parse(fs.readFileSync(localHistoryPath, 'utf8')) || {};
+                } catch (e) {}
+            }
+            localHistory[todayStr] = stockResult;
+            
+            // Mantener solo los últimos 15 días de capturas
+            const dates = Object.keys(localHistory).sort();
+            if (dates.length > 15) {
+                const datesToRemove = dates.slice(0, dates.length - 15);
+                for (const d of datesToRemove) {
+                    delete localHistory[d];
+                }
+            }
+            fs.writeFileSync(localHistoryPath, JSON.stringify(localHistory, null, 2));
+            console.log(`[Parser] Histórico diario local de 15 días actualizado con el registro de hoy: ${todayStr}`);
             
             // Subir de inmediato
             await uploadLocalSnapshot();
