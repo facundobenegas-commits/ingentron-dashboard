@@ -2457,6 +2457,68 @@ function applyRouteFromLocation() {
     }
 }
 
+// Helper para extraer texto plano de la variación sin HTML (usado en exportaciones)
+function getStockVariationText(item) {
+    if (!stockHistory || Object.keys(stockHistory).length === 0) return 'Sin cambios';
+    const availableDates = Object.keys(stockHistory).sort();
+    if (availableDates.length === 0) return 'Sin cambios';
+    
+    // Obtener el día de hoy en hora local (Argentina UTC-3)
+    const localDate = new Date(new Date().getTime() - 3 * 3600 * 1000);
+    const todayStr = localDate.toISOString().split('T')[0];
+    
+    // Encontrar el último snapshot histórico anterior a hoy
+    let prevDate = '';
+    for (let i = availableDates.length - 1; i >= 0; i--) {
+        if (availableDates[i] < todayStr) {
+            prevDate = availableDates[i];
+            break;
+        }
+    }
+    
+    if (!prevDate) prevDate = availableDates[0]; // Fallback al registro disponible
+    
+    const key = `${String(item.codigo).trim()}_${String(item.fechaVencimiento).trim()}`;
+    
+    // Cachear el mapa de cantidades del día anterior
+    if (!window.yesterdayQtyMap || window.yesterdayQtyMapDate !== prevDate) {
+        window.yesterdayQtyMap = new Map();
+        const yesterdayData = stockHistory[prevDate] || [];
+        yesterdayData.forEach(yItem => {
+            const yKey = `${String(yItem.codigo || yItem.ean || '').trim()}_${String(yItem.fechaVencimiento || yItem.vencimiento || '').trim()}`;
+            const currentQty = window.yesterdayQtyMap.get(yKey) || 0;
+            window.yesterdayQtyMap.set(yKey, currentQty + parseFloat(yItem.cantidad || 0));
+        });
+        window.yesterdayQtyMapDate = prevDate;
+    }
+    
+    const yesterdayTotal = window.yesterdayQtyMap.get(key);
+    if (yesterdayTotal === undefined) {
+        return 'Nuevo';
+    }
+    
+    // Cachear el mapa de cantidades de hoy agrupado por codigo+vencimiento
+    if (!window.todayQtyMap) {
+        window.todayQtyMap = new Map();
+        stockData.forEach(tItem => {
+            const tKey = `${String(tItem.codigo).trim()}_${String(tItem.fechaVencimiento).trim()}`;
+            const currentQty = window.todayQtyMap.get(tKey) || 0;
+            window.todayQtyMap.set(tKey, currentQty + parseFloat(tItem.cantidad || 0));
+        });
+    }
+    
+    const todayTotal = window.todayQtyMap.get(key) || 0;
+    const variation = todayTotal - yesterdayTotal;
+    
+    if (variation > 0) {
+        return `+${variation}`;
+    } else if (variation < 0) {
+        return `${variation}`;
+    } else {
+        return 'Sin cambios';
+    }
+}
+
 // Exportar listado de vencimientos de stock filtrado a PDF
 window.exportStockToPDF = function(event) {
     if (event) event.preventDefault();
@@ -2482,7 +2544,7 @@ window.exportStockToPDF = function(event) {
     doc.text(`Generado el: ${dateStr} | Total de registros: ${dataToExport.length}`, 14, 27);
     
     // Configuración de tabla
-    const tableColumns = ["Código Artículo", "Categoría", "Producto", "Lote", "Cantidad", "Vencimiento", "Restante"];
+    const tableColumns = ["Código Artículo", "Producto", "Cantidad", "Variación", "Vencimiento", "Restante"];
     const tableRows = dataToExport.map(item => {
         const days = getDaysRemaining(item.fechaVencimiento);
         
@@ -2493,10 +2555,9 @@ window.exportStockToPDF = function(event) {
         
         return [
             item.codigo,
-            item.categoria || 'Almacén',
             item.producto,
-            item.lote || 'S/L',
             `${item.cantidad} un.`,
+            getStockVariationText(item),
             formatDateToES(item.fechaVencimiento),
             daysText
         ];
@@ -2510,13 +2571,12 @@ window.exportStockToPDF = function(event) {
         headStyles: { fillColor: [59, 130, 246] }, // Azul primario
         styles: { fontSize: 8 },
         columnStyles: {
-            0: { cellWidth: 25 }, // Código artículo
-            1: { cellWidth: 25 }, // Categoría
-            2: { cellWidth: 65 }, // Producto
-            3: { cellWidth: 18 }, // Lote
-            4: { cellWidth: 15 }, // Cantidad
-            5: { cellWidth: 17 }, // Vencimiento
-            6: { cellWidth: 17 }  // Restante
+            0: { cellWidth: 32 }, // Código artículo
+            1: { cellWidth: 70 }, // Producto
+            2: { cellWidth: 20 }, // Cantidad
+            3: { cellWidth: 20 }, // Variación
+            4: { cellWidth: 20 }, // Vencimiento
+            5: { cellWidth: 20 }  // Restante
         }
     });
     
@@ -2542,10 +2602,9 @@ window.exportStockToExcel = function(event) {
         
         return {
             "Código Artículo": item.codigo,
-            "Categoría": item.categoria || 'Almacén',
             "Producto": item.producto,
-            "Lote": item.lote || 'S/L',
             "Cantidad": item.cantidad,
+            "Variación (24h)": getStockVariationText(item),
             "Vencimiento": formatDateToES(item.fechaVencimiento),
             "Días Restantes": days,
             "Restante Detalle": daysText
@@ -2559,10 +2618,9 @@ window.exportStockToExcel = function(event) {
     // Auto-ajustar anchos de columnas
     worksheet['!cols'] = [
         {wch: 16}, // Código Artículo
-        {wch: 16}, // Categoría
         {wch: 50}, // Producto
-        {wch: 12}, // Lote
         {wch: 12}, // Cantidad
+        {wch: 16}, // Variación (24h)
         {wch: 15}, // Vencimiento
         {wch: 15}, // Días restantes
         {wch: 22}  // Restante Detalle

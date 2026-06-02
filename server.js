@@ -4,6 +4,9 @@ const fs = require('fs');
 const XLSX = require('xlsx');
 const firebird = require('node-firebird');
 
+const DATA_DIR = process.env.DATA_DIR || (fs.existsSync('/data') ? '/data' : __dirname);
+console.log(`[Persistence] Usando directorio de persistencia: ${DATA_DIR}`);
+
 const app = express();
 
 // Servir archivos estáticos del dashboard (index.html, styles.css, app.js)
@@ -255,7 +258,7 @@ app.post('/api/update-saldos', express.json({ limit: '15mb' }), (req, res) => {
     const syncOrigin = req.headers['x-sync-origin']; // Ej: 'Aguas' o 'PepsiCo'
     
     try {
-        const cachePath = path.join(__dirname, 'saldos_cache.json');
+        const cachePath = path.join(DATA_DIR, 'saldos_cache.json');
         let currentCache = [];
         if (fs.existsSync(cachePath)) {
             try {
@@ -285,7 +288,7 @@ app.post('/api/update-saldos', express.json({ limit: '15mb' }), (req, res) => {
         fs.writeFileSync(cachePath, JSON.stringify(updatedCache));
         
         // Guardar la fecha y hora de la última sincronización exitosa por origen
-        const statusPath = path.join(__dirname, 'sync_status.json');
+        const statusPath = path.join(DATA_DIR, 'sync_status.json');
         let syncStatus = { Aguas: null, PepsiCo: null, 'Trenque Lauquen': null, Salliquelo: null, Digip: null };
         if (fs.existsSync(statusPath)) {
             try {
@@ -324,11 +327,11 @@ app.post('/api/update-stock', express.json({ limit: '15mb' }), (req, res) => {
     }
     
     try {
-        const cachePath = path.join(__dirname, 'stock_cache.json');
+        const cachePath = path.join(DATA_DIR, 'stock_cache.json');
         fs.writeFileSync(cachePath, JSON.stringify(payload));
         
         // Registrar hora de sinc de Digip
-        const statusPath = path.join(__dirname, 'sync_status.json');
+        const statusPath = path.join(DATA_DIR, 'sync_status.json');
         let syncStatus = { Aguas: null, PepsiCo: null, 'Trenque Lauquen': null, Salliquelo: null, Digip: null };
         if (fs.existsSync(statusPath)) {
             try {
@@ -343,7 +346,7 @@ app.post('/api/update-stock', express.json({ limit: '15mb' }), (req, res) => {
         const localDate = new Date(new Date().getTime() - 3 * 3600 * 1000);
         const todayStr = localDate.toISOString().split('T')[0];
         
-        const historyPath = path.join(__dirname, 'stock_history.json');
+        const historyPath = path.join(DATA_DIR, 'stock_history.json');
         let history = {};
         if (fs.existsSync(historyPath)) {
             try {
@@ -373,8 +376,8 @@ app.post('/api/update-stock', express.json({ limit: '15mb' }), (req, res) => {
 
 // Endpoint GET para servir el stock consolidado (usado por el dashboard beta)
 app.get('/api/stock', (req, res) => {
-    const cachePath = path.join(__dirname, 'stock_cache.json');
-    const historyPath = path.join(__dirname, 'stock_history.json');
+    const cachePath = path.join(DATA_DIR, 'stock_cache.json');
+    const historyPath = path.join(DATA_DIR, 'stock_history.json');
     
     let current = [];
     let history = {};
@@ -400,7 +403,7 @@ app.get('/api/stock', (req, res) => {
 
 // Endpoint para consultar el estado de la última sincronización de los servidores locales
 app.get('/api/sync-status', (req, res) => {
-    const statusPath = path.join(__dirname, 'sync_status.json');
+    const statusPath = path.join(DATA_DIR, 'sync_status.json');
     let syncStatus = { Aguas: null, PepsiCo: null, 'Trenque Lauquen': null, Salliquelo: null, Digip: null };
     if (fs.existsSync(statusPath)) {
         try {
@@ -414,7 +417,7 @@ app.get('/api/sync-status', (req, res) => {
 // Endpoint unificado y ultra-rápido en tiempo real (para versión Beta)
 app.get('/api/saldos', async (req, res) => {
     // 0. Si existe el archivo caché sincronizado (ej. en Render), lo servimos instantáneamente
-    const cachePath = path.join(__dirname, 'saldos_cache.json');
+    const cachePath = path.join(DATA_DIR, 'saldos_cache.json');
     if (fs.existsSync(cachePath)) {
         try {
             const cacheContent = fs.readFileSync(cachePath, 'utf8');
