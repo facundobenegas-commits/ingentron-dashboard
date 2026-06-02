@@ -336,14 +336,17 @@ function populateFilters() {
     const newEmpresaSelect = empresaSelectEl.cloneNode(true);
     empresaSelectEl.parentNode.replaceChild(newEmpresaSelect, empresaSelectEl);
 
-    const newOriginSelect = originSelect.cloneNode(true);
-    originSelect.parentNode.replaceChild(newOriginSelect, originSelect);
-    const newWeekSelect = weekSelect.cloneNode(true);
-    weekSelect.parentNode.replaceChild(newWeekSelect, weekSelect);
+    const originSelectEl = document.getElementById('origin-select');
+    const newOriginSelect = originSelectEl.cloneNode(true);
+    originSelectEl.parentNode.replaceChild(newOriginSelect, originSelectEl);
+
+    const weekSelectEl = document.getElementById('week-select');
+    const newWeekSelect = weekSelectEl.cloneNode(true);
+    weekSelectEl.parentNode.replaceChild(newWeekSelect, weekSelectEl);
     
-    const statusSelect = document.getElementById('status-select');
-    const newStatusSelect = statusSelect.cloneNode(true);
-    statusSelect.parentNode.replaceChild(newStatusSelect, statusSelect);
+    const statusSelectEl = document.getElementById('status-select');
+    const newStatusSelect = statusSelectEl.cloneNode(true);
+    statusSelectEl.parentNode.replaceChild(newStatusSelect, statusSelectEl);
 
     const situacionSelectEl = document.getElementById('situacion-select');
     const newSituacionSelect = situacionSelectEl.cloneNode(true);
