@@ -11,7 +11,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link rel="icon" type="image/png" href="/favicon.png">
-    <link rel="stylesheet" href="/beta/styles.css?v=22">
+    <link rel="stylesheet" href="/beta/styles.css?v=23">
 </head>
 <body>
     <div class="app-container">
@@ -44,7 +44,7 @@
         <main class="main-content expanded" id="main-content">
             <!-- Cabecera Móvil Fija -->
             <div class="mobile-top-bar">
-                <button id="mobile-menu-toggle" class="btn-icon hamburger-btn" onclick="document.getElementById('sidebar-toggle').click()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); cursor: pointer; width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                <button id="mobile-menu-toggle" class="btn-icon hamburger-btn" onclick="event.stopPropagation(); document.getElementById('sidebar-toggle').click()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); cursor: pointer; width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 4px;">
                     <span class="bar"></span>
                     <span class="bar"></span>
                     <span class="bar"></span>
