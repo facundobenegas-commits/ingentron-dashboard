@@ -1625,7 +1625,7 @@ tbody tr:hover {
 
 /* Table modifications for stock on mobile card transformation */
 @media (max-width: 640px) {
-    #stock-table tbody tr {
+    #stock-table tbody tr.stock-main-row {
         display: flex !important;
         flex-direction: column !important;
         background: rgba(255, 255, 255, 0.02) !important;
@@ -1637,9 +1637,31 @@ tbody tr:hover {
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
         width: 100% !important;
         box-sizing: border-box !important;
+        transition: border-radius 0.3s, margin-bottom 0.3s;
     }
     
-    #stock-table tbody td {
+    #stock-table tbody tr.stock-main-row.expanded-main {
+        border-radius: 16px 16px 0 0 !important;
+        margin-bottom: 0 !important;
+        border-bottom: none !important;
+    }
+
+    #stock-table tbody tr.stock-detail-row {
+        display: flex !important;
+        flex-direction: column !important;
+        background: rgba(255, 255, 255, 0.01) !important;
+        border: 1px solid rgba(255, 255, 255, 0.06) !important;
+        border-top: 1px dashed rgba(255, 255, 255, 0.15) !important;
+        border-radius: 0 0 16px 16px !important;
+        padding: 16px !important;
+        margin-bottom: 14px !important;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15) !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        margin-top: 0 !important;
+    }
+    
+    #stock-table tbody tr.stock-main-row td {
         display: flex !important;
         justify-content: space-between !important;
         align-items: center !important;
@@ -1650,7 +1672,7 @@ tbody tr:hover {
         width: 100% !important;
     }
     
-    #stock-table tbody td:first-child {
+    #stock-table tbody tr.stock-main-row td:first-child {
         flex-direction: column !important;
         align-items: flex-start !important;
         border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
@@ -1659,12 +1681,11 @@ tbody tr:hover {
         gap: 6px !important;
     }
     
-    #stock-table tbody td:nth-child(2)::before { content: "Categoría:"; font-weight: 600; color: var(--text-secondary); }
-    #stock-table tbody td:nth-child(3)::before { content: "Cantidad:"; font-weight: 600; color: var(--text-secondary); }
-    #stock-table tbody td:nth-child(4)::before { content: "Vencimiento:"; font-weight: 600; color: var(--text-secondary); }
-    #stock-table tbody td:nth-child(5)::before { content: "Restante:"; font-weight: 600; color: var(--text-secondary); }
-    #stock-table tbody td:nth-child(6)::before { content: "Estado:"; font-weight: 600; color: var(--text-secondary); }
-    #stock-table tbody td:nth-child(7)::before { content: "Acción:"; font-weight: 600; color: var(--text-secondary); }
+    #stock-table tbody tr.stock-main-row td:nth-child(1)::before { content: "Código:"; font-weight: 600; color: var(--text-secondary); }
+    #stock-table tbody tr.stock-main-row td:nth-child(3)::before { content: "Cantidad:"; font-weight: 600; color: var(--text-secondary); }
+    #stock-table tbody tr.stock-main-row td:nth-child(4)::before { content: "Variación:"; font-weight: 600; color: var(--text-secondary); }
+    #stock-table tbody tr.stock-main-row td:nth-child(5)::before { content: "Vencimiento:"; font-weight: 600; color: var(--text-secondary); }
+    #stock-table tbody tr.stock-main-row td:nth-child(6)::before { content: "Restante:"; font-weight: 600; color: var(--text-secondary); }
 }
 
 /* --- ESTILOS DE MÓDULOS DE LANDING (HOME) --- */

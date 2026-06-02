@@ -2087,6 +2087,87 @@ window.updateSortIcons = function() {
     });
 };
 
+// Helper para obtener las variaciones diarias de los últimos 7 días
+function getItemDailyVariations(item) {
+    const dates = [];
+    const localDate = new Date(new Date().getTime() - 3 * 3600 * 1000); // Argentina UTC-3
+    
+    // Necesitamos 8 días para poder calcular la variación diaria de los últimos 7 días
+    for (let i = 7; i >= 0; i--) {
+        const d = new Date(localDate.getTime() - i * 24 * 3600 * 1000);
+        dates.push(d.toISOString().split('T')[0]);
+    }
+    
+    const key = `${String(item.codigo).trim()}_${String(item.fechaVencimiento).trim()}`;
+    
+    // Obtener cantidades para los 8 días
+    const dailyQtys = dates.map(dateStr => {
+        let qty = 0;
+        let hasRecord = false;
+        
+        const localToday = new Date(new Date().getTime() - 3 * 3600 * 1000).toISOString().split('T')[0];
+        if (dateStr === localToday) {
+            stockData.forEach(tItem => {
+                const tKey = `${String(tItem.codigo).trim()}_${String(tItem.fechaVencimiento).trim()}`;
+                if (tKey === key) {
+                    qty += parseFloat(tItem.cantidad || 0);
+                    hasRecord = true;
+                }
+            });
+        } else if (stockHistory && stockHistory[dateStr]) {
+            stockHistory[dateStr].forEach(hItem => {
+                const hKey = `${String(hItem.codigo || hItem.ean || '').trim()}_${String(hItem.fechaVencimiento || hItem.vencimiento || '').trim()}`;
+                if (hKey === key) {
+                    qty += parseFloat(hItem.cantidad || 0);
+                    hasRecord = true;
+                }
+            });
+        }
+        return { dateStr, qty, hasRecord };
+    });
+    
+    // Calcular variaciones diarias de los últimos 7 días
+    const variations = [];
+    for (let i = 1; i < dailyQtys.length; i++) {
+        const day = dailyQtys[i];
+        const prevDay = dailyQtys[i-1];
+        const parts = day.dateStr.split('-');
+        const label = `${parts[2]}/${parts[1]}`; // Formato DD/MM
+        
+        let variationText = '';
+        let variationClass = '';
+        
+        if (!day.hasRecord && !prevDay.hasRecord) {
+            variationText = '-';
+            variationClass = 'neutral';
+        } else if (!prevDay.hasRecord && day.hasRecord) {
+            variationText = 'Nuevo';
+            variationClass = 'new';
+        } else {
+            const diff = day.qty - prevDay.qty;
+            if (diff > 0) {
+                variationText = `+${diff}`;
+                variationClass = 'positive';
+            } else if (diff < 0) {
+                variationText = `${diff}`;
+                variationClass = 'negative';
+            } else {
+                variationText = '0';
+                variationClass = 'neutral';
+            }
+        }
+        
+        variations.push({
+            label,
+            text: variationText,
+            class: variationClass,
+            qty: day.qty
+        });
+    }
+    
+    return variations;
+}
+
 // Renderizado dinámico de la tabla de stock
 function renderStockTable() {
     window.todayQtyMap = null; // Reiniciar mapa de hoy para recálculo dinámico en cada dibujado
@@ -2185,6 +2266,8 @@ function renderStockTable() {
         else daysText = `${days}d restante${days > 1 ? 's' : ''}`;
         
         const tr = document.createElement('tr');
+        tr.style.cursor = 'pointer';
+        tr.className = 'stock-main-row';
         tr.innerHTML = `
             <td><code style="font-size: 11px; opacity: 0.85;">${item.codigo}</code></td>
             <td>
@@ -2193,9 +2276,62 @@ function renderStockTable() {
             <td style="font-weight: 600; color: var(--text-primary);">${item.cantidad} un.</td>
             <td>${getStockVariation(item)}</td>
             <td>${formatDateToES(item.fechaVencimiento)}</td>
-            <td style="font-weight: 600; color: ${days <= 30 ? '#f87171' : 'inherit'};">${daysText}</td>
+            <td style="font-weight: 600; color: ${days <= 30 ? '#f87171' : 'inherit'}; display: flex; align-items: center; gap: 8px; justify-content: space-between;">
+                <span>${daysText}</span>
+                <i class="fas fa-chevron-down toggle-icon" style="transition: transform 0.3s; opacity: 0.5;"></i>
+            </td>
         `;
+        
+        // Crear fila de detalle
+        const detailTr = document.createElement('tr');
+        detailTr.className = 'stock-detail-row';
+        detailTr.style.display = 'none';
+        detailTr.style.background = 'rgba(255, 255, 255, 0.005)';
+        
+        const variations = getItemDailyVariations(item);
+        
+        let variationsHtml = variations.map(v => {
+            let badgeStyle = '';
+            if (v.class === 'positive') badgeStyle = 'background: rgba(52, 211, 153, 0.15); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.25);';
+            else if (v.class === 'negative') badgeStyle = 'background: rgba(248, 113, 113, 0.15); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.25);';
+            else if (v.class === 'new') badgeStyle = 'background: rgba(96, 165, 250, 0.15); color: #60a5fa; border: 1px solid rgba(96, 165, 250, 0.25);';
+            else badgeStyle = 'background: rgba(255, 255, 255, 0.05); color: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.1);';
+            
+            return `
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255,255,255,0.04); padding: 8px 12px; border-radius: 10px; min-width: 68px; flex: 1; box-sizing: border-box;">
+                    <div style="font-size: 11px; opacity: 0.6; font-weight: 500;">${v.label}</div>
+                    <div style="font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 4px; ${badgeStyle} text-align: center;">${v.text}</div>
+                    <div style="font-size: 9.5px; opacity: 0.4; font-weight: 500; text-align: center;">${v.qty} un.</div>
+                </div>
+            `;
+        }).join('');
+        
+        detailTr.innerHTML = `
+            <td colspan="6" style="padding: 16px 24px; border-top: none;">
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--accent-color);">
+                        <i class="fas fa-history"></i> Historial de Variación Diaria (Últimos 7 días)
+                    </div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: space-between; width: 100%;">
+                        ${variationsHtml}
+                    </div>
+                </div>
+            </td>
+        `;
+        
+        // Evento toggle al hacer click en la fila principal
+        tr.addEventListener('click', () => {
+            const isVisible = detailTr.style.display !== 'none';
+            detailTr.style.display = isVisible ? 'none' : 'table-row';
+            tr.classList.toggle('expanded-main', !isVisible);
+            const icon = tr.querySelector('.toggle-icon');
+            if (icon) {
+                icon.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)';
+            }
+        });
+        
         fragment.appendChild(tr);
+        fragment.appendChild(detailTr);
     });
     tbody.appendChild(fragment);
 }
