@@ -1,37 +1,43 @@
 :root {
     --bg-color: #000000;
-    --surface-color: rgba(20, 20, 22, 0.4);
-    --surface-border: rgba(255, 255, 255, 0.08);
-    --text-primary: rgba(255, 255, 255, 0.95);
-    --text-secondary: rgba(235, 235, 245, 0.6);
+    --surface-color: rgba(20, 20, 25, 0.35);
+    --surface-border: rgba(255, 255, 255, 0.07);
+    --text-primary: rgba(255, 255, 255, 0.94);
+    --text-secondary: rgba(235, 235, 245, 0.55);
     --accent-color: #0a84ff;
-    --accent-hover: #007aff;
+    --accent-hover: #2f97ff;
     --danger-color: #ff453a;
-    --success-color: #32d74b;
+    --success-color: #30d158;
     --purple-color: #bf5af2;
     
     --sidebar-width: 260px;
     --header-height: 104px;
-    --border-radius: 20px;
+    --border-radius: 24px;
 }
 
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.011em;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    letter-spacing: -0.022em;
 }
 
 body {
-    background-color: #050505;
+    background-color: #040406;
     color: var(--text-primary);
     min-height: 100vh;
     overflow-x: hidden;
     background-image: 
-        radial-gradient(circle at 10% 20%, rgba(10, 132, 255, 0.25) 0%, transparent 40%),
-        radial-gradient(circle at 90% 80%, rgba(191, 90, 242, 0.25) 0%, transparent 40%),
-        radial-gradient(circle at 50% 50%, rgba(50, 215, 75, 0.15) 0%, transparent 50%);
+        radial-gradient(circle at 0% 0%, rgba(10, 132, 255, 0.15) 0%, transparent 45%),
+        radial-gradient(circle at 100% 100%, rgba(191, 90, 242, 0.15) 0%, transparent 45%),
+        radial-gradient(circle at 50% 25%, rgba(255, 45, 85, 0.05) 0%, transparent 35%),
+        radial-gradient(circle at 15% 75%, rgba(48, 209, 88, 0.06) 0%, transparent 30%);
     background-attachment: fixed;
 }
 
@@ -203,11 +209,14 @@ body {
 /* Glassmorphism Classes */
 .glass-card {
     background: var(--surface-color);
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(32px) saturate(210%);
+    -webkit-backdrop-filter: blur(32px) saturate(210%);
     border: 1px solid var(--surface-border);
     border-radius: var(--border-radius);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    box-shadow: 
+        0 16px 40px rgba(0, 0, 0, 0.35), 
+        inset 0 1px 0 rgba(255, 255, 255, 0.12),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.02);
 }
 
 .glass-input, .glass-select {
@@ -1561,14 +1570,19 @@ tbody tr:hover {
 
 /* --- ESTILOS DE MÓDULOS DE LANDING (HOME) --- */
 .module-card {
-    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+    background: rgba(255, 255, 255, 0.015) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 .module-card:hover {
-    transform: translateY(-6px) !important;
-    border-color: rgba(255, 255, 255, 0.18) !important;
+    transform: translateY(-8px) scale(1.02) !important;
+    border-color: rgba(255, 255, 255, 0.22) !important;
     background: rgba(255, 255, 255, 0.04) !important;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 
+        0 24px 48px rgba(0, 0, 0, 0.5), 
+        inset 0 1px 0 rgba(255, 255, 255, 0.2),
+        0 0 20px rgba(255, 255, 255, 0.02) !important;
 }
 
 .module-card:hover .module-icon-container {
