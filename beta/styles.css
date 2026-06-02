@@ -1813,14 +1813,14 @@ tbody tr:hover {
     z-index: 3;
 }
 
-/* Destello automático alternado: Ingentron destella y luego Gruya a los 4.5 segundos */
+/* Destello automático coordinado: Ingentron destella primero, Gruya brilla exactamente 1 segundo después */
 .glowing-logo-badge.brand-ingentron .glowing-logo-badge-inner::after {
-    animation: automatic-shine-sweep 9s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+    animation: automatic-shine-sweep 7s cubic-bezier(0.25, 1, 0.5, 1) infinite;
 }
 
 .glowing-logo-badge.brand-gruya .glowing-logo-badge-inner::after {
-    animation: automatic-shine-sweep 9s cubic-bezier(0.25, 1, 0.5, 1) infinite;
-    animation-delay: 4.5s;
+    animation: automatic-shine-sweep 7s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+    animation-delay: 1.0s;
 }
 
 .glowing-logo-badge-inner {
