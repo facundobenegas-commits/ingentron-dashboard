@@ -240,7 +240,7 @@ async function loadCuentasCorrientesData() {
     if (isCuentasCorrientesLoading) return;
     isCuentasCorrientesLoading = true;
     
-    const loadingIndicator = document.getElementById('loading-indicator');
+    const loadingIndicator = document.getElementById('processing-overlay');
     if (loadingIndicator) {
         loadingIndicator.classList.add('show');
         loadingIndicator.querySelector('span').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando Cuentas Corrientes...';
@@ -2621,7 +2621,7 @@ function applyRoute(moduleName) {
         if (subtitleEl) subtitleEl.textContent = 'Módulo de control de caducidades';
         
         // Cargar datos de stock actualizados perezosamente
-        const loadingIndicator = document.getElementById('loading-indicator');
+        const loadingIndicator = document.getElementById('processing-overlay');
         if (loadingIndicator) {
             loadingIndicator.classList.add('show');
             loadingIndicator.querySelector('span').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando Vencimientos...';
@@ -2646,6 +2646,9 @@ function applyRoute(moduleName) {
         if (filtersContainer) filtersContainer.style.setProperty('display', 'none', 'important');
         if (titleEl) titleEl.textContent = 'Módulos Ingentron';
         if (subtitleEl) subtitleEl.textContent = 'Panel de selección de módulos';
+        
+        const overlay = document.getElementById('processing-overlay');
+        if (overlay) overlay.classList.remove('show');
     }
 }
 
