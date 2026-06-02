@@ -1598,61 +1598,57 @@ tbody tr:hover {
     background: rgba(255, 255, 255, 0.05) !important;
 }
 
-/* --- ANIMACIÓN DE RESPIRACIÓN Y AURA DE CRISTAL PARA LOGOS --- */
-@keyframes ambient-glow {
+/* --- ORBE CIRCULAR DE RESPIRACIÓN ACCESIBLE (SIN PARPADEOS) --- */
+@keyframes breathing-orb {
     0% {
-        box-shadow: 
-            0 12px 32px rgba(0, 0, 0, 0.4), 
-            0 0 15px rgba(255, 255, 255, 0.03),
-            inset 0 1px 0 rgba(255, 255, 255, 0.08);
-        border-color: rgba(255, 255, 255, 0.06);
+        opacity: 0.35;
+        transform: translate(-50%, -50%) scale(0.9);
     }
     50% {
-        box-shadow: 
-            0 16px 48px rgba(0, 0, 0, 0.5), 
-            0 0 25px rgba(10, 132, 255, 0.14), 
-            0 0 12px rgba(191, 90, 242, 0.1),
-            inset 0 1px 0 rgba(255, 255, 255, 0.12);
-        border-color: rgba(10, 132, 255, 0.22);
+        opacity: 0.65;
+        transform: translate(-50%, -50%) scale(1.15);
     }
     100% {
-        box-shadow: 
-            0 12px 32px rgba(0, 0, 0, 0.4), 
-            0 0 15px rgba(255, 255, 255, 0.03),
-            inset 0 1px 0 rgba(255, 255, 255, 0.08);
-        border-color: rgba(255, 255, 255, 0.06);
+        opacity: 0.35;
+        transform: translate(-50%, -50%) scale(0.9);
     }
 }
 
 .glowing-logo-badge {
     position: relative;
     border-radius: 20px;
-    background: rgba(20, 20, 25, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(20, 20, 25, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-    animation: ambient-glow 8s ease-in-out infinite;
     width: 270px;
     height: 72px;
     box-sizing: border-box;
-    overflow: hidden;
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 
+        0 12px 36px rgba(0, 0, 0, 0.4), 
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
+/* El orbe circular de brillo situado detrás del badge de cristal */
 .glowing-logo-badge::before {
     content: '';
     position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 60%);
-    opacity: 0.8;
+    top: 50%;
+    left: 50%;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(10, 132, 255, 0.35) 0%, rgba(191, 90, 242, 0.25) 50%, transparent 100%);
+    filter: blur(25px);
+    transform: translate(-50%, -50%) scale(1);
+    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    opacity: 0.5;
     pointer-events: none;
     z-index: 1;
+    animation: breathing-orb 7s ease-in-out infinite;
+    will-change: transform, opacity;
 }
 
 .glowing-logo-badge-inner {
@@ -1671,12 +1667,18 @@ tbody tr:hover {
 .glowing-logo-badge:hover {
     transform: scale(1.03) translateY(-2px);
     border-color: rgba(10, 132, 255, 0.35);
-    background: rgba(25, 25, 30, 0.6);
+    background: rgba(25, 25, 30, 0.65);
     box-shadow: 
-        0 24px 48px rgba(0, 0, 0, 0.55), 
-        0 0 35px rgba(10, 132, 255, 0.25), 
-        0 0 15px rgba(191, 90, 242, 0.15),
+        0 20px 48px rgba(0, 0, 0, 0.55), 
         inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+/* Efecto hover: el orbe circular de luz se expande y suaviza aún más */
+.glowing-logo-badge:hover::before {
+    background: radial-gradient(circle, rgba(10, 132, 255, 0.5) 0%, rgba(191, 90, 242, 0.35) 50%, transparent 100%);
+    filter: blur(20px);
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(1.35);
 }
 
 /* --- ESTILOS DE ORDENACIÓN DE TABLAS --- */
