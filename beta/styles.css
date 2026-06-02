@@ -1982,6 +1982,26 @@ th.active-sort .sort-icon {
     background: rgba(255, 255, 255, 0.08);
 }
 
+/* --- ANIMACIÓN DE DESPLIEGUE ACORDEÓN (UNFOLD PANEL) --- */
+@keyframes unfoldPanel {
+    0% {
+        opacity: 0;
+        transform: scaleY(0.92) translateY(-15px);
+        filter: blur(4px);
+    }
+    100% {
+        opacity: 1;
+        transform: scaleY(1) translateY(0);
+        filter: blur(0);
+    }
+}
+
+.stock-detail-row .detail-wrapper {
+    animation: unfoldPanel 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    transform-origin: top;
+    will-change: transform, opacity, filter;
+}
+
 
 
 

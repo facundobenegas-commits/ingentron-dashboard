@@ -2307,8 +2307,8 @@ function renderStockTable() {
         }).join('');
         
         detailTr.innerHTML = `
-            <td colspan="6" style="padding: 16px 24px; border-top: none;">
-                <div style="display: flex; flex-direction: column; gap: 12px;">
+            <td colspan="6" style="padding: 0; border-top: none;">
+                <div class="detail-wrapper" style="padding: 16px 24px; display: flex; flex-direction: column; gap: 12px; transform-origin: top;">
                     <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--accent-color);">
                         <i class="fas fa-history"></i> Historial de Variación Diaria (Últimos 7 días)
                     </div>
