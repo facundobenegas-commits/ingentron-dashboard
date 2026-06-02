@@ -1598,53 +1598,67 @@ tbody tr:hover {
     background: rgba(255, 255, 255, 0.05) !important;
 }
 
-/* --- ANIMACIÓN DE BRILLO PARA LOGOS DEL HOME --- */
-@keyframes border-rotate {
+/* --- ANIMACIÓN DE RESPIRACIÓN Y AURA DE CRISTAL PARA LOGOS --- */
+@keyframes ambient-glow {
+    0% {
+        box-shadow: 
+            0 12px 32px rgba(0, 0, 0, 0.4), 
+            0 0 15px rgba(255, 255, 255, 0.03),
+            inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        border-color: rgba(255, 255, 255, 0.06);
+    }
+    50% {
+        box-shadow: 
+            0 16px 48px rgba(0, 0, 0, 0.5), 
+            0 0 25px rgba(10, 132, 255, 0.14), 
+            0 0 12px rgba(191, 90, 242, 0.1),
+            inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        border-color: rgba(10, 132, 255, 0.22);
+    }
     100% {
-        transform: rotate(360deg);
+        box-shadow: 
+            0 12px 32px rgba(0, 0, 0, 0.4), 
+            0 0 15px rgba(255, 255, 255, 0.03),
+            inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        border-color: rgba(255, 255, 255, 0.06);
     }
 }
 
 .glowing-logo-badge {
     position: relative;
-    padding: 1px;
-    border-radius: 18px;
-    overflow: hidden;
-    background: rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    background: rgba(20, 20, 25, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.06);
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: ambient-glow 8s ease-in-out infinite;
     width: 270px;
     height: 72px;
     box-sizing: border-box;
+    overflow: hidden;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
 }
 
 .glowing-logo-badge::before {
     content: '';
     position: absolute;
-    width: 200%;
-    height: 200%;
-    background: conic-gradient(
-        from 0deg,
-        transparent 30%,
-        rgba(255, 255, 255, 0.25) 45%,
-        rgba(255, 255, 255, 0.75) 50%,
-        rgba(255, 255, 255, 0.25) 55%,
-        transparent 70%
-    );
-    animation: border-rotate 5s linear infinite;
     top: -50%;
     left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 60%);
+    opacity: 0.8;
+    pointer-events: none;
     z-index: 1;
 }
 
 .glowing-logo-badge-inner {
     position: relative;
     z-index: 2;
-    background: rgba(12, 12, 14, 0.95);
-    border-radius: 17px;
+    background: transparent;
     padding: 12px 28px;
     display: flex;
     align-items: center;
@@ -1652,14 +1666,17 @@ tbody tr:hover {
     height: 100%;
     width: 100%;
     box-sizing: border-box;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .glowing-logo-badge:hover {
-    transform: scale(1.04);
-    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5), 0 0 12px rgba(255, 255, 255, 0.08);
+    transform: scale(1.03) translateY(-2px);
+    border-color: rgba(10, 132, 255, 0.35);
+    background: rgba(25, 25, 30, 0.6);
+    box-shadow: 
+        0 24px 48px rgba(0, 0, 0, 0.55), 
+        0 0 35px rgba(10, 132, 255, 0.25), 
+        0 0 15px rgba(191, 90, 242, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 /* --- ESTILOS DE ORDENACIÓN DE TABLAS --- */
