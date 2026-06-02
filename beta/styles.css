@@ -1617,7 +1617,7 @@ tbody tr:hover {
 .glowing-logo-badge {
     position: relative;
     border-radius: 20px;
-    background: rgba(20, 20, 25, 0.55);
+    background: rgba(20, 20, 25, 0.45);
     border: 1px solid rgba(255, 255, 255, 0.08);
     display: flex;
     align-items: center;
@@ -1626,6 +1626,8 @@ tbody tr:hover {
     width: 270px;
     height: 72px;
     box-sizing: border-box;
+    backdrop-filter: blur(14px) saturate(215%);
+    -webkit-backdrop-filter: blur(14px) saturate(215%);
     box-shadow: 
         0 12px 36px rgba(0, 0, 0, 0.4), 
         inset 0 1px 0 rgba(255, 255, 255, 0.1);
@@ -1651,6 +1653,37 @@ tbody tr:hover {
     will-change: transform, opacity;
 }
 
+/* Orbes de respiración personalizados por marca */
+.glowing-logo-badge.brand-ingentron::before {
+    background: radial-gradient(circle, rgba(239, 68, 68, 0.3) 0%, rgba(59, 130, 246, 0.2) 60%, transparent 100%);
+}
+
+.glowing-logo-badge.brand-gruya::before {
+    background: radial-gradient(circle, rgba(249, 115, 22, 0.3) 0%, rgba(139, 92, 246, 0.2) 60%, transparent 100%);
+}
+
+/* El efecto premium de destello/barrido de cristal (Shine Sweep) */
+.glowing-logo-badge-inner::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -150%;
+    width: 80%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.05) 20%,
+        rgba(255, 255, 255, 0.2) 50%,
+        rgba(255, 255, 255, 0.05) 80%,
+        transparent
+    );
+    transform: skewX(-25deg);
+    transition: none;
+    pointer-events: none;
+    z-index: 3;
+}
+
 .glowing-logo-badge-inner {
     position: relative;
     z-index: 2;
@@ -1662,23 +1695,70 @@ tbody tr:hover {
     height: 100%;
     width: 100%;
     box-sizing: border-box;
+    overflow: hidden;
+    border-radius: 19px;
+}
+
+/* Transiciones suaves para las imágenes de logos en home */
+#home-logo-ingentron, #home-logo-gruya {
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), filter 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform, filter;
 }
 
 .glowing-logo-badge:hover {
-    transform: scale(1.03) translateY(-2px);
-    border-color: rgba(10, 132, 255, 0.35);
+    transform: scale(1.04) translateY(-3px);
     background: rgba(25, 25, 30, 0.65);
     box-shadow: 
         0 20px 48px rgba(0, 0, 0, 0.55), 
-        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.glowing-logo-badge.brand-ingentron:hover {
+    border-color: rgba(239, 68, 68, 0.35);
+    box-shadow: 
+        0 20px 48px rgba(0, 0, 0, 0.55), 
+        0 0 25px rgba(239, 68, 68, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.glowing-logo-badge.brand-gruya:hover {
+    border-color: rgba(249, 115, 22, 0.35);
+    box-shadow: 
+        0 20px 48px rgba(0, 0, 0, 0.55), 
+        0 0 25px rgba(249, 115, 22, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* Al hacer hover, el brillo recorre la superficie de cristal de izquierda a derecha */
+.glowing-logo-badge:hover .glowing-logo-badge-inner::after {
+    left: 150%;
+    transition: left 0.85s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 /* Efecto hover: el orbe circular de luz se expande y suaviza aún más */
-.glowing-logo-badge:hover::before {
-    background: radial-gradient(circle, rgba(10, 132, 255, 0.5) 0%, rgba(191, 90, 242, 0.35) 50%, transparent 100%);
+.glowing-logo-badge.brand-ingentron:hover::before {
+    background: radial-gradient(circle, rgba(239, 68, 68, 0.45) 0%, rgba(59, 130, 246, 0.3) 60%, transparent 100%);
     filter: blur(20px);
     opacity: 0.9;
     transform: translate(-50%, -50%) scale(1.35);
+}
+
+.glowing-logo-badge.brand-gruya:hover::before {
+    background: radial-gradient(circle, rgba(249, 115, 22, 0.45) 0%, rgba(139, 92, 246, 0.3) 60%, transparent 100%);
+    filter: blur(20px);
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(1.35);
+}
+
+/* Efecto hover en el logo propiamente dicho */
+.glowing-logo-badge.brand-ingentron:hover #home-logo-ingentron {
+    transform: scale(1.06);
+    filter: drop-shadow(0 0 12px rgba(239, 68, 68, 0.45));
+}
+
+.glowing-logo-badge.brand-gruya:hover #home-logo-gruya {
+    transform: scale(1.06);
+    filter: drop-shadow(0 0 12px rgba(249, 115, 22, 0.45));
 }
 
 /* --- ESTILOS DE ORDENACIÓN DE TABLAS --- */
