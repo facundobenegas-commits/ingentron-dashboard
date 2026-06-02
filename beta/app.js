@@ -2298,10 +2298,10 @@ function renderStockTable() {
             else badgeStyle = 'background: rgba(255, 255, 255, 0.05); color: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.1);';
             
             return `
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255,255,255,0.04); padding: 8px 12px; border-radius: 10px; min-width: 68px; flex: 1; box-sizing: border-box;">
-                    <div style="font-size: 11px; opacity: 0.6; font-weight: 500;">${v.label}</div>
-                    <div style="font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 4px; ${badgeStyle} text-align: center;">${v.text}</div>
-                    <div style="font-size: 9.5px; opacity: 0.4; font-weight: 500; text-align: center;">${v.qty} un.</div>
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.06); padding: 12px 14px; border-radius: 12px; min-width: 76px; flex: 1; box-sizing: border-box; transition: background 0.2s;">
+                    <div style="font-size: 13px; opacity: 0.95; font-weight: 600; color: #ffffff;">${v.label}</div>
+                    <div style="font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 6px; ${badgeStyle} text-align: center; width: 100%; box-sizing: border-box; display: block;">${v.text}</div>
+                    <div style="font-size: 12px; opacity: 0.85; font-weight: 600; color: var(--text-secondary); text-align: center;">${v.qty} un.</div>
                 </div>
             `;
         }).join('');
@@ -2319,9 +2319,25 @@ function renderStockTable() {
             </td>
         `;
         
-        // Evento toggle al hacer click en la fila principal
+        // Evento toggle al hacer click en la fila principal (comportamiento de acordeón único)
         tr.addEventListener('click', () => {
             const isVisible = detailTr.style.display !== 'none';
+            
+            if (!isVisible) {
+                // Colapsar cualquier otra fila que esté abierta
+                const openMainRows = tbody.querySelectorAll('.stock-main-row.expanded-main');
+                openMainRows.forEach(row => {
+                    row.classList.remove('expanded-main');
+                    const icon = row.querySelector('.toggle-icon');
+                    if (icon) icon.style.transform = 'rotate(0deg)';
+                });
+                
+                const openDetailRows = tbody.querySelectorAll('.stock-detail-row');
+                openDetailRows.forEach(dRow => {
+                    dRow.style.display = 'none';
+                });
+            }
+            
             detailTr.style.display = isVisible ? 'none' : 'table-row';
             tr.classList.toggle('expanded-main', !isVisible);
             const icon = tr.querySelector('.toggle-icon');
