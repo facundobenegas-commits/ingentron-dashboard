@@ -997,6 +997,9 @@ tbody tr:hover {
 .mobile-filter-toggle-btn {
     display: none;
 }
+.mobile-top-bar {
+    display: none;
+}
 
 /* Mobile: single column everything */
 @media (max-width: 640px) {
@@ -1087,25 +1090,28 @@ tbody tr:hover {
         align-items: stretch;
         padding: 0 16px !important;
         gap: 10px;
-        margin-top: 84px !important;
+        margin-top: 76px !important; /* Clears the fixed 64px header nicely */
     }
-    .header-left {
+    .mobile-top-bar {
+        display: flex !important;
         position: fixed !important;
         top: 0;
         left: 0;
-        width: 100%;
-        min-height: 74px;
-        background: rgba(10, 10, 12, 0.75) !important;
-        backdrop-filter: blur(30px) saturate(200%) !important;
-        -webkit-backdrop-filter: blur(30px) saturate(200%) !important;
-        border-bottom: 1px solid var(--surface-border) !important;
-        padding: 12px 16px !important;
-        z-index: 100 !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: flex-start !important;
-        gap: 12px !important;
+        width: 100vw;
+        height: 64px;
+        background: rgba(10, 10, 12, 0.7) !important;
+        backdrop-filter: blur(25px) saturate(210%) !important;
+        -webkit-backdrop-filter: blur(25px) saturate(210%) !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+        padding: 0 16px !important;
+        z-index: 999 !important;
         box-sizing: border-box !important;
+        align-items: center;
+        justify-content: space-between;
+    }
+    /* Hide the original header hamburger button since we have a new fixed one */
+    #sidebar-toggle {
+        display: none !important;
     }
     .header-actions {
         width: 100%;
