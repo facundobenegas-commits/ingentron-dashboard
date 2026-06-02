@@ -198,7 +198,7 @@ function processLogo(imgSrc, isGruya, callback) {
     };
 }
 
-// Auto Load Data on Startup
+// Auto Load Data on Startup (Solo cabeceras y estado, los datos son perezosos)
 document.addEventListener('DOMContentLoaded', async () => {
     // Consultar estado de sincronización inicial
     loadSyncStatus();
@@ -223,6 +223,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (headerImg) headerImg.src = res.dark;
         if (homeImg) homeImg.src = res.dark;
     });
+    
+    // Aplicar ruta inicial según la URL sin cargar datos innecesarios a priori
+    applyRouteFromLocation();
+});
+
+let isCuentasCorrientesLoading = false;
+
+// Carga perezosa e independiente para Cuentas Corrientes
+async function loadCuentasCorrientesData() {
+    if (globalData && globalData.length > 0) {
+        // Ya está cargado, simplemente actualizamos las vistas y KPIs
+        updateDashboard();
+        return;
+    }
+    if (isCuentasCorrientesLoading) return;
+    isCuentasCorrientesLoading = true;
+    
+    const loadingIndicator = document.getElementById('loading-indicator');
+    if (loadingIndicator) {
+        loadingIndicator.classList.add('show');
+        loadingIndicator.querySelector('span').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando Cuentas Corrientes...';
+        loadingIndicator.querySelector('span').style.color = 'inherit';
+        const spinner = loadingIndicator.querySelector('.processing-spinner');
+        if (spinner) spinner.style.display = '';
+    }
+    
     try {
         const response = await fetch('/api/saldos');
         if (!response.ok) throw new Error('No se pudo cargar la información de saldos desde el servidor.');
@@ -237,17 +263,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         
         populateFilters();
+        updateDashboard();
         
-        loadingIndicator.classList.remove('show');
-        applyRouteFromLocation();
+        if (loadingIndicator) loadingIndicator.classList.remove('show');
         
     } catch (error) {
         console.error(error);
-        loadingIndicator.querySelector('span').innerHTML = `<i class="fas fa-exclamation-triangle"></i> Error al cargar datos: ${error.message}`;
-        loadingIndicator.querySelector('span').style.color = 'var(--danger-color)';
-        loadingIndicator.querySelector('.processing-spinner').style.display = 'none';
+        if (loadingIndicator) {
+            loadingIndicator.querySelector('span').innerHTML = `<i class="fas fa-exclamation-triangle"></i> Error al cargar datos: ${error.message}`;
+            loadingIndicator.querySelector('span').style.color = 'var(--danger-color)';
+            const spinner = loadingIndicator.querySelector('.processing-spinner');
+            if (spinner) spinner.style.display = 'none';
+        }
+    } finally {
+        isCuentasCorrientesLoading = false;
     }
-});
+}
 
 // UI Updating
 function updateOriginOptionsForEmpresa() {
@@ -2514,7 +2545,7 @@ window.navigateToModule = function(moduleName) {
     applyRoute(moduleName);
 };
 
-// Aplicar visualmente la ruta activa (mostrar/ocultar vistas, filtros, cabeceras)
+// Aplicar visualmente la ruta activa (mostrar/ocultar vistas, filtros, cabeceras y liberar memoria de otros módulos)
 function applyRoute(moduleName) {
     const views = document.querySelectorAll('.view-section');
     const navItems = document.querySelectorAll('.nav-menu .nav-item[data-view]');
@@ -2522,6 +2553,14 @@ function applyRoute(moduleName) {
     const filtersContainer = document.getElementById('filters-container');
     const titleEl = document.getElementById('view-title');
     const subtitleEl = document.getElementById('view-subtitle');
+    
+    // LIBERACIÓN DE MEMORIA Y LIMPIEZA DE DOM DE LOS MÓDULOS INACTIVOS
+    if (moduleName !== 'CuentasCorrientes') {
+        unloadModule('CuentasCorrientes');
+    }
+    if (moduleName !== 'ControlVencimientos') {
+        unloadModule('ControlVencimientos');
+    }
     
     // Ocultar todas las vistas
     views.forEach(v => v.style.display = 'none');
@@ -2566,6 +2605,9 @@ function applyRoute(moduleName) {
         if (titleEl) titleEl.textContent = 'Cuentas Corrientes';
         if (subtitleEl) subtitleEl.textContent = 'Resumen de cuentas corrientes';
         
+        // Carga perezosa de Cuentas Corrientes
+        loadCuentasCorrientesData();
+        
     } else if (moduleName === 'ControlVencimientos') {
         const targetView = document.getElementById('stock-expiration-view');
         if (targetView) targetView.style.display = 'block';
@@ -2578,11 +2620,21 @@ function applyRoute(moduleName) {
         if (titleEl) titleEl.textContent = 'Vencimientos de Stock';
         if (subtitleEl) subtitleEl.textContent = 'Módulo de control de caducidades';
         
-        // Cargar datos de stock actualizados
+        // Cargar datos de stock actualizados perezosamente
+        const loadingIndicator = document.getElementById('loading-indicator');
+        if (loadingIndicator) {
+            loadingIndicator.classList.add('show');
+            loadingIndicator.querySelector('span').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando Vencimientos...';
+            loadingIndicator.querySelector('span').style.color = 'inherit';
+            const spinner = loadingIndicator.querySelector('.processing-spinner');
+            if (spinner) spinner.style.display = '';
+        }
+        
         loadRealStockData().finally(() => {
             updateStockKPIs();
             renderStockTable();
             updateStockCharts();
+            if (loadingIndicator) loadingIndicator.classList.remove('show');
         });
         
     } else {
@@ -2594,6 +2646,52 @@ function applyRoute(moduleName) {
         if (filtersContainer) filtersContainer.style.setProperty('display', 'none', 'important');
         if (titleEl) titleEl.textContent = 'Módulos Ingentron';
         if (subtitleEl) subtitleEl.textContent = 'Panel de selección de módulos';
+    }
+}
+
+// Función para liberar memoria y limpiar el DOM del módulo inactivo
+function unloadModule(moduleName) {
+    if (moduleName === 'CuentasCorrientes') {
+        if (globalData && globalData.length > 0) {
+            console.log("[Lazy Engine] Liberando memoria de Cuentas Corrientes.");
+            globalData = [];
+            availableWeeks = new Set();
+            
+            // Limpiar DOM de tablas
+            const mainTbody = document.getElementById('main-tbody');
+            if (mainTbody) mainTbody.innerHTML = '';
+            
+            // Destruir instancias de gráficos Chart.js
+            if (statusChart) {
+                statusChart.destroy();
+                statusChart = null;
+            }
+            if (trendChart) {
+                trendChart.destroy();
+                trendChart = null;
+            }
+        }
+    } else if (moduleName === 'ControlVencimientos') {
+        if (stockData && stockData.length > 0) {
+            console.log("[Lazy Engine] Liberando memoria de Control Vencimientos.");
+            stockData = [];
+            stockHistory = {};
+            isRealStockLoaded = false;
+            
+            // Limpiar DOM de tablas de stock
+            const stockTbody = document.getElementById('stock-table-body');
+            if (stockTbody) stockTbody.innerHTML = '';
+            
+            // Destruir instancias de gráficos de stock
+            if (stockRiskChart) {
+                stockRiskChart.destroy();
+                stockRiskChart = null;
+            }
+            if (stockTimelineChart) {
+                stockTimelineChart.destroy();
+                stockTimelineChart = null;
+            }
+        }
     }
 }
 
