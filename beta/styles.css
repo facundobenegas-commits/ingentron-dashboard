@@ -1663,6 +1663,28 @@ tbody tr:hover {
     -webkit-backdrop-filter: blur(14px) saturate(215%);
 }
 
+/* --- ANIMACIONES AUTOMÁTICAS DEL DESTELLO DE CRISTAL (SHINE SWEEP) --- */
+@keyframes automatic-shine-sweep {
+    0% {
+        left: -150%;
+    }
+    12% {
+        left: 150%;
+    }
+    100% {
+        left: 150%;
+    }
+}
+
+@keyframes hover-shine-sweep {
+    0% {
+        left: -150%;
+    }
+    100% {
+        left: 150%;
+    }
+}
+
 .glowing-logo-badge.brand-ingentron {
     animation: border-glow-ingentron 7s ease-in-out infinite;
 }
@@ -1688,9 +1710,18 @@ tbody tr:hover {
         transparent
     );
     transform: skewX(-25deg);
-    transition: none;
     pointer-events: none;
     z-index: 3;
+}
+
+/* Destello automático alternado: Ingentron destella y luego Gruya a los 4.5 segundos */
+.glowing-logo-badge.brand-ingentron .glowing-logo-badge-inner::after {
+    animation: automatic-shine-sweep 9s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+
+.glowing-logo-badge.brand-gruya .glowing-logo-badge-inner::after {
+    animation: automatic-shine-sweep 9s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+    animation-delay: 4.5s;
 }
 
 .glowing-logo-badge-inner {
@@ -1736,10 +1767,9 @@ tbody tr:hover {
         inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
-/* Al hacer hover, el brillo recorre la superficie de cristal de izquierda a derecha */
+/* Al hacer hover, el destello barre la superficie instantáneamente y se pausa el ciclo automático */
 .glowing-logo-badge:hover .glowing-logo-badge-inner::after {
-    left: 150%;
-    transition: left 0.85s cubic-bezier(0.25, 1, 0.5, 1);
+    animation: hover-shine-sweep 0.85s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
 
 /* Efecto hover en el logo propiamente dicho */
