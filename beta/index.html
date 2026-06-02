@@ -283,19 +283,6 @@
                             <h3 style="font-size: 18px; font-weight: 600; color: var(--accent-color);">Control de Lotes y Caducidades</h3>
                             <div style="display: flex; gap: 10px; flex-wrap: wrap; flex: 1; justify-content: flex-end; align-items: center;">
                                 <input type="text" id="search-stock" class="glass-input" placeholder="Buscar producto..." style="max-width: 200px; font-size: 13px; padding: 6px 12px; border-radius: 8px;">
-                                <select id="filter-stock-status" class="glass-select" style="font-size: 13px; padding: 6px 12px; border-radius: 8px;">
-                                    <option value="">Todos los estados</option>
-                                    <option value="VENCIDO">Vencido</option>
-                                    <option value="CRITICO">Alerta Crítica (≤30d)</option>
-                                    <option value="PROXIMO">Próximo (31-90d)</option>
-                                    <option value="OK">En Regla (>90d)</option>
-                                </select>
-                                <div class="premium-checkbox-wrapper" style="margin-left: 6px; margin-right: 6px;">
-                                    <label>
-                                        <input type="checkbox" id="hide-expired-checkbox" checked>
-                                        Ocultar vencidos
-                                    </label>
-                                </div>
                                 <div class="dropdown" style="position: relative; display: inline-block;">
                                     <button type="button" id="download-stock-btn" class="glass-btn" style="font-size: 13px; padding: 6px 12px; border-radius: 8px; display: flex; align-items: center; gap: 8px; cursor: pointer; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: #fff; height: 34px; transition: all 0.2s;">
                                         <i class="fas fa-download"></i> <span>Exportar</span> <i class="fas fa-chevron-down" style="font-size: 10px;"></i>
@@ -305,6 +292,14 @@
                                         <a href="#" onclick="exportStockToExcel(event)" style="color: #fff; padding: 10px 16px; text-decoration: none; display: flex; align-items: center; gap: 8px; font-size: 13px; transition: background 0.2s; border-radius: 0 0 8px 8px;"><i class="fas fa-file-excel" style="color: #30d158;"></i> Descargar Excel</a>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; margin-top: -10px; margin-bottom: 15px;">
+                            <div class="premium-checkbox-wrapper">
+                                <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); cursor: pointer; user-select: none;">
+                                    <input type="checkbox" id="hide-expired-checkbox" checked style="cursor: pointer;">
+                                    Ocultar vencidos
+                                </label>
                             </div>
                         </div>
                         <div class="table-container" style="overflow-x: auto;">

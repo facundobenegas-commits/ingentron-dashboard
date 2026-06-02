@@ -2095,7 +2095,6 @@ function renderStockTable() {
     if (!tbody) return;
     
     const searchVal = (document.getElementById('search-stock')?.value || '').toLowerCase();
-    const statusVal = document.getElementById('filter-stock-status')?.value || '';
     const hideExpired = document.getElementById('hide-expired-checkbox')?.checked || false;
     
     tbody.innerHTML = '';
@@ -2108,20 +2107,13 @@ function renderStockTable() {
                             item.codigo.includes(searchVal) ||
                             item.categoria.toLowerCase().includes(searchVal);
                             
-        // Filtro por select de estado
-        let matchStatus = true;
-        if (statusVal === 'VENCIDO') matchStatus = days <= 0;
-        else if (statusVal === 'CRITICO') matchStatus = days > 0 && days <= 30;
-        else if (statusVal === 'PROXIMO') matchStatus = days > 30 && days <= 90;
-        else if (statusVal === 'OK') matchStatus = days > 90;
-        
         // Filtro "Ocultar vencidos"
         let matchExpired = true;
         if (hideExpired) {
             matchExpired = days > 0;
         }
         
-        return matchSearch && matchStatus && matchExpired;
+        return matchSearch && matchExpired;
     });
     
     // Aplicar ordenación dinámica
@@ -2490,7 +2482,7 @@ window.exportStockToPDF = function(event) {
     doc.text(`Generado el: ${dateStr} | Total de registros: ${dataToExport.length}`, 14, 27);
     
     // Configuración de tabla
-    const tableColumns = ["Código Artículo", "Producto", "Cantidad", "Vencimiento", "Restante"];
+    const tableColumns = ["Código Artículo", "Categoría", "Producto", "Lote", "Cantidad", "Vencimiento", "Restante"];
     const tableRows = dataToExport.map(item => {
         const days = getDaysRemaining(item.fechaVencimiento);
         
@@ -2501,7 +2493,9 @@ window.exportStockToPDF = function(event) {
         
         return [
             item.codigo,
+            item.categoria || 'Almacén',
             item.producto,
+            item.lote || 'S/L',
             `${item.cantidad} un.`,
             formatDateToES(item.fechaVencimiento),
             daysText
@@ -2516,8 +2510,13 @@ window.exportStockToPDF = function(event) {
         headStyles: { fillColor: [59, 130, 246] }, // Azul primario
         styles: { fontSize: 8 },
         columnStyles: {
-            0: { cellWidth: 35 }, // Código artículo
-            1: { cellWidth: 85 }  // Producto
+            0: { cellWidth: 25 }, // Código artículo
+            1: { cellWidth: 25 }, // Categoría
+            2: { cellWidth: 65 }, // Producto
+            3: { cellWidth: 18 }, // Lote
+            4: { cellWidth: 15 }, // Cantidad
+            5: { cellWidth: 17 }, // Vencimiento
+            6: { cellWidth: 17 }  // Restante
         }
     });
     
@@ -2543,7 +2542,9 @@ window.exportStockToExcel = function(event) {
         
         return {
             "Código Artículo": item.codigo,
+            "Categoría": item.categoria || 'Almacén',
             "Producto": item.producto,
+            "Lote": item.lote || 'S/L',
             "Cantidad": item.cantidad,
             "Vencimiento": formatDateToES(item.fechaVencimiento),
             "Días Restantes": days,
@@ -2558,7 +2559,9 @@ window.exportStockToExcel = function(event) {
     // Auto-ajustar anchos de columnas
     worksheet['!cols'] = [
         {wch: 16}, // Código Artículo
+        {wch: 16}, // Categoría
         {wch: 50}, // Producto
+        {wch: 12}, // Lote
         {wch: 12}, // Cantidad
         {wch: 15}, // Vencimiento
         {wch: 15}, // Días restantes
@@ -2607,11 +2610,9 @@ document.addEventListener('DOMContentLoaded', () => {
     applyRouteFromLocation();
     
     const searchStockEl = document.getElementById('search-stock');
-    const filterStockStatusEl = document.getElementById('filter-stock-status');
     const hideExpiredEl = document.getElementById('hide-expired-checkbox');
     
     if (searchStockEl) searchStockEl.addEventListener('input', renderStockTable);
-    if (filterStockStatusEl) filterStockStatusEl.addEventListener('change', renderStockTable);
     if (hideExpiredEl) hideExpiredEl.addEventListener('change', renderStockTable);
     
     // Inicializar íconos de ordenación de stock
