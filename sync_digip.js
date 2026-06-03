@@ -645,9 +645,9 @@ async function scheduleDailySync() {
         await runDigipScraper(false);
     }
     
-    // 2. Iniciar el bucle de scraping periódico en tiempo real cada 10 minutos
-    const scrapeIntervalMs = 10 * 60 * 1000; // 10 minutos
-    console.log(`[Programador] Programando scraping periódico en tiempo real cada 10 minutos.`);
+    // 2. Iniciar el bucle de scraping periódico en tiempo real cada 2 minutos
+    const scrapeIntervalMs = 2 * 60 * 1000; // 2 minutos
+    console.log(`[Programador] Programando scraping periódico en tiempo real cada 2 minutos.`);
     setInterval(async () => {
         console.log(`\n[Programador] Ejecutando scraping periódico en tiempo real...`);
         try {
