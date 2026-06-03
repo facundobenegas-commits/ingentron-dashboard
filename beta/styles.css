@@ -1569,8 +1569,16 @@ body.route-home .mobile-top-bar {
 
 /* Resaltado de fila de producto seleccionada/expandida (Desktop) */
 #stock-table tbody tr.stock-main-row.expanded-main {
-    background-color: rgba(10, 132, 255, 0.05) !important;
-    transition: background-color 0.25s ease;
+    background-color: rgba(10, 132, 255, 0.09) !important;
+    transition: all 0.25s ease;
+}
+
+#stock-table tbody tr.stock-main-row.expanded-main:hover {
+    background-color: rgba(10, 132, 255, 0.13) !important;
+}
+
+#stock-table tbody tr.stock-main-row.expanded-main td:first-child {
+    border-left: 4px solid #0a84ff !important;
 }
 
 #stock-table tbody tr.stock-main-row.expanded-main td:nth-child(2) div {
@@ -1584,8 +1592,12 @@ body.route-home .mobile-top-bar {
 }
 
 #stock-table tbody tr.stock-main-row.expanded-main + tr.stock-detail-row {
-    background-color: rgba(10, 132, 255, 0.015) !important;
-    transition: background-color 0.25s ease;
+    background-color: rgba(10, 132, 255, 0.04) !important;
+    transition: all 0.25s ease;
+}
+
+#stock-table tbody tr.stock-main-row.expanded-main + tr.stock-detail-row td {
+    border-left: 4px solid #0a84ff !important;
 }
 
 /* Table modifications for stock on mobile card transformation */
@@ -1609,8 +1621,9 @@ body.route-home .mobile-top-bar {
         border-radius: 16px 16px 0 0 !important;
         margin-bottom: 0 !important;
         border-bottom: none !important;
-        border-color: rgba(10, 132, 255, 0.25) !important;
-        background-color: rgba(10, 132, 255, 0.08) !important;
+        border-color: rgba(10, 132, 255, 0.45) !important;
+        border-left: 4px solid #0a84ff !important;
+        background-color: rgba(10, 132, 255, 0.11) !important;
     }
 
     #stock-table tbody tr.stock-detail-row {
@@ -1629,9 +1642,10 @@ body.route-home .mobile-top-bar {
     }
     
     #stock-table tbody tr.stock-main-row.expanded-main + tr.stock-detail-row {
-        border-color: rgba(10, 132, 255, 0.25) !important;
-        border-top: 1px dashed rgba(10, 132, 255, 0.3) !important;
-        background-color: rgba(10, 132, 255, 0.03) !important;
+        border-color: rgba(10, 132, 255, 0.45) !important;
+        border-left: 4px solid #0a84ff !important;
+        border-top: 1px dashed rgba(10, 132, 255, 0.4) !important;
+        background-color: rgba(10, 132, 255, 0.05) !important;
     }
     
     #stock-table tbody tr.stock-main-row td {
