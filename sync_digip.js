@@ -619,7 +619,7 @@ function getMsUntilMidnight() {
 async function scheduleDailySync() {
     console.log("=============================================================");
     console.log("🔄 SINCRONIZADOR DE VENCIMIENTOS DE STOCK - DIGIP WMS (RPA)");
-    console.log(`Modo: Scraping en tiempo real (cada 10 min) + Corte de Medianoche`);
+    console.log(`Modo: Scraping en tiempo real (cada 2 min) + Corte de Medianoche`);
     console.log(`URL Destino Render: ${config.syncUrl}`);
     console.log("=============================================================");
     
