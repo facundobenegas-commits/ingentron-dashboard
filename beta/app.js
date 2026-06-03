@@ -2134,13 +2134,39 @@ function getItemDailyVariations(item) {
     
     const key = `${String(item.codigo).trim()}_${String(item.fechaVencimiento).trim()}`;
     
+    // Encontrar cantidad inicial e identificar si existía antes del rango de 8 días (para forward-fill)
+    let lastKnownQty = 0;
+    let hasAnyPastRecord = false;
+    
+    if (stockHistory) {
+        const sortedHistoryDates = Object.keys(stockHistory).sort();
+        // Buscar el último snapshot antes de dates[0] que contenga el artículo
+        for (let i = sortedHistoryDates.length - 1; i >= 0; i--) {
+            const histDate = sortedHistoryDates[i];
+            if (histDate < dates[0]) {
+                const histData = stockHistory[histDate] || [];
+                const found = histData.find(hItem => {
+                    const hKey = `${String(hItem.codigo || hItem.ean || '').trim()}_${String(hItem.fechaVencimiento || hItem.vencimiento || '').trim()}`;
+                    return hKey === key;
+                });
+                if (found) {
+                    lastKnownQty = parseFloat(found.cantidad || 0);
+                    hasAnyPastRecord = true;
+                    break;
+                }
+            }
+        }
+    }
+    
     // Obtener cantidades para los 8 días
     const dailyQtys = dates.map(dateStr => {
         let qty = 0;
         let hasRecord = false;
+        let dayHasSnapshot = false;
         
         const localToday = new Date(new Date().getTime() - 3 * 3600 * 1000).toISOString().split('T')[0];
         if (dateStr === localToday) {
+            dayHasSnapshot = true;
             stockData.forEach(tItem => {
                 const tKey = `${String(tItem.codigo).trim()}_${String(tItem.fechaVencimiento).trim()}`;
                 if (tKey === key) {
@@ -2148,19 +2174,37 @@ function getItemDailyVariations(item) {
                     hasRecord = true;
                 }
             });
-        } else if (stockHistory && stockHistory[dateStr]) {
-            stockHistory[dateStr].forEach(hItem => {
-                const hKey = `${String(hItem.codigo || hItem.ean || '').trim()}_${String(hItem.fechaVencimiento || hItem.vencimiento || '').trim()}`;
-                if (hKey === key) {
-                    qty += parseFloat(hItem.cantidad || 0);
-                    hasRecord = true;
-                }
-            });
+        } else if (stockHistory) {
+            if (stockHistory[dateStr]) {
+                dayHasSnapshot = true;
+                stockHistory[dateStr].forEach(hItem => {
+                    const hKey = `${String(hItem.codigo || hItem.ean || '').trim()}_${String(hItem.fechaVencimiento || hItem.vencimiento || '').trim()}`;
+                    if (hKey === key) {
+                        qty += parseFloat(hItem.cantidad || 0);
+                        hasRecord = true;
+                    }
+                });
+            } else {
+                dayHasSnapshot = false;
+            }
         }
-        return { dateStr, qty, hasRecord };
+        
+        // Si el día no tiene snapshot de sincronización, arrastramos el último valor conocido (Forward Fill)
+        if (!dayHasSnapshot && hasAnyPastRecord) {
+            qty = lastKnownQty;
+            hasRecord = true;
+        } else if (dayHasSnapshot) {
+            lastKnownQty = qty;
+            if (hasRecord) {
+                hasAnyPastRecord = true;
+            }
+        }
+        
+        return { dateStr, qty, hasRecord, dayHasSnapshot };
     });
     
     // Calcular variaciones diarias de los últimos 7 días
+    let hasSeenBefore = hasAnyPastRecord;
     const variations = [];
     for (let i = 1; i < dailyQtys.length; i++) {
         const day = dailyQtys[i];
@@ -2171,12 +2215,23 @@ function getItemDailyVariations(item) {
         let variationText = '';
         let variationClass = '';
         
+        if (day.hasRecord) {
+            if (day.qty > 0) hasSeenBefore = true;
+        }
+        
         if (!day.hasRecord && !prevDay.hasRecord) {
             variationText = '-';
             variationClass = 'neutral';
         } else if (!prevDay.hasRecord && day.hasRecord) {
-            variationText = 'Nuevo';
-            variationClass = 'new';
+            if (!hasSeenBefore) {
+                variationText = 'Nuevo';
+                variationClass = 'new';
+                hasSeenBefore = true;
+            } else {
+                const diff = day.qty;
+                variationText = `+${diff}`;
+                variationClass = 'positive';
+            }
         } else {
             const diff = day.qty - prevDay.qty;
             if (diff > 0) {
@@ -2189,6 +2244,11 @@ function getItemDailyVariations(item) {
                 variationText = '0';
                 variationClass = 'neutral';
             }
+        }
+        
+        // Si hoy o ayer se marcó que tiene registro, actualizamos que ya fue visto
+        if (prevDay.hasRecord && prevDay.qty > 0) {
+            hasSeenBefore = true;
         }
         
         variations.push({
@@ -2205,6 +2265,7 @@ function getItemDailyVariations(item) {
 // Renderizado dinámico de la tabla de stock
 function renderStockTable() {
     window.todayQtyMap = null; // Reiniciar mapa de hoy para recálculo dinámico en cada dibujado
+    window.yesterdayQtyMap = null; // Reiniciar mapa del día anterior para evitar cachés obsoletas al recargar
     
     const tbody = document.getElementById('stock-table-body');
     if (!tbody) return;
