@@ -2060,9 +2060,11 @@ function getStockVariationValue(item) {
     return todayTotal - yesterdayTotal;
 }
 
-// Helper para calcular días restantes entre la fecha actual y la de vencimiento (Referencia: 29/05/2026)
+// Helper para calcular días restantes entre la fecha actual y la de vencimiento
 function getDaysRemaining(expiryStr) {
-    const today = new Date("2026-05-29T00:00:00");
+    const localDate = new Date(new Date().getTime() - 3 * 3600 * 1000); // Argentina UTC-3
+    const todayStr = localDate.toISOString().split('T')[0];
+    const today = new Date(todayStr + "T00:00:00");
     const expiry = new Date(expiryStr + "T00:00:00");
     const diffTime = expiry - today;
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
