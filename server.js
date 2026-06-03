@@ -366,9 +366,13 @@ app.post('/api/update-stock', express.json({ limit: '15mb' }), (req, res) => {
                     history = JSON.parse(fs.readFileSync(historyPath, 'utf8')) || {};
                 } catch (err) {}
             }
+            // Solo agregar al histórico de forma automática si es al final del día (ej. de 23:00 a 23:59 hs de Argentina)
             const localDate = new Date(new Date().getTime() - 3 * 3600 * 1000);
-            const todayStr = localDate.toISOString().split('T')[0];
-            history[todayStr] = currentData;
+            const localHour = localDate.getHours();
+            if (localHour >= 23) {
+                const todayStr = localDate.toISOString().split('T')[0];
+                history[todayStr] = currentData;
+            }
         }
         
         // Mantener solo los últimos 15 días de capturas para optimizar disco

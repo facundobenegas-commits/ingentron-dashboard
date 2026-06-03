@@ -275,9 +275,9 @@ async function uploadLocalSnapshot() {
 }
 
 // Proceso principal de Scraping y Carga
-async function runDigipScraper() {
+async function runDigipScraper(isMidnightCut = false) {
     const timestamp = new Date().toLocaleString();
-    console.log(`\n[${timestamp}] 🔄 Iniciando ciclo de scraping de Digip WMS...`);
+    console.log(`\n[${timestamp}] 🔄 Iniciando ciclo de scraping de Digip WMS (${isMidnightCut ? 'Corte de Medianoche' : 'Tiempo Real'})...`);
 
     // Validar si las credenciales son las predeterminadas
     if (config.digipUser === 'usuario_placeholder' || config.digipPass === 'pass_placeholder') {
@@ -533,29 +533,34 @@ async function runDigipScraper() {
             fs.writeFileSync(localSnapshotPath, JSON.stringify(stockResult, null, 2));
             console.log(`[Parser] Guardado snapshot local de stock (${stockResult.length} registros) en: ${localSnapshotPath}`);
             
-            // --- ACTUALIZAR HISTÓRICO DIARIO LOCAL ---
-            const localDate = new Date(new Date().getTime() - 3 * 3600 * 1000);
-            const todayStr = localDate.toISOString().split('T')[0];
-            
-            const localHistoryPath = path.join(__dirname, 'stock_history.json');
-            let localHistory = {};
-            if (fs.existsSync(localHistoryPath)) {
-                try {
-                    localHistory = JSON.parse(fs.readFileSync(localHistoryPath, 'utf8')) || {};
-                } catch (e) {}
-            }
-            localHistory[todayStr] = stockResult;
-            
-            // Mantener solo los últimos 15 días de capturas
-            const dates = Object.keys(localHistory).sort();
-            if (dates.length > 15) {
-                const datesToRemove = dates.slice(0, dates.length - 15);
-                for (const d of datesToRemove) {
-                    delete localHistory[d];
+            // --- ACTUALIZAR HISTÓRICO DIARIO LOCAL (SOLO SI ES CORTE DE MEDIANOCHE) ---
+            if (isMidnightCut) {
+                const localDate = new Date(new Date().getTime() - 3 * 3600 * 1000); // Argentina UTC-3
+                localDate.setDate(localDate.getDate() - 1); // Restar 1 día para registrar el día que acaba de terminar (ayer)
+                const targetDateStr = localDate.toISOString().split('T')[0];
+                
+                const localHistoryPath = path.join(__dirname, 'stock_history.json');
+                let localHistory = {};
+                if (fs.existsSync(localHistoryPath)) {
+                    try {
+                        localHistory = JSON.parse(fs.readFileSync(localHistoryPath, 'utf8')) || {};
+                    } catch (e) {}
                 }
+                localHistory[targetDateStr] = stockResult;
+                
+                // Mantener solo los últimos 15 días de capturas
+                const dates = Object.keys(localHistory).sort();
+                if (dates.length > 15) {
+                    const datesToRemove = dates.slice(0, dates.length - 15);
+                    for (const d of datesToRemove) {
+                        delete localHistory[d];
+                    }
+                }
+                fs.writeFileSync(localHistoryPath, JSON.stringify(localHistory, null, 2));
+                console.log(`[Parser] Histórico diario local de 15 días actualizado con el corte del día finalizado: ${targetDateStr}`);
+            } else {
+                console.log(`[Parser] Sincronización en tiempo real. No se modifica el histórico local.`);
             }
-            fs.writeFileSync(localHistoryPath, JSON.stringify(localHistory, null, 2));
-            console.log(`[Parser] Histórico diario local de 15 días actualizado con el registro de hoy: ${todayStr}`);
             
             // Subir de inmediato
             await uploadLocalSnapshot();
@@ -614,11 +619,11 @@ function getMsUntilMidnight() {
 async function scheduleDailySync() {
     console.log("=============================================================");
     console.log("🔄 SINCRONIZADOR DE VENCIMIENTOS DE STOCK - DIGIP WMS (RPA)");
-    console.log(`Modo: Snapshot Estático de Medianoche (Carga continua de resiliencia cada 5 min)`);
+    console.log(`Modo: Scraping en tiempo real (cada 10 min) + Corte de Medianoche`);
     console.log(`URL Destino Render: ${config.syncUrl}`);
     console.log("=============================================================");
     
-    // 1. Verificar si ya tenemos el snapshot "foto" de hoy
+    // 1. Carga inicial / verificación de hoy
     const localSnapshotPath = path.join(__dirname, 'stock_local_snapshot.json');
     let hasTodaySnapshot = false;
     if (fs.existsSync(localSnapshotPath)) {
@@ -636,29 +641,32 @@ async function scheduleDailySync() {
         console.log(`\n[Programador] Encontrado snapshot local de hoy. Subiendo copia al servidor...`);
         await uploadLocalSnapshot();
     } else {
-        console.log(`\n[Programador] No se encontró snapshot de hoy. Iniciando Scraping RPA para tomar la foto diaria...`);
-        await runDigipScraper();
+        console.log(`\n[Programador] No se encontró snapshot de hoy. Iniciando Scraping RPA inicial en tiempo real...`);
+        await runDigipScraper(false);
     }
     
-    // 2. Iniciar el bucle de sincronización ligera (subir el snapshot existente cada 5 minutos)
-    // Esto asegura que si Render reinicia y limpia su caché, recuperamos los datos en minutos con 0 consumo
-    const uploadIntervalMs = 5 * 60 * 1000; // 5 minutos
-    console.log(`[Programador] Programando reenvíos automáticos ligeros del snapshot cada 5 minutos.`);
+    // 2. Iniciar el bucle de scraping periódico en tiempo real cada 10 minutos
+    const scrapeIntervalMs = 10 * 60 * 1000; // 10 minutos
+    console.log(`[Programador] Programando scraping periódico en tiempo real cada 10 minutos.`);
     setInterval(async () => {
-        console.log(`\n[Programador] Iniciando reenvío de resiliencia del snapshot local...`);
-        await uploadLocalSnapshot();
-    }, uploadIntervalMs);
+        console.log(`\n[Programador] Ejecutando scraping periódico en tiempo real...`);
+        try {
+            await runDigipScraper(false);
+        } catch (err) {
+            console.error("[Programador] Error durante el scraping periódico en tiempo real:", err.message);
+        }
+    }, scrapeIntervalMs);
     
-    // 3. Iniciar el bucle diario auto-calculable para tomar la foto real a la medianoche (00:00 hs de Argentina)
+    // 3. Iniciar el bucle diario para tomar la foto final a la medianoche (00:00 hs de Argentina)
     const runNext = () => {
         const delayMs = getMsUntilMidnight();
         
         setTimeout(async () => {
-            console.log("\n[Programador] ¡Es medianoche (00:00 hs)! Iniciando Scraping RPA para tomar la foto de stock diaria...");
+            console.log("\n[Programador] ¡Es medianoche (00:00 hs)! Iniciando Scraping RPA para el corte de medianoche...");
             try {
-                await runDigipScraper();
+                await runDigipScraper(true);
             } catch (err) {
-                console.error("[Programador] Error durante la ejecución del corte diario:", err.message);
+                console.error("[Programador] Error durante la ejecución del corte de medianoche:", err.message);
             }
             // Programar el siguiente corte diario de forma recursiva
             runNext();
