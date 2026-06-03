@@ -210,9 +210,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const sidebarImg = document.getElementById('sidebar-logo-ingentron');
         const headerImg = document.getElementById('header-logo-ingentron');
         const homeImg = document.getElementById('home-logo-ingentron');
+        const mobileImg = document.getElementById('mobile-logo-ingentron');
         if (sidebarImg) sidebarImg.src = res.dark;
         if (headerImg) headerImg.src = res.dark;
         if (homeImg) homeImg.src = res.dark;
+        if (mobileImg) mobileImg.src = res.dark;
     });
 
     processLogo('../logo_gruya.jpg', true, (res) => {
@@ -220,9 +222,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const sidebarImg = document.getElementById('sidebar-logo-gruya');
         const headerImg = document.getElementById('header-logo-gruya');
         const homeImg = document.getElementById('home-logo-gruya');
+        const mobileImg = document.getElementById('mobile-logo-gruya');
         if (sidebarImg) sidebarImg.src = res.dark;
         if (headerImg) headerImg.src = res.dark;
         if (homeImg) homeImg.src = res.dark;
+        if (mobileImg) mobileImg.src = res.dark;
     });
     
     // Aplicar ruta inicial según la URL sin cargar datos innecesarios a priori
