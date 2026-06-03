@@ -9,25 +9,29 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
-    <link rel="icon" type="image/png" href="../favicon.png">
-    <link rel="stylesheet" href="styles.css?v=2">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <link rel="stylesheet" href="/beta/styles.css?v=30">
 </head>
 <body>
     <div class="app-container">
         <!-- Sidebar -->
         <aside class="sidebar collapsed" id="sidebar">
-            <div class="logo-container" style="display: flex; align-items: center; gap: 10px; justify-content: center; height: var(--header-height); border-bottom: 1px solid var(--surface-border); padding: 0 16px;">
+            <div class="logo-container" onclick="navigateToModule('home')" style="display: flex; align-items: center; gap: 10px; justify-content: center; height: var(--header-height); border-bottom: 1px solid var(--surface-border); padding: 0 16px; cursor: pointer;">
                 <div class="logo-badge" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 4px 10px; border-radius: 8px; display: flex; align-items: center; justify-content: center; height: 32px;">
-                    <img id="sidebar-logo-ingentron" src="../logo_ingentron.png" alt="Ingentron S.R.L." style="max-height: 20px; width: auto; object-fit: contain;">
+                    <img id="sidebar-logo-ingentron" src="/logo_ingentron.png" alt="Ingentron S.R.L." style="max-height: 20px; width: auto; object-fit: contain;">
                 </div>
                 <div style="width: 1px; height: 18px; background: rgba(255,255,255,0.15);"></div>
                 <div class="logo-badge" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 4px 10px; border-radius: 8px; display: flex; align-items: center; justify-content: center; height: 32px;">
-                    <img id="sidebar-logo-gruya" src="../logo_gruya.jpg" alt="Gruya S.R.L." style="max-height: 20px; width: auto; object-fit: contain;">
+                    <img id="sidebar-logo-gruya" src="/logo_gruya.jpg" alt="Gruya S.R.L." style="max-height: 20px; width: auto; object-fit: contain;">
                 </div>
             </div>
             <nav class="nav-menu">
                 <div class="nav-item active" data-view="dashboard">
-                    <i class="fas fa-home"></i> <span>Resumen</span>
+                    <i class="fas fa-wallet"></i> <span>Cuentas Corrientes</span>
+                </div>
+                <div class="nav-item" data-view="stock-expiration">
+                    <i class="fas fa-boxes"></i> <span>Vencimientos Stock</span>
                 </div>
                 <div style="flex: 1;"></div>
                 <div class="nav-item stable-link" onclick="window.location.href='/'">
@@ -38,6 +42,25 @@
 
         <!-- Main Content -->
         <main class="main-content expanded" id="main-content">
+            <!-- Cabecera Móvil Fija -->
+            <div class="mobile-top-bar">
+                <button id="mobile-menu-toggle" class="btn-icon hamburger-btn" onclick="event.stopPropagation(); document.getElementById('sidebar-toggle').click()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); cursor: pointer; width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                </button>
+                <div class="mobile-bar-logos" onclick="navigateToModule('home')" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                    <div class="logo-badge" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 4px 10px; border-radius: 8px; display: flex; align-items: center; justify-content: center; height: 32px;">
+                        <img id="mobile-logo-ingentron" src="/logo_ingentron.png" alt="Ingentron S.R.L." style="max-height: 20px; width: auto; object-fit: contain;">
+                    </div>
+                    <div style="width: 1px; height: 18px; background: rgba(255,255,255,0.15);"></div>
+                    <div class="logo-badge" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 4px 10px; border-radius: 8px; display: flex; align-items: center; justify-content: center; height: 32px;">
+                        <img id="mobile-logo-gruya" src="/logo_gruya.jpg" alt="Gruya S.R.L." style="max-height: 20px; width: auto; object-fit: contain;">
+                    </div>
+                </div>
+                <div style="width: 40px;"></div> <!-- Espaciador para centrar logos -->
+            </div>
+
             <header class="top-header">
                 <div class="header-title" style="display: flex; align-items: center; gap: 16px;">
                     <button id="sidebar-toggle" class="btn-icon hamburger-btn" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); cursor: pointer; width: 40px; height: 40px; border-radius: 12px; transition: all 0.2s;">
@@ -45,24 +68,28 @@
                         <span class="bar"></span>
                         <span class="bar"></span>
                     </button>
-                    <div class="header-logo-container">
+                    <div class="header-logo-container" onclick="navigateToModule('home')" style="cursor: pointer;">
                         <div class="logo-badge" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 4px 10px; border-radius: 8px; display: flex; align-items: center; justify-content: center; height: 32px;">
-                            <img id="header-logo-ingentron" src="../logo_ingentron.png" alt="Ingentron S.R.L." style="max-height: 20px; width: auto; object-fit: contain;">
+                            <img id="header-logo-ingentron" src="/logo_ingentron.png" alt="Ingentron S.R.L." style="max-height: 20px; width: auto; object-fit: contain;">
                         </div>
                         <div style="width: 1px; height: 18px; background: rgba(255,255,255,0.15);"></div>
                         <div class="logo-badge" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 4px 10px; border-radius: 8px; display: flex; align-items: center; justify-content: center; height: 32px;">
-                            <img id="header-logo-gruya" src="../logo_gruya.jpg" alt="Gruya S.R.L." style="max-height: 20px; width: auto; object-fit: contain;">
+                            <img id="header-logo-gruya" src="/logo_gruya.jpg" alt="Gruya S.R.L." style="max-height: 20px; width: auto; object-fit: contain;">
                         </div>
                     </div>
                     <div>
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <h2 id="view-title">Dashboard</h2>
+                            <h2 id="view-title">Cuentas Corrientes</h2>
                             <span class="badge beta-badge">Beta</span>
                         </div>
                         <p id="view-subtitle">Resumen de cuentas corrientes</p>
                     </div>
                 </div>
                 <div class="header-actions">
+                    <button id="mobile-filter-toggle" class="mobile-filter-toggle-btn">
+                        <i class="fas fa-filter"></i>
+                        <span>Mostrar Filtros</span>
+                    </button>
                     <!-- Removed loading-indicator -->
                     <div class="selector-group" id="filters-container" style="display: none;">
                         <div class="empresa-selector-container">
@@ -93,12 +120,6 @@
                                 <option value="Vencido">Vencido</option>
                                 <option value="Más de 30 días">Más de 30 días</option>
                             </select>
-                        </div>
-                        <div class="situacion-selector-container" id="situacion-selector-container">
-                            <label for="situacion-select"><i class="fas fa-info-circle"></i> Situación:</label>
-                            <select id="situacion-select" class="glass-select">
-                                <option value="">Todas las situaciones</option>
-                            </select>
                             <div class="compensar-checkbox-wrapper">
                                 <label>
                                     <input type="checkbox" id="hide-compensar-checkbox" checked>
@@ -111,6 +132,56 @@
             </header>
 
             <div class="content-area">
+                <div id="home-view" class="view-section" style="display: flex; min-height: calc(100vh - 100px); align-items: center; justify-content: center; box-sizing: border-box;">
+                    <div style="max-width: 1000px; width: 100%; margin: auto; padding: 20px;">
+                        <div class="home-logos-container" style="display: flex; align-items: center; gap: 20px; justify-content: center; margin-bottom: 56px;">
+                            <div class="glowing-logo-badge brand-ingentron">
+                                <div class="glowing-logo-badge-inner">
+                                    <img id="home-logo-ingentron" src="/logo_ingentron.png" alt="Ingentron" style="max-height: 44px; width: auto; object-fit: contain;">
+                                </div>
+                            </div>
+                            <div class="logo-separator" style="width: 1px; height: 36px; background: rgba(255,255,255,0.15);"></div>
+                            <div class="glowing-logo-badge brand-gruya">
+                                <div class="glowing-logo-badge-inner">
+                                    <img id="home-logo-gruya" src="/logo_gruya.jpg" alt="Gruya" style="max-height: 44px; width: auto; object-fit: contain;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 340px)); gap: 24px; justify-content: center; max-width: 720px; margin: 0 auto;">
+                            
+                            <!-- Card: Cuentas Corrientes -->
+                            <div class="module-card glass-card" onclick="navigateToModule('CuentasCorrientes')" style="padding: 32px; border-radius: 20px; cursor: pointer; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); border: 1px solid rgba(255, 255, 255, 0.08); display: flex; flex-direction: column; gap: 20px; position: relative; overflow: hidden; background: rgba(255, 255, 255, 0.02); min-height: 220px;">
+                                <div class="module-icon-container" style="width: 56px; height: 56px; border-radius: 14px; background: rgba(59, 130, 246, 0.12); color: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 24px; transition: transform 0.2s;">
+                                    <i class="fas fa-wallet"></i>
+                                </div>
+                                <div>
+                                    <h3 style="font-size: 20px; font-weight: 600; color: #fff; margin-bottom: 8px;">Cuentas Corrientes</h3>
+                                    <p style="color: var(--text-secondary); font-size: 13px; line-height: 1.5;">Monitoreo de saldos de clientes, facturas pendientes y evolución histórica de deudas.</p>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #3b82f6; margin-top: auto;">
+                                    <span>Acceder</span> <i class="fas fa-chevron-right" style="font-size: 10px; margin-top: 1px; transition: transform 0.2s;"></i>
+                                </div>
+                            </div>
+
+                            <!-- Card: Control de Vencimientos -->
+                            <div class="module-card glass-card" onclick="navigateToModule('ControlVencimientos')" style="padding: 32px; border-radius: 20px; cursor: pointer; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); border: 1px solid rgba(255, 255, 255, 0.08); display: flex; flex-direction: column; gap: 20px; position: relative; overflow: hidden; background: rgba(255, 255, 255, 0.02); min-height: 220px;">
+                                <div class="module-icon-container" style="width: 56px; height: 56px; border-radius: 14px; background: rgba(139, 92, 246, 0.12); color: #8b5cf6; display: flex; align-items: center; justify-content: center; font-size: 24px; transition: transform 0.2s;">
+                                    <i class="fas fa-boxes"></i>
+                                </div>
+                                <div>
+                                    <h3 style="font-size: 20px; font-weight: 600; color: #fff; margin-bottom: 8px;">Control de Vencimientos</h3>
+                                    <p style="color: var(--text-secondary); font-size: 13px; line-height: 1.5;">Gestión de caducidad de artículos sincronizada con DIGIP WMS.</p>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #8b5cf6; margin-top: auto;">
+                                    <span>Acceder</span> <i class="fas fa-chevron-right" style="font-size: 10px; margin-top: 1px; transition: transform 0.2s;"></i>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Dashboard View -->
                 <div id="dashboard-view" class="view-section" style="display: none;">
                     
@@ -171,7 +242,6 @@
                                             <th>Cliente</th>
                                             <th>Origen</th>
                                             <th class="text-center">Estado</th>
-                                            <th>Situación</th>
                                             <th class="text-right">Saldo Total</th>
                                             <th class="text-center">Acción</th>
                                         </tr>
@@ -216,6 +286,53 @@
                     </div>
 
                 </div>
+
+                <!-- Stock Expiration View -->
+                <div id="stock-expiration-view" class="view-section" style="display: none;">
+                    <!-- Table Section (Full Width) -->
+                    <div class="table-section glass-card" style="padding: 24px;">
+                        <div class="table-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+                            <h3 style="font-size: 18px; font-weight: 600; color: var(--accent-color);">Control de Lotes y Caducidades</h3>
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap; flex: 1; justify-content: flex-end; align-items: center;">
+                                <input type="text" id="search-stock" class="glass-input" placeholder="Buscar producto..." style="max-width: 200px; font-size: 13px; padding: 6px 12px; border-radius: 8px;">
+                                <div class="dropdown" style="position: relative; display: inline-block;">
+                                    <button type="button" id="download-stock-btn" class="glass-btn" style="font-size: 13px; padding: 6px 12px; border-radius: 8px; display: flex; align-items: center; gap: 8px; cursor: pointer; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: #fff; height: 34px; transition: all 0.2s;">
+                                        <i class="fas fa-download"></i> <span>Exportar</span> <i class="fas fa-chevron-down" style="font-size: 10px;"></i>
+                                    </button>
+                                    <div id="download-dropdown" class="dropdown-content glass-card" style="display: none; position: absolute; right: 0; top: 110%; min-width: 160px; z-index: 1000; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08); background: rgba(25, 28, 36, 0.95); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
+                                        <a href="#" onclick="exportStockToPDF(event)" style="color: #fff; padding: 10px 16px; text-decoration: none; display: flex; align-items: center; gap: 8px; font-size: 13px; transition: background 0.2s; border-bottom: 1px solid rgba(255,255,255,0.05); border-radius: 8px 8px 0 0;"><i class="fas fa-file-pdf" style="color: #ff453a;"></i> Descargar PDF</a>
+                                        <a href="#" onclick="exportStockToExcel(event)" style="color: #fff; padding: 10px 16px; text-decoration: none; display: flex; align-items: center; gap: 8px; font-size: 13px; transition: background 0.2s; border-radius: 0 0 8px 8px;"><i class="fas fa-file-excel" style="color: #30d158;"></i> Descargar Excel</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; margin-top: -10px; margin-bottom: 15px;">
+                            <div class="premium-checkbox-wrapper">
+                                <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); cursor: pointer; user-select: none;">
+                                    <input type="checkbox" id="hide-expired-checkbox" checked style="cursor: pointer;">
+                                    Ocultar vencidos
+                                </label>
+                            </div>
+                        </div>
+                        <div class="table-container" style="overflow-x: auto;">
+                            <table class="data-table" id="stock-table">
+                                <thead>
+                                    <tr>
+                                        <th onclick="sortStockTable('codigo')" style="cursor: pointer; user-select: none;">Código Artículo <span id="sort-icon-codigo" class="sort-icon"><i class="fas fa-sort"></i></span></th>
+                                        <th onclick="sortStockTable('producto')" style="cursor: pointer; user-select: none;">Producto <span id="sort-icon-producto" class="sort-icon"><i class="fas fa-sort"></i></span></th>
+                                        <th onclick="sortStockTable('cantidad')" style="cursor: pointer; user-select: none;">Cantidad <span id="sort-icon-cantidad" class="sort-icon"><i class="fas fa-sort"></i></span></th>
+                                        <th onclick="sortStockTable('variacion')" style="cursor: pointer; user-select: none;">Variación (24h) <span id="sort-icon-variacion" class="sort-icon"><i class="fas fa-sort"></i></span></th>
+                                        <th onclick="sortStockTable('vencimiento')" style="cursor: pointer; user-select: none;">Vencimiento <span id="sort-icon-vencimiento" class="sort-icon"><i class="fas fa-sort"></i></span></th>
+                                        <th onclick="sortStockTable('restante')" style="cursor: pointer; user-select: none;">Restante <span id="sort-icon-restante" class="sort-icon"><i class="fas fa-sort"></i></span></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="stock-table-body">
+                                    <!-- Injected dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
@@ -224,11 +341,10 @@
     <div id="invoice-modal" class="modal">
         <div class="modal-content glass-card">
             <div class="modal-header" style="align-items: flex-start;">
-                <div style="display:flex; flex-direction:column; gap:12px; flex: 1;">
+                <div class="modal-header-info" style="display:flex; flex-direction:column; gap:12px; flex: 1;">
                     <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
                         <h3 id="modal-client-name" style="font-size: 1.5rem; margin:0;">Nombre del Cliente</h3>
                         <div id="modal-client-codes" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;"></div>
-                        <div id="modal-client-situacion" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;"></div>
                     </div>
                     <div id="modal-origin-filters" style="display:flex; gap:8px; flex-wrap: wrap;"></div>
                 </div>
@@ -253,7 +369,7 @@
                         <div id="modal-total-amount" style="font-size: 28px; font-weight: 700; color: var(--accent-color); margin: 0; line-height: 1;">$ 0,00</div>
                     </div>
                 </div>
-                <span class="close-modal" style="margin-top: 5px;">&times;</span>
+                <span class="close-modal">&times;</span>
             </div>
             <div class="modal-body">
                 <div id="table-anim-wrapper" style="overflow: hidden; transition: height 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);">
@@ -278,24 +394,29 @@
         </div>
     </div>
 
+
     <!-- Sync Status Panel -->
     <div id="sync-status-panel" class="glass-card">
-        <div style="font-weight: 600; opacity: 0.5; text-transform: uppercase; font-size: 8.5px; letter-spacing: 0.5px; margin-bottom: 2px;">ÚLTIMA SINCRONIZACIÓN</div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #0a84ff;"></span>
+        <div style="font-weight: 600; opacity: 0.5; text-transform: uppercase; font-size: 7px; letter-spacing: 0.5px; margin-bottom: 1px;">ÚLTIMA SINCRONIZACIÓN</div>
+        <div style="display: flex; align-items: center; gap: 5px; font-size: 10.5px; white-space: nowrap;">
+            <span style="display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #0a84ff; flex-shrink: 0;"></span>
             <span style="opacity: 0.85;">Calvo (Aguas): <span id="sync-time-aguas" style="font-weight: 500;">Cargando...</span></span>
         </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #bf5af2;"></span>
+        <div style="display: flex; align-items: center; gap: 5px; font-size: 10.5px; white-space: nowrap;">
+            <span style="display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #bf5af2; flex-shrink: 0;"></span>
             <span style="opacity: 0.85;">Gescom (PepsiCo): <span id="sync-time-pepsico" style="font-weight: 500;">Cargando...</span></span>
         </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #30d158;"></span>
+        <div style="display: flex; align-items: center; gap: 5px; font-size: 10.5px; white-space: nowrap;">
+            <span style="display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #30d158; flex-shrink: 0;"></span>
             <span style="opacity: 0.85;">Calvo (Salliqueló): <span id="sync-time-salliquelo" style="font-weight: 500;">Cargando...</span></span>
         </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #ffd60a;"></span>
-            <span style="opacity: 0.85;">Gescom (Trenque Lauquen): <span id="sync-time-trenque" style="font-weight: 500;">Cargando...</span></span>
+        <div style="display: flex; align-items: center; gap: 5px; font-size: 10.5px; white-space: nowrap;">
+            <span style="display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #ffd60a; flex-shrink: 0;"></span>
+            <span style="opacity: 0.85;">Gescom (T. Lauquen): <span id="sync-time-trenque" style="font-weight: 500;">Cargando...</span></span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 5px; font-size: 10.5px; white-space: nowrap;">
+            <span style="display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #ff9f0a; flex-shrink: 0;"></span>
+            <span style="opacity: 0.85;">Digip WMS (Stock): <span id="sync-time-digip" style="font-weight: 500;">Cargando...</span></span>
         </div>
     </div>
 
@@ -311,6 +432,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=5"></script>
+    <script src="/beta/app.js?v=19"></script>
 </body>
 </html>

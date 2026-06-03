@@ -872,8 +872,7 @@ tbody tr:hover {
 .empresa-selector-container,
 .origin-selector-container,
 .week-selector-container,
-.status-selector-container,
-.situacion-selector-container {
+.status-selector-container {
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -906,8 +905,7 @@ tbody tr:hover {
 .empresa-selector-container label,
 .origin-selector-container label,
 .week-selector-container label,
-.status-selector-container label,
-.situacion-selector-container label {
+.status-selector-container label {
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.5px;
@@ -978,8 +976,7 @@ tbody tr:hover {
     .empresa-selector-container,
     .origin-selector-container,
     .week-selector-container,
-    .status-selector-container,
-    .situacion-selector-container {
+    .status-selector-container {
         flex-basis: 120px;
     }
 }
@@ -1111,8 +1108,7 @@ tbody tr:hover {
     .empresa-selector-container,
     .origin-selector-container,
     .week-selector-container,
-    .status-selector-container,
-    .situacion-selector-container {
+    .status-selector-container {
         width: 100%;
         flex-basis: auto;
     }
@@ -1423,7 +1419,7 @@ tbody tr:hover {
 }
 
 @media (min-width: 641px) {
-    .situacion-selector-container {
+    .status-selector-container {
         position: relative;
     }
     .compensar-checkbox-wrapper {

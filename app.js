@@ -5,7 +5,6 @@ let currentEmpresaFilter = '';
 let currentWeekFilter = '';
 let currentOriginFilter = '';
 let currentStatusFilter = '';
-let currentSituacionFilter = '';
 let statusChart = null;
 let trendChart = null;
 
@@ -41,7 +40,6 @@ const weekSelect = document.getElementById('week-select');
 const empresaSelect = document.getElementById('empresa-select');
 const originSelect = document.getElementById('origin-select');
 const statusSelect = document.getElementById('status-select');
-const situacionSelect = document.getElementById('situacion-select');
 const filtersContainer = document.getElementById('filters-container');
 const searchInput = document.getElementById('search-client');
 const loadingIndicator = document.getElementById('processing-overlay');
@@ -221,26 +219,6 @@ function populateFilters() {
     // Populate Origin select based on empresa filter
     updateOriginOptionsForEmpresa();
 
-
-    // Populate Situación select options dynamically!
-    const situSelect = document.getElementById('situacion-select');
-    situSelect.innerHTML = '<option value="">Todas las situaciones</option>';
-    const situaciones = new Set();
-    globalData.forEach(item => {
-        if (item.situacion && item.situacion !== 'Sin Especificar') {
-            situaciones.add(item.situacion);
-        }
-    });
-    if (globalData.some(item => item.situacion === 'Sin Especificar')) {
-        situaciones.add('Sin Especificar');
-    }
-    Array.from(situaciones).sort().forEach(situ => {
-        const option = document.createElement('option');
-        option.value = situ;
-        option.textContent = situ;
-        situSelect.appendChild(option);
-    });
-    
     // Clone nodes to remove old event listeners safely if this is called multiple times
     const empresaSelectEl = document.getElementById('empresa-select');
     const newEmpresaSelect = empresaSelectEl.cloneNode(true);
@@ -254,17 +232,12 @@ function populateFilters() {
     const statusSelect = document.getElementById('status-select');
     const newStatusSelect = statusSelect.cloneNode(true);
     statusSelect.parentNode.replaceChild(newStatusSelect, statusSelect);
-
-    const situacionSelectEl = document.getElementById('situacion-select');
-    const newSituacionSelect = situacionSelectEl.cloneNode(true);
-    situacionSelectEl.parentNode.replaceChild(newSituacionSelect, situacionSelectEl);
     
     // Re-assign references
     const empresaEl = document.getElementById('empresa-select');
     const originEl = document.getElementById('origin-select');
     const weekEl = document.getElementById('week-select');
     const statusEl = document.getElementById('status-select');
-    const situacionEl = document.getElementById('situacion-select');
 
     empresaEl.addEventListener('change', (e) => {
         currentEmpresaFilter = e.target.value;
@@ -294,17 +267,11 @@ function populateFilters() {
         currentStatusFilter = e.target.value;
         updateDashboard();
     });
-
-    situacionEl.addEventListener('change', (e) => {
-        currentSituacionFilter = e.target.value;
-        updateDashboard();
-    });
     
     updateWeekSelectorForCurrentOrigin();
     syncMacSelect('empresa-select');
     syncMacSelect('origin-select');
     syncMacSelect('status-select');
-    syncMacSelect('situacion-select');
 }
 
 function updateWeekSelectorForCurrentOrigin() {
@@ -553,12 +520,6 @@ function performDashboardUpdate() {
         });
     }
     
-    if (currentSituacionFilter !== '') {
-        aggregatedClients = aggregatedClients.filter(client => {
-            return client.invoices.some(inv => inv.situacion === currentSituacionFilter);
-        });
-    }
-
     // Show/hide the reset button depending on whether a status filter is active
     const resetBtn = document.getElementById('reset-status-filter');
     if (resetBtn) {
@@ -610,19 +571,6 @@ function performDashboardUpdate() {
             codesHtml = codesList.join(' ');
         }
         
-        const status = getClientMostCriticalStatus(client.invoices);
-        
-        const uniqueSituaciones = Array.from(new Set(client.invoices.map(inv => inv.situacion || 'Sin Especificar')));
-        let situacionHtml = '';
-        uniqueSituaciones.forEach(situ => {
-            if (situ && situ !== 'Sin Especificar') {
-                situacionHtml += `<span class="badge badge-outline" style="margin-right: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.9); font-size: 11px; padding: 4px 10px; font-weight: 600; display: inline-block; white-space: nowrap;"><i class="fas fa-info-circle" style="font-size: 10px; opacity: 0.8; margin-right: 4px;"></i>${situ}</span>`;
-            }
-        });
-        if (!situacionHtml) {
-            situacionHtml = `<span class="badge badge-outline" style="margin-right: 4px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.02); color: rgba(255,255,255,0.5); font-size: 11px; padding: 4px 10px; font-weight: 600; display: inline-block; white-space: nowrap;">Sin Especificar</span>`;
-        }
-        
         tr.innerHTML = `
             <td>
                 <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -632,7 +580,6 @@ function performDashboardUpdate() {
             </td>
             <td>${originsHtml}</td>
             <td class="text-center"><span class="badge ${status.class}" style="font-size: 11px; padding: 4px 10px; font-weight: 600; display: inline-flex; min-width: 90px; text-align: center; justify-content: center;">${status.text}</span></td>
-            <td>${situacionHtml}</td>
             <td class="text-right font-medium">${formatCurrency(client.totalAmount)}</td>
             <td class="text-center">
                 <button class="btn-icon" title="Ver Facturas" onclick="showInvoices('${escapeHtml(client.client)}')">
@@ -728,23 +675,6 @@ window.showInvoices = function(clientName) {
     
     currentModalInvoices = invoices;
     document.getElementById('modal-client-name').textContent = clientName;
-    
-    // Extract and render client situations in modal header
-    const uniqueSituaciones = Array.from(new Set(invoices.map(inv => inv.situacion || 'Sin Especificar')));
-    const modalSituacionEl = document.getElementById('modal-client-situacion');
-    if (modalSituacionEl) {
-        modalSituacionEl.innerHTML = '';
-        uniqueSituaciones.forEach(situ => {
-            if (situ && situ !== 'Sin Especificar') {
-                const badge = document.createElement('span');
-                badge.className = 'client-code-badge';
-                badge.style.background = 'rgba(255, 255, 255, 0.08)';
-                badge.style.border = '1px solid rgba(255, 255, 255, 0.15)';
-                badge.innerHTML = `<i class="fas fa-info-circle"></i> ${situ}`;
-                modalSituacionEl.appendChild(badge);
-            }
-        });
-    }
     
     // Extract and render client codes in modal header
     const codesByOrigin = {};

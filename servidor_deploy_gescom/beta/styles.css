@@ -638,7 +638,7 @@ tbody tr:hover {
     background: rgba(0, 0, 0, 0.3);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    z-index: 100;
+    z-index: 2000;
     align-items: center;
     justify-content: center;
 }
@@ -671,14 +671,31 @@ tbody tr:hover {
 }
 
 .close-modal {
-    font-size: 28px;
+    font-size: 20px;
     color: var(--text-secondary);
     cursor: pointer;
-    transition: color 0.2s;
+    transition: all 0.2s ease;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    flex-shrink: 0;
 }
 
 .close-modal:hover {
     color: var(--danger-color);
+    background: rgba(255, 69, 58, 0.1);
+    border-color: rgba(255, 69, 58, 0.25);
+    transform: scale(1.05);
+}
+
+.close-modal:active {
+    transform: scale(0.95);
+    background: rgba(255, 69, 58, 0.18);
 }
 
 .modal-body {
@@ -881,8 +898,7 @@ tbody tr:hover {
 .empresa-selector-container,
 .origin-selector-container,
 .week-selector-container,
-.status-selector-container,
-.situacion-selector-container {
+.status-selector-container {
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -915,8 +931,7 @@ tbody tr:hover {
 .empresa-selector-container label,
 .origin-selector-container label,
 .week-selector-container label,
-.status-selector-container label,
-.situacion-selector-container label {
+.status-selector-container label {
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.5px;
@@ -987,8 +1002,7 @@ tbody tr:hover {
     .empresa-selector-container,
     .origin-selector-container,
     .week-selector-container,
-    .status-selector-container,
-    .situacion-selector-container {
+    .status-selector-container {
         flex-basis: 120px;
     }
 }
@@ -1129,8 +1143,7 @@ body.route-home .mobile-top-bar {
     .empresa-selector-container,
     .origin-selector-container,
     .week-selector-container,
-    .status-selector-container,
-    .situacion-selector-container {
+    .status-selector-container {
         width: 100%;
         flex-basis: auto;
     }
@@ -1424,6 +1437,8 @@ body.route-home .mobile-top-bar {
     .invoice-table tbody td:nth-child(2)::before { content: "Fecha:"; font-weight: 600; color: var(--text-secondary); }
     .invoice-table tbody td:nth-child(3)::before { content: "Estado:"; font-weight: 600; color: var(--text-secondary); }
     .invoice-table tbody td:nth-child(4)::before { content: "Importe:"; font-weight: 600; color: var(--text-secondary); }
+    .invoice-table tbody td:nth-child(5)::before { content: "Canceló:"; font-weight: 600; color: var(--text-secondary); }
+    .invoice-table tbody td:nth-child(6)::before { content: "Pendiente:"; font-weight: 600; color: var(--text-secondary); }
 
     /* Modal header responsive adjustments */
     .modal-header {
@@ -1431,6 +1446,18 @@ body.route-home .mobile-top-bar {
         flex-direction: column !important;
         gap: 16px !important;
         align-items: stretch !important;
+        position: relative !important;
+    }
+    
+    .modal-header-info {
+        padding-right: 44px !important;
+    }
+    
+    .close-modal {
+        position: absolute !important;
+        top: 16px !important;
+        right: 16px !important;
+        z-index: 10 !important;
     }
     
     .modal-header .glass-card {
@@ -1475,7 +1502,7 @@ body.route-home .mobile-top-bar {
 }
 
 @media (min-width: 641px) {
-    .situacion-selector-container {
+    .status-selector-container {
         position: relative;
     }
     .compensar-checkbox-wrapper {
@@ -2040,10 +2067,11 @@ th.active-sort .sort-icon {
 
 /* Expanded state */
 #sync-status-panel.expanded {
-    max-width: 290px;
-    max-height: 250px;
-    border-radius: 16px !important;
-    padding: 12px 16px !important;
+    max-width: 260px;
+    max-height: 200px;
+    border-radius: 12px !important;
+    padding: 8px 10px !important;
+    gap: 1px;
     display: flex !important;
     flex-direction: column !important;
     align-items: stretch !important;
