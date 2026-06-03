@@ -2030,12 +2030,33 @@ function getStockVariationValue(item) {
     
     const key = `${String(item.codigo).trim()}_${String(item.fechaVencimiento).trim()}`;
     
-    const yesterdayTotal = window.yesterdayQtyMap ? window.yesterdayQtyMap.get(key) : undefined;
-    if (yesterdayTotal === undefined) {
-        return parseFloat(item.cantidad) || 0; // Tratar como cantidad actual si es nuevo
+    // Inicializar mapas si no existen (necesario ya que la ordenación ocurre antes del renderizado de filas)
+    if (!window.yesterdayQtyMap || window.yesterdayQtyMapDate !== prevDate) {
+        const yesterdayData = stockHistory[prevDate] || [];
+        window.yesterdayQtyMap = new Map();
+        yesterdayData.forEach(yItem => {
+            const yKey = `${String(yItem.codigo || yItem.ean || '').trim()}_${String(yItem.fechaVencimiento || yItem.vencimiento || '').trim()}`;
+            const currentQty = window.yesterdayQtyMap.get(yKey) || 0;
+            window.yesterdayQtyMap.set(yKey, currentQty + parseFloat(yItem.cantidad || 0));
+        });
+        window.yesterdayQtyMapDate = prevDate;
     }
     
-    const todayTotal = parseFloat(item.cantidad) || 0;
+    if (!window.todayQtyMap) {
+        window.todayQtyMap = new Map();
+        stockData.forEach(tItem => {
+            const tKey = `${String(tItem.codigo).trim()}_${String(tItem.fechaVencimiento).trim()}`;
+            const currentQty = window.todayQtyMap.get(tKey) || 0;
+            window.todayQtyMap.set(tKey, currentQty + parseFloat(tItem.cantidad || 0));
+        });
+    }
+    
+    const yesterdayTotal = window.yesterdayQtyMap.get(key);
+    if (yesterdayTotal === undefined) {
+        return window.todayQtyMap.get(key) || 0; // Tratar como cantidad actual si es nuevo
+    }
+    
+    const todayTotal = window.todayQtyMap.get(key) || 0;
     return todayTotal - yesterdayTotal;
 }
 
