@@ -476,6 +476,8 @@ app.get('/api/saldos', async (req, res) => {
         JOIN PERSONA p ON ct.PROPIETARIO_OID = p.OID
         WHERE cp.IMPORTE > 0 
           AND p.dtype = 'Cliente'
+          AND c.VISIBILIDAD = 0
+          AND p.VISIBILIDAD = 0
           AND c.TIPOCOMPROBANTE_OID IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 43, 56)
           AND (cp.IMPORTE + COALESCE((SELECT SUM(can.IMPORTE) FROM CANCELACION can WHERE can.COMPROBANTECANCELADO_OID = c.OID), 0)) > 0.01
           AND c.TALONARIO_OID NOT IN (23, 24)
@@ -505,6 +507,8 @@ app.get('/api/saldos', async (req, res) => {
         JOIN PERSONA p ON ct.PROPIETARIO_OID = p.OID
         WHERE cp.IMPORTE > 0 
           AND p.dtype = 'Cliente'
+          AND c.VISIBILIDAD = 0
+          AND p.VISIBILIDAD = 0
           AND c.TIPOCOMPROBANTE_OID IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 43, 56)
           AND (cp.IMPORTE + COALESCE((SELECT SUM(can.IMPORTE) FROM CANCELACION can WHERE can.COMPROBANTECANCELADO_OID = c.OID), 0)) > 0.01
           AND c.TALONARIO_OID IN (23, 24)
