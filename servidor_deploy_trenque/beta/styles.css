@@ -1410,5 +1410,83 @@ tbody tr:hover {
     background: rgba(255, 255, 255, 0.08);
 }
 
+/* Collapsible Sync Status Panel (Global) */
+#sync-status-panel {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    max-width: 42px;
+    max-height: 42px;
+    overflow: hidden;
+    border-radius: 21px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer;
+    z-index: 99;
+    background: rgba(10, 10, 12, 0.75) !important;
+    border: 1px solid rgba(10, 132, 255, 0.3) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+/* Database/Sync icon for collapsed state */
+#sync-status-panel::before {
+    content: '\f2f1'; /* FontAwesome Sync icon */
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    font-size: 16px;
+    color: #0a84ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    animation: pulse-sync-indicator 3s ease-in-out infinite;
+}
+
+@keyframes pulse-sync-indicator {
+    0% { opacity: 0.7; transform: scale(0.95); }
+    50% { opacity: 1; transform: scale(1.05); }
+    100% { opacity: 0.7; transform: scale(0.95); }
+}
+
+#sync-status-panel > * {
+    display: none !important;
+}
+
+/* Expanded state */
+#sync-status-panel.expanded {
+    max-width: 290px;
+    max-height: 200px;
+    border-radius: 16px !important;
+    padding: 12px 16px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    background: rgba(10, 10, 12, 0.9) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+#sync-status-panel.expanded::before {
+    display: none !important;
+}
+
+#sync-status-panel.expanded > * {
+    display: flex !important;
+}
+
+@media (max-width: 640px) {
+    #sync-status-panel {
+        right: 12px !important;
+        bottom: 12px !important;
+    }
+}
+
 
 

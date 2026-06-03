@@ -145,6 +145,7 @@ function processLogo(imgSrc, isGruya, callback) {
 document.addEventListener('DOMContentLoaded', async () => {
     // Consultar estado de sincronización inicial
     loadSyncStatus();
+    initSyncStatusPanel();
 
     // Process logos for both themes
     processLogo('logo_ingentron.png', false, (res) => {
@@ -1769,6 +1770,28 @@ async function loadSyncStatus() {
     } catch (e) {
         console.error("Error al cargar estado de sincronización:", e);
     }
+}
+
+// Inicializa el comportamiento de auto-contraer y toggle del panel de sincronización
+function initSyncStatusPanel() {
+    const syncPanel = document.getElementById('sync-status-panel');
+    if (!syncPanel) return;
+    
+    // Iniciar desplegado (con clase 'expanded')
+    syncPanel.classList.add('expanded');
+    
+    // Auto-contraer después de 5 segundos
+    const autoCollapseTimeout = setTimeout(() => {
+        if (syncPanel.classList.contains('expanded')) {
+            syncPanel.classList.remove('expanded');
+        }
+    }, 5000);
+    
+    // Alternar expandido/contraído al hacer clic
+    syncPanel.addEventListener('click', (e) => {
+        clearTimeout(autoCollapseTimeout);
+        syncPanel.classList.toggle('expanded');
+    });
 }
 
 

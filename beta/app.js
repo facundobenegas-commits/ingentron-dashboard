@@ -202,6 +202,7 @@ function processLogo(imgSrc, isGruya, callback) {
 document.addEventListener('DOMContentLoaded', async () => {
     // Consultar estado de sincronización inicial
     loadSyncStatus();
+    initSyncStatusPanel();
 
     // Process logos for both themes
     processLogo('../logo_ingentron.png', false, (res) => {
@@ -1870,6 +1871,28 @@ async function loadSyncStatus() {
     }
 }
 
+// Inicializa el comportamiento de auto-contraer y toggle del panel de sincronización
+function initSyncStatusPanel() {
+    const syncPanel = document.getElementById('sync-status-panel');
+    if (!syncPanel) return;
+    
+    // Iniciar desplegado (con clase 'expanded')
+    syncPanel.classList.add('expanded');
+    
+    // Auto-contraer después de 5 segundos
+    const autoCollapseTimeout = setTimeout(() => {
+        if (syncPanel.classList.contains('expanded')) {
+            syncPanel.classList.remove('expanded');
+        }
+    }, 5000);
+    
+    // Alternar expandido/contraído al hacer clic
+    syncPanel.addEventListener('click', (e) => {
+        clearTimeout(autoCollapseTimeout);
+        syncPanel.classList.toggle('expanded');
+    });
+}
+
 // ═══════════════════════════════════════════════════════════════
 // MÓDULO DE GESTIÓN DE VENCIMIENTOS DE STOCK (BETA)
 // ═══════════════════════════════════════════════════════════════
@@ -2687,6 +2710,9 @@ function applyRoute(moduleName) {
     // Ocultar todas las vistas
     views.forEach(v => v.style.display = 'none');
     
+    // Toggle class on body for CSS styling specific to home view
+    document.body.classList.toggle('route-home', moduleName === 'home');
+    
     // Quitar clase activa de todos los botones de navegación lateral
     navItems.forEach(nav => nav.classList.remove('active'));
     
@@ -2694,10 +2720,12 @@ function applyRoute(moduleName) {
     const header = document.querySelector('.top-header');
     const sidebar = document.getElementById('sidebar');
     const mainContent = document.getElementById('main-content');
+    const mobileTopBar = document.querySelector('.mobile-top-bar');
     
     if (moduleName === 'home') {
         if (header) header.style.setProperty('display', 'none', 'important');
         if (sidebar) sidebar.style.setProperty('display', 'none', 'important');
+        if (mobileTopBar) mobileTopBar.style.setProperty('display', 'none', 'important');
         if (mainContent) {
             mainContent.style.setProperty('margin-left', '0', 'important');
             mainContent.style.setProperty('max-width', '100%', 'important');
@@ -2707,6 +2735,7 @@ function applyRoute(moduleName) {
     } else {
         if (header) header.style.removeProperty('display');
         if (sidebar) sidebar.style.removeProperty('display');
+        if (mobileTopBar) mobileTopBar.style.removeProperty('display');
         if (mainContent) {
             mainContent.style.removeProperty('margin-left');
             mainContent.style.removeProperty('max-width');
