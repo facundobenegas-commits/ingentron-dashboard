@@ -1567,6 +1567,27 @@ body.route-home .mobile-top-bar {
     border: 1px solid rgba(52, 211, 153, 0.25) !important;
 }
 
+/* Resaltado de fila de producto seleccionada/expandida (Desktop) */
+#stock-table tbody tr.stock-main-row.expanded-main {
+    background-color: rgba(10, 132, 255, 0.05) !important;
+    transition: background-color 0.25s ease;
+}
+
+#stock-table tbody tr.stock-main-row.expanded-main td:nth-child(2) div {
+    color: #0a84ff !important; /* Resaltar en azul/celeste */
+    transition: color 0.25s ease;
+}
+
+#stock-table tbody tr.stock-main-row.expanded-main .toggle-icon {
+    color: #0a84ff !important;
+    opacity: 0.95 !important;
+}
+
+#stock-table tbody tr.stock-main-row.expanded-main + tr.stock-detail-row {
+    background-color: rgba(10, 132, 255, 0.015) !important;
+    transition: background-color 0.25s ease;
+}
+
 /* Table modifications for stock on mobile card transformation */
 @media (max-width: 640px) {
     #stock-table tbody tr.stock-main-row {
@@ -1588,6 +1609,8 @@ body.route-home .mobile-top-bar {
         border-radius: 16px 16px 0 0 !important;
         margin-bottom: 0 !important;
         border-bottom: none !important;
+        border-color: rgba(10, 132, 255, 0.25) !important;
+        background-color: rgba(10, 132, 255, 0.08) !important;
     }
 
     #stock-table tbody tr.stock-detail-row {
@@ -1603,6 +1626,12 @@ body.route-home .mobile-top-bar {
         width: 100% !important;
         box-sizing: border-box !important;
         margin-top: 0 !important;
+    }
+    
+    #stock-table tbody tr.stock-main-row.expanded-main + tr.stock-detail-row {
+        border-color: rgba(10, 132, 255, 0.25) !important;
+        border-top: 1px dashed rgba(10, 132, 255, 0.3) !important;
+        background-color: rgba(10, 132, 255, 0.03) !important;
     }
     
     #stock-table tbody tr.stock-main-row td {
