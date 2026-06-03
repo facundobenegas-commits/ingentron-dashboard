@@ -2240,7 +2240,7 @@ function getItemDailyVariations(item) {
                     variationText = `${diff}`;
                     variationClass = 'negative';
                 } else {
-                    variationText = '0';
+                    variationText = 'Sin cambios';
                     variationClass = 'neutral';
                 }
             } else {
@@ -2272,7 +2272,7 @@ function getItemDailyVariations(item) {
                     variationText = `${diff}`;
                     variationClass = 'negative';
                 } else {
-                    variationText = '0';
+                    variationText = 'Sin cambios';
                     variationClass = 'neutral';
                 }
             }
