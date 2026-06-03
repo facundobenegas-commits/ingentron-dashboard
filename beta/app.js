@@ -2215,38 +2215,73 @@ function getItemDailyVariations(item) {
         let variationText = '';
         let variationClass = '';
         
-        if (day.hasRecord) {
-            if (day.qty > 0) hasSeenBefore = true;
-        }
+        const localToday = new Date(new Date().getTime() - 3 * 3600 * 1000).toISOString().split('T')[0];
+        const isToday = (day.dateStr === localToday);
         
-        if (!day.hasRecord && !prevDay.hasRecord) {
-            variationText = '-';
-            variationClass = 'neutral';
-        } else if (!prevDay.hasRecord && day.hasRecord) {
-            if (!hasSeenBefore) {
-                variationText = 'Nuevo';
-                variationClass = 'new';
-                hasSeenBefore = true;
+        if (isToday) {
+            // Para el día actual, si existe un snapshot de hoy en el historial,
+            // la variación debe ser respecto a ese snapshot de hoy (al igual que la fila principal)
+            let todaySnapshotQty = null;
+            if (stockHistory && stockHistory[localToday]) {
+                stockHistory[localToday].forEach(hItem => {
+                    const hKey = `${String(hItem.codigo || hItem.ean || '').trim()}_${String(hItem.fechaVencimiento || hItem.vencimiento || '').trim()}`;
+                    if (hKey === key) {
+                        todaySnapshotQty = (todaySnapshotQty || 0) + parseFloat(hItem.cantidad || 0);
+                    }
+                });
+            }
+            
+            if (todaySnapshotQty !== null) {
+                const diff = day.qty - todaySnapshotQty;
+                if (diff > 0) {
+                    variationText = `+${diff}`;
+                    variationClass = 'positive';
+                } else if (diff < 0) {
+                    variationText = `${diff}`;
+                    variationClass = 'negative';
+                } else {
+                    variationText = '0';
+                    variationClass = 'neutral';
+                }
             } else {
-                const diff = day.qty;
-                variationText = `+${diff}`;
-                variationClass = 'positive';
+                calculateNormalDiff();
             }
         } else {
-            const diff = day.qty - prevDay.qty;
-            if (diff > 0) {
-                variationText = `+${diff}`;
-                variationClass = 'positive';
-            } else if (diff < 0) {
-                variationText = `${diff}`;
-                variationClass = 'negative';
-            } else {
-                variationText = '0';
+            calculateNormalDiff();
+        }
+        
+        function calculateNormalDiff() {
+            if (!day.hasRecord && !prevDay.hasRecord) {
+                variationText = '-';
                 variationClass = 'neutral';
+            } else if (!prevDay.hasRecord && day.hasRecord) {
+                if (!hasSeenBefore) {
+                    variationText = 'Nuevo';
+                    variationClass = 'new';
+                } else {
+                    const diff = day.qty;
+                    variationText = `+${diff}`;
+                    variationClass = 'positive';
+                }
+            } else {
+                const diff = day.qty - prevDay.qty;
+                if (diff > 0) {
+                    variationText = `+${diff}`;
+                    variationClass = 'positive';
+                } else if (diff < 0) {
+                    variationText = `${diff}`;
+                    variationClass = 'negative';
+                } else {
+                    variationText = '0';
+                    variationClass = 'neutral';
+                }
             }
         }
         
-        // Si hoy o ayer se marcó que tiene registro, actualizamos que ya fue visto
+        // Si hoy o ayer se marcó que tiene registro y cantidad, actualizamos que ya fue visto
+        if (day.hasRecord && day.qty > 0) {
+            hasSeenBefore = true;
+        }
         if (prevDay.hasRecord && prevDay.qty > 0) {
             hasSeenBefore = true;
         }
