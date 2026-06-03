@@ -471,7 +471,7 @@ function toggleClearSearchBtn() {
 searchInput.addEventListener('input', () => {
     toggleClearSearchBtn();
     clearTimeout(_dashboardDebounce);
-    _dashboardDebounce = setTimeout(() => updateDashboard(), 120);
+    _dashboardDebounce = setTimeout(() => updateDashboard(), 250);
 });
 
 if (clearSearchBtn) {
@@ -1571,9 +1571,33 @@ function updateStatusPieChart(ok, vencido, critico) {
         }
     }
     
-    // Destroy previous chart
+    // Reuse existing chart if available
     if (statusChart) {
-        statusChart.destroy();
+        if (total === 0) {
+            statusChart.data.labels = ['Sin datos'];
+            statusChart.data.datasets[0].data = [1];
+            statusChart.data.datasets[0].backgroundColor = ['rgba(255, 255, 255, 0.05)'];
+            statusChart.data.datasets[0].borderColor = ['rgba(255, 255, 255, 0.05)'];
+            statusChart.data.datasets[0].borderWidth = 0;
+            statusChart.options.plugins.tooltip.enabled = false;
+        } else {
+            statusChart.data.labels = ['No vencido', 'Vencido', 'Más de 30 días'];
+            statusChart.data.datasets[0].data = [ok, vencido, critico];
+            statusChart.data.datasets[0].backgroundColor = [
+                'rgba(52, 211, 153, 0.65)',
+                'rgba(251, 191, 36, 0.65)',
+                'rgba(248, 113, 113, 0.65)'
+            ];
+            statusChart.data.datasets[0].borderColor = [
+                'rgba(52, 211, 153, 0.8)',
+                'rgba(251, 191, 36, 0.8)',
+                'rgba(248, 113, 113, 0.8)'
+            ];
+            statusChart.data.datasets[0].borderWidth = 1.5;
+            statusChart.options.plugins.tooltip.enabled = true;
+        }
+        statusChart.update('none'); // Update immediately with zero animations for typing responsiveness
+        return;
     }
     
     if (total === 0) {
@@ -1659,11 +1683,19 @@ function updateTrendChart(weeks, balances) {
     const ctx = document.getElementById('trend-bar-chart');
     if (!ctx) return;
     
-    if (trendChart) {
-        trendChart.destroy();
+    if (weeks.length === 0) {
+        if (trendChart) {
+            trendChart.destroy();
+            trendChart = null;
+        }
+        return;
     }
     
-    if (weeks.length === 0) {
+    if (trendChart) {
+        trendChart.data.labels = weeks;
+        trendChart.data.datasets[0].data = balances;
+        trendChart.data.datasets[1].data = balances;
+        trendChart.update('none'); // Skip animation to prevent lag
         return;
     }
     
@@ -2462,44 +2494,13 @@ function renderStockTable() {
             </td>
         `;
         
-        // Crear fila de detalle
+        // Crear fila de detalle (vacia inicialmente)
         const detailTr = document.createElement('tr');
         detailTr.className = 'stock-detail-row';
         detailTr.style.display = 'none';
         detailTr.style.background = 'rgba(255, 255, 255, 0.005)';
         
-        const variations = getItemDailyVariations(item);
-        
-        let variationsHtml = variations.map(v => {
-            let badgeStyle = '';
-            if (v.class === 'positive') badgeStyle = 'background: rgba(52, 211, 153, 0.15); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.25);';
-            else if (v.class === 'negative') badgeStyle = 'background: rgba(248, 113, 113, 0.15); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.25);';
-            else if (v.class === 'new') badgeStyle = 'background: rgba(96, 165, 250, 0.15); color: #60a5fa; border: 1px solid rgba(96, 165, 250, 0.25);';
-            else badgeStyle = 'background: rgba(255, 255, 255, 0.05); color: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.1);';
-            
-            return `
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.06); padding: 12px 14px; border-radius: 12px; min-width: 76px; flex: 1; box-sizing: border-box; transition: background 0.2s;">
-                    <div style="font-size: 13px; opacity: 0.95; font-weight: 600; color: #ffffff;">${v.label}</div>
-                    <div style="font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 6px; ${badgeStyle} text-align: center; width: 100%; box-sizing: border-box; display: block;">${v.text}</div>
-                    <div style="font-size: 12px; opacity: 0.85; font-weight: 600; color: var(--text-secondary); text-align: center;">${v.qty} un.</div>
-                </div>
-            `;
-        }).join('');
-        
-        detailTr.innerHTML = `
-            <td colspan="6" style="padding: 0; border-top: none;">
-                <div class="detail-wrapper" style="padding: 16px 24px; display: flex; flex-direction: column; gap: 12px; transform-origin: top;">
-                    <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--accent-color);">
-                        <i class="fas fa-history"></i> Historial de Variación Diaria (Últimos 7 días)
-                    </div>
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: space-between; width: 100%;">
-                        ${variationsHtml}
-                    </div>
-                </div>
-            </td>
-        `;
-        
-        // Evento toggle al hacer click en la fila principal (comportamiento de acordeón único)
+        // Evento toggle al hacer click en la fila principal (comportamiento de acordeón único con carga perezosa)
         tr.addEventListener('click', () => {
             const isVisible = detailTr.style.display !== 'none';
             
@@ -2516,6 +2517,50 @@ function renderStockTable() {
                 openDetailRows.forEach(dRow => {
                     dRow.style.display = 'none';
                 });
+                
+                // Carga perezosa del contenido de historial
+                if (!detailTr.dataset.loaded) {
+                    detailTr.innerHTML = `
+                        <td colspan="6" style="padding: 16px 24px; text-align: center; color: var(--text-secondary);">
+                            <i class="fas fa-spinner fa-spin"></i> Cargando historial de variación...
+                        </td>
+                    `;
+                    
+                    // Ejecutamos en un setTimeout mínimo para permitir la animación inicial fluida del CSS
+                    setTimeout(() => {
+                        const variations = getItemDailyVariations(item);
+                        
+                        let variationsHtml = variations.map(v => {
+                            let badgeStyle = '';
+                            if (v.class === 'positive') badgeStyle = 'background: rgba(52, 211, 153, 0.15); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.25);';
+                            else if (v.class === 'negative') badgeStyle = 'background: rgba(248, 113, 113, 0.15); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.25);';
+                            else if (v.class === 'new') badgeStyle = 'background: rgba(96, 165, 250, 0.15); color: #60a5fa; border: 1px solid rgba(96, 165, 250, 0.25);';
+                            else badgeStyle = 'background: rgba(255, 255, 255, 0.05); color: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.1);';
+                            
+                            return `
+                                <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.06); padding: 12px 14px; border-radius: 12px; min-width: 76px; flex: 1; box-sizing: border-box; transition: background 0.2s;">
+                                    <div style="font-size: 13px; opacity: 0.95; font-weight: 600; color: #ffffff;">${v.label}</div>
+                                    <div style="font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 6px; ${badgeStyle} text-align: center; width: 100%; box-sizing: border-box; display: block;">${v.text}</div>
+                                    <div style="font-size: 12px; opacity: 0.85; font-weight: 600; color: var(--text-secondary); text-align: center;">${v.qty} un.</div>
+                                </div>
+                            `;
+                        }).join('');
+                        
+                        detailTr.innerHTML = `
+                            <td colspan="6" style="padding: 0; border-top: none;">
+                                <div class="detail-wrapper" style="padding: 16px 24px; display: flex; flex-direction: column; gap: 12px; transform-origin: top;">
+                                    <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--accent-color);">
+                                        <i class="fas fa-history"></i> Historial de Variación Diaria (Últimos 7 días)
+                                    </div>
+                                    <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: space-between; width: 100%;">
+                                        ${variationsHtml}
+                                    </div>
+                                </div>
+                            </td>
+                        `;
+                        detailTr.dataset.loaded = "true";
+                    }, 20);
+                }
             }
             
             detailTr.style.display = isVisible ? 'none' : 'table-row';
@@ -2555,41 +2600,43 @@ function updateStockCharts() {
     const canvasRisk = document.getElementById('stock-risk-chart');
     if (canvasRisk) {
         const ctxRisk = canvasRisk.getContext('2d');
-        if (stockRiskChart) stockRiskChart.destroy();
-        
-        stockRiskChart = new Chart(ctxRisk, {
-            type: 'doughnut',
-            data: {
-                labels: ['Vencido', 'Alerta Crítica', 'Próximo', 'En Regla'],
-                datasets: [{
-                    data: [expired, critical, upcoming, ok],
-                    backgroundColor: ['#f87171', '#fbbf24', '#60a5fa', '#34d399'],
-                    borderColor: 'rgba(10, 10, 12, 0.6)',
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'right',
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.7)',
-                            font: { size: 10, family: 'Inter' }
-                        }
-                    }
+        if (stockRiskChart) {
+            stockRiskChart.data.datasets[0].data = [expired, critical, upcoming, ok];
+            stockRiskChart.update('none');
+        } else {
+            stockRiskChart = new Chart(ctxRisk, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Vencido', 'Alerta Crítica', 'Próximo', 'En Regla'],
+                    datasets: [{
+                        data: [expired, critical, upcoming, ok],
+                        backgroundColor: ['#f87171', '#fbbf24', '#60a5fa', '#34d399'],
+                        borderColor: 'rgba(10, 10, 12, 0.6)',
+                        borderWidth: 2
+                    }]
                 },
-                cutout: '70%'
-            }
-        });
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                color: 'rgba(255, 255, 255, 0.7)',
+                                font: { size: 10, family: 'Inter' }
+                            }
+                        }
+                    },
+                    cutout: '70%'
+                }
+            });
+        }
     }
     
     // 2. Gráfico de Barras: Cronograma por Mes
     const canvasTimeline = document.getElementById('stock-timeline-chart');
     if (canvasTimeline) {
         const ctxTimeline = canvasTimeline.getContext('2d');
-        if (stockTimelineChart) stockTimelineChart.destroy();
         
         const monthsGroup = {};
         stockData.forEach(item => {
@@ -2607,43 +2654,49 @@ function updateStockCharts() {
         });
         const timelineData = sortedMonths.map(ym => monthsGroup[ym]);
         
-        stockTimelineChart = new Chart(ctxTimeline, {
-            type: 'bar',
-            data: {
-                labels: monthLabels,
-                datasets: [{
-                    label: 'Unidades a vencer',
-                    data: timelineData,
-                    backgroundColor: 'rgba(10, 132, 255, 0.3)',
-                    borderColor: '#0a84ff',
-                    borderWidth: 1.5,
-                    borderRadius: 4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false }
+        if (stockTimelineChart) {
+            stockTimelineChart.data.labels = monthLabels;
+            stockTimelineChart.data.datasets[0].data = timelineData;
+            stockTimelineChart.update('none');
+        } else {
+            stockTimelineChart = new Chart(ctxTimeline, {
+                type: 'bar',
+                data: {
+                    labels: monthLabels,
+                    datasets: [{
+                        label: 'Unidades a vencer',
+                        data: timelineData,
+                        backgroundColor: 'rgba(10, 132, 255, 0.3)',
+                        borderColor: '#0a84ff',
+                        borderWidth: 1.5,
+                        borderRadius: 4
+                    }]
                 },
-                scales: {
-                    y: {
-                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                        ticks: {
-                            color: 'rgba(255, 255, 255, 0.6)',
-                            font: { size: 10, family: 'Inter' }
-                        }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
                     },
-                    x: {
-                        grid: { display: false },
-                        ticks: {
-                            color: 'rgba(255, 255, 255, 0.6)',
-                            font: { size: 10, family: 'Inter' }
+                    scales: {
+                        y: {
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: {
+                                color: 'rgba(255, 255, 255, 0.6)',
+                                font: { size: 10, family: 'Inter' }
+                            }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: {
+                                color: 'rgba(255, 255, 255, 0.6)',
+                                font: { size: 10, family: 'Inter' }
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
+        }
     }
 }
 
@@ -3078,7 +3131,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchStockEl = document.getElementById('search-stock');
     const hideExpiredEl = document.getElementById('hide-expired-checkbox');
     
-    if (searchStockEl) searchStockEl.addEventListener('input', renderStockTable);
+    let _stockSearchDebounce = null;
+    if (searchStockEl) {
+        searchStockEl.addEventListener('input', () => {
+            clearTimeout(_stockSearchDebounce);
+            _stockSearchDebounce = setTimeout(() => {
+                renderStockTable();
+            }, 250);
+        });
+    }
     if (hideExpiredEl) hideExpiredEl.addEventListener('change', renderStockTable);
     
     // Inicializar íconos de ordenación de stock
