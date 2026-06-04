@@ -1709,7 +1709,7 @@ function updateTrendChart(weeks, balances) {
             maintainAspectRatio: false,
             layout: {
                 padding: {
-                    left: 20,
+                    left: 40,
                     right: 20,
                     top: 20,
                     bottom: 0
