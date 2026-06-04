@@ -95,48 +95,7 @@ body {
 }
 
 /* Beta and Stable Quick Links */
-.beta-link {
-    background: rgba(191, 90, 242, 0.08);
-    border: 1px solid rgba(191, 90, 242, 0.2);
-    color: var(--purple-color);
-    margin-top: auto;
-}
 
-.beta-link:hover {
-    background: rgba(191, 90, 242, 0.15);
-    color: var(--purple-color);
-    border-color: rgba(191, 90, 242, 0.4);
-    transform: scale(1.03) translateX(4px);
-}
-
-.stable-link {
-    background: rgba(10, 132, 255, 0.08);
-    border: 1px solid rgba(10, 132, 255, 0.2);
-    color: var(--accent-color);
-    margin-top: auto;
-}
-
-.stable-link:hover {
-    background: rgba(10, 132, 255, 0.15);
-    color: var(--accent-color);
-    border-color: rgba(10, 132, 255, 0.4);
-    transform: scale(1.03) translateX(4px);
-}
-
-.beta-badge {
-    background: rgba(191, 90, 242, 0.15);
-    border: 1px solid rgba(191, 90, 242, 0.4);
-    color: var(--purple-color);
-    font-size: 10px;
-    font-weight: 700;
-    padding: 2px 6px;
-    border-radius: 6px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
 
 .nav-item {
     padding: 12px 16px;
