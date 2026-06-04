@@ -565,19 +565,26 @@ app.get('/api/saldos', async (req, res) => {
     res.json(globalData);
 });
 
-// Catch-all para la versión Beta para soportar SPA routing (HTML5 History API)
+// Redireccionar antiguas URLs de Beta a la versión estable en la raíz
 app.get(/^\/beta/, (req, res) => {
-    res.sendFile(path.join(__dirname, 'beta', 'index.html'));
+    res.redirect('/');
+});
+
+// Catch-all para la versión estable (HTML5 History API)
+app.get('*', (req, res) => {
+    if (req.path.startsWith('/api')) {
+        return res.status(404).json({ error: 'Not Found' });
+    }
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n======================================================`);
-    console.log(`🚀 SERVIDOR INGENTRON INICIADO (BETA SQL ACTIVA)`);
+    console.log(`🚀 SERVIDOR INGENTRON INICIADO (DASHBOARD ACTIVO)`);
     console.log(`======================================================`);
     console.log(`\nEl dashboard está disponible en tu computadora local en:`);
     console.log(`-> http://localhost:${PORT}`);
-    console.log(`-> http://localhost:${PORT}/beta/ (Versión con Base de Datos SQL)`);
     console.log(`\nPara que otras computadoras lo vean, dales la IP de esta PC.`);
     console.log(`(Asegúrate de no cerrar esta ventana mientras quieras que el sistema funcione)`);
 });

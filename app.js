@@ -112,11 +112,68 @@ function processLogo(imgSrc, isGruya, callback) {
             ctxDark.putImageData(imgDataDark, 0, 0);
             ctxLight.putImageData(imgDataLight, 0, 0);
             
+            // Scan for visible bounding box after transparency/colors are applied
+            let minX = canvasDark.width;
+            let minY = canvasDark.height;
+            let maxX = 0;
+            let maxY = 0;
+            let hasVisiblePixels = false;
+            
+            const finalDataDark = ctxDark.getImageData(0, 0, canvasDark.width, canvasDark.height).data;
+            
+            for (let y = 0; y < canvasDark.height; y++) {
+                for (let x = 0; x < canvasDark.width; x++) {
+                    const idx = (y * canvasDark.width + x) * 4;
+                    const a = finalDataDark[idx + 3];
+                    if (a > 0) { // Visible non-transparent pixel
+                        hasVisiblePixels = true;
+                        if (x < minX) minX = x;
+                        if (x > maxX) maxX = x;
+                        if (y < minY) minY = y;
+                        if (y > maxY) maxY = y;
+                    }
+                }
+            }
+            
+            let finalCanvasDark = canvasDark;
+            let finalCanvasLight = canvasLight;
+            let finalWidth = img.width;
+            let finalHeight = img.height;
+            
+            if (hasVisiblePixels) {
+                // Add a small 2px padding to avoid subpixel clipping
+                const padding = 2;
+                minX = Math.max(0, minX - padding);
+                minY = Math.max(0, minY - padding);
+                maxX = Math.min(canvasDark.width - 1, maxX + padding);
+                maxY = Math.min(canvasDark.height - 1, maxY + padding);
+                
+                const croppedWidth = maxX - minX + 1;
+                const croppedHeight = maxY - minY + 1;
+                
+                const croppedCanvasDark = document.createElement('canvas');
+                croppedCanvasDark.width = croppedWidth;
+                croppedCanvasDark.height = croppedHeight;
+                const croppedCtxDark = croppedCanvasDark.getContext('2d');
+                croppedCtxDark.drawImage(canvasDark, minX, minY, croppedWidth, croppedHeight, 0, 0, croppedWidth, croppedHeight);
+                
+                const croppedCanvasLight = document.createElement('canvas');
+                croppedCanvasLight.width = croppedWidth;
+                croppedCanvasLight.height = croppedHeight;
+                const croppedCtxLight = croppedCanvasLight.getContext('2d');
+                croppedCtxLight.drawImage(canvasLight, minX, minY, croppedWidth, croppedHeight, 0, 0, croppedWidth, croppedHeight);
+                
+                finalCanvasDark = croppedCanvasDark;
+                finalCanvasLight = croppedCanvasLight;
+                finalWidth = croppedWidth;
+                finalHeight = croppedHeight;
+            }
+            
             callback({
-                dark: canvasDark.toDataURL('image/png'),
-                light: canvasLight.toDataURL('image/png'),
-                width: img.width,
-                height: img.height
+                dark: finalCanvasDark.toDataURL('image/png'),
+                light: finalCanvasLight.toDataURL('image/png'),
+                width: finalWidth,
+                height: finalHeight
             });
         } catch (e) {
             console.error("Error processing images on canvas:", e);
@@ -139,28 +196,62 @@ function processLogo(imgSrc, isGruya, callback) {
     };
 }
 
-// Auto Load Data on Startup
+// Auto Load Data on Startup (Solo cabeceras y estado, los datos son perezosos)
 document.addEventListener('DOMContentLoaded', async () => {
     // Consultar estado de sincronización inicial
     loadSyncStatus();
     initSyncStatusPanel();
 
     // Process logos for both themes
-    processLogo('logo_ingentron.png', false, (res) => {
+    processLogo('../logo_ingentron.png', false, (res) => {
         window.logoIngentronObj = res;
         const sidebarImg = document.getElementById('sidebar-logo-ingentron');
         const headerImg = document.getElementById('header-logo-ingentron');
+        const homeImg = document.getElementById('home-logo-ingentron');
+        const mobileImg = document.getElementById('mobile-logo-ingentron');
         if (sidebarImg) sidebarImg.src = res.dark;
         if (headerImg) headerImg.src = res.dark;
+        if (homeImg) homeImg.src = res.dark;
+        if (mobileImg) mobileImg.src = res.dark;
     });
 
-    processLogo('logo_gruya.jpg', true, (res) => {
+    processLogo('../logo_gruya.jpg', true, (res) => {
         window.logoGruyaObj = res;
         const sidebarImg = document.getElementById('sidebar-logo-gruya');
         const headerImg = document.getElementById('header-logo-gruya');
+        const homeImg = document.getElementById('home-logo-gruya');
+        const mobileImg = document.getElementById('mobile-logo-gruya');
         if (sidebarImg) sidebarImg.src = res.dark;
         if (headerImg) headerImg.src = res.dark;
+        if (homeImg) homeImg.src = res.dark;
+        if (mobileImg) mobileImg.src = res.dark;
     });
+    
+    // Aplicar ruta inicial según la URL sin cargar datos innecesarios a priori
+    applyRouteFromLocation();
+});
+
+let isCuentasCorrientesLoading = false;
+
+// Carga perezosa e independiente para Cuentas Corrientes
+async function loadCuentasCorrientesData() {
+    if (globalData && globalData.length > 0) {
+        // Ya está cargado, simplemente actualizamos las vistas y KPIs
+        updateDashboard();
+        return;
+    }
+    if (isCuentasCorrientesLoading) return;
+    isCuentasCorrientesLoading = true;
+    
+    const loadingIndicator = document.getElementById('processing-overlay');
+    if (loadingIndicator) {
+        loadingIndicator.classList.add('show');
+        loadingIndicator.querySelector('span').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando Cuentas Corrientes...';
+        loadingIndicator.querySelector('span').style.color = 'inherit';
+        const spinner = loadingIndicator.querySelector('.processing-spinner');
+        if (spinner) spinner.style.display = '';
+    }
+    
     try {
         const response = await fetch('/api/saldos');
         if (!response.ok) throw new Error('No se pudo cargar la información de saldos desde el servidor.');
@@ -175,18 +266,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         
         populateFilters();
+        updateDashboard();
         
-        loadingIndicator.classList.remove('show');
-        dashboardView.style.display = 'block';
-        filtersContainer.style.display = 'flex';
+        if (loadingIndicator) loadingIndicator.classList.remove('show');
         
     } catch (error) {
         console.error(error);
-        loadingIndicator.querySelector('span').innerHTML = `<i class="fas fa-exclamation-triangle"></i> Error al cargar datos: ${error.message}`;
-        loadingIndicator.querySelector('span').style.color = 'var(--danger-color)';
-        loadingIndicator.querySelector('.processing-spinner').style.display = 'none';
+        if (loadingIndicator) {
+            loadingIndicator.querySelector('span').innerHTML = `<i class="fas fa-exclamation-triangle"></i> Error al cargar datos: ${error.message}`;
+            loadingIndicator.querySelector('span').style.color = 'var(--danger-color)';
+            const spinner = loadingIndicator.querySelector('.processing-spinner');
+            if (spinner) spinner.style.display = 'none';
+        }
+    } finally {
+        isCuentasCorrientesLoading = false;
     }
-});
+}
 
 // UI Updating
 function updateOriginOptionsForEmpresa() {
@@ -224,15 +319,18 @@ function populateFilters() {
     const newEmpresaSelect = empresaSelectEl.cloneNode(true);
     empresaSelectEl.parentNode.replaceChild(newEmpresaSelect, empresaSelectEl);
 
-    const newOriginSelect = originSelect.cloneNode(true);
-    originSelect.parentNode.replaceChild(newOriginSelect, originSelect);
-    const newWeekSelect = weekSelect.cloneNode(true);
-    weekSelect.parentNode.replaceChild(newWeekSelect, weekSelect);
+    const originSelectEl = document.getElementById('origin-select');
+    const newOriginSelect = originSelectEl.cloneNode(true);
+    originSelectEl.parentNode.replaceChild(newOriginSelect, originSelectEl);
+
+    const weekSelectEl = document.getElementById('week-select');
+    const newWeekSelect = weekSelectEl.cloneNode(true);
+    weekSelectEl.parentNode.replaceChild(newWeekSelect, weekSelectEl);
     
-    const statusSelect = document.getElementById('status-select');
-    const newStatusSelect = statusSelect.cloneNode(true);
-    statusSelect.parentNode.replaceChild(newStatusSelect, statusSelect);
-    
+    const statusSelectEl = document.getElementById('status-select');
+    const newStatusSelect = statusSelectEl.cloneNode(true);
+    statusSelectEl.parentNode.replaceChild(newStatusSelect, statusSelectEl);
+
     // Re-assign references
     const empresaEl = document.getElementById('empresa-select');
     const originEl = document.getElementById('origin-select');
@@ -340,7 +438,7 @@ function toggleClearSearchBtn() {
 searchInput.addEventListener('input', () => {
     toggleClearSearchBtn();
     clearTimeout(_dashboardDebounce);
-    _dashboardDebounce = setTimeout(() => updateDashboard(), 120);
+    _dashboardDebounce = setTimeout(() => updateDashboard(), 250);
 });
 
 if (clearSearchBtn) {
@@ -519,7 +617,6 @@ function performDashboardUpdate() {
             return status.text === currentStatusFilter;
         });
     }
-    
     // Show/hide the reset button depending on whether a status filter is active
     const resetBtn = document.getElementById('reset-status-filter');
     if (resetBtn) {
@@ -547,6 +644,7 @@ function performDashboardUpdate() {
     const tbody = document.getElementById('clients-tbody');
     tbody.innerHTML = '';
     
+    const fragment = document.createDocumentFragment();
     aggregatedClients.forEach(client => {
         const tr = document.createElement('tr');
         
@@ -571,10 +669,12 @@ function performDashboardUpdate() {
             codesHtml = codesList.join(' ');
         }
         
+        const status = getClientMostCriticalStatus(client.invoices);
+        
         tr.innerHTML = `
             <td>
                 <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                    <span style="font-weight: 700; font-size: 15px; color: var(--text-primary);">${client.client}</span>
+                     <span style="font-weight: 700; font-size: 15px; color: var(--text-primary);">${client.client}</span>
                     ${codesHtml ? `<div style="display: inline-flex; gap: 6px; flex-wrap: wrap; align-items: center;">${codesHtml}</div>` : ''}
                 </div>
             </td>
@@ -587,8 +687,9 @@ function performDashboardUpdate() {
                 </button>
             </td>
         `;
-        tbody.appendChild(tr);
+        fragment.appendChild(tr);
     });
+    tbody.appendChild(fragment);
 }
 
 window.resetStatusFilter = function() {
@@ -790,6 +891,7 @@ function renderModalInvoices(originFilter, animate = true) {
         
     let filterTotal = 0;
         
+    const fragment = document.createDocumentFragment();
     invoicesToRender.forEach((inv, index) => {
         filterTotal += inv.amount;
         const tr = document.createElement('tr');
@@ -815,8 +917,9 @@ function renderModalInvoices(originFilter, animate = true) {
             <td class="text-right font-medium" style="color: #30d158; opacity: 0.95;">${formatCurrency(paidAmt)}</td>
             <td class="text-right font-medium" style="color: var(--accent-color);">${formatCurrency(inv.amount)}</td>
         `;
-        tbody.appendChild(tr);
+        fragment.appendChild(tr);
     });
+    tbody.appendChild(fragment);
     
     const totalEl = document.getElementById('modal-total-amount');
     if (totalEl) totalEl.textContent = formatCurrency(filterTotal);
@@ -1399,9 +1502,33 @@ function updateStatusPieChart(ok, vencido, critico) {
         }
     }
     
-    // Destroy previous chart
+    // Reuse existing chart if available
     if (statusChart) {
-        statusChart.destroy();
+        if (total === 0) {
+            statusChart.data.labels = ['Sin datos'];
+            statusChart.data.datasets[0].data = [1];
+            statusChart.data.datasets[0].backgroundColor = ['rgba(255, 255, 255, 0.05)'];
+            statusChart.data.datasets[0].borderColor = ['rgba(255, 255, 255, 0.05)'];
+            statusChart.data.datasets[0].borderWidth = 0;
+            statusChart.options.plugins.tooltip.enabled = false;
+        } else {
+            statusChart.data.labels = ['No vencido', 'Vencido', 'Más de 30 días'];
+            statusChart.data.datasets[0].data = [ok, vencido, critico];
+            statusChart.data.datasets[0].backgroundColor = [
+                'rgba(52, 211, 153, 0.65)',
+                'rgba(251, 191, 36, 0.65)',
+                'rgba(248, 113, 113, 0.65)'
+            ];
+            statusChart.data.datasets[0].borderColor = [
+                'rgba(52, 211, 153, 0.8)',
+                'rgba(251, 191, 36, 0.8)',
+                'rgba(248, 113, 113, 0.8)'
+            ];
+            statusChart.data.datasets[0].borderWidth = 1.5;
+            statusChart.options.plugins.tooltip.enabled = true;
+        }
+        statusChart.update('none'); // Update immediately with zero animations for typing responsiveness
+        return;
     }
     
     if (total === 0) {
@@ -1487,11 +1614,19 @@ function updateTrendChart(weeks, balances) {
     const ctx = document.getElementById('trend-bar-chart');
     if (!ctx) return;
     
-    if (trendChart) {
-        trendChart.destroy();
+    if (weeks.length === 0) {
+        if (trendChart) {
+            trendChart.destroy();
+            trendChart = null;
+        }
+        return;
     }
     
-    if (weeks.length === 0) {
+    if (trendChart) {
+        trendChart.data.labels = weeks;
+        trendChart.data.datasets[0].data = balances;
+        trendChart.data.datasets[1].data = balances;
+        trendChart.update('none'); // Skip animation to prevent lag
         return;
     }
     
@@ -1637,13 +1772,12 @@ if (mobileFilterToggle && filtersContainer) {
     });
 }
 
-// Close mobile sidebar drawer when selecting a navigation menu item
+// Close sidebar drawer when selecting a navigation menu item (both PC and mobile)
 const navItems = document.querySelectorAll('.nav-item');
 navItems.forEach(item => {
     item.addEventListener('click', () => {
         const sidebar = document.getElementById('sidebar');
-        const isMobile = window.innerWidth <= 768;
-        if (isMobile && sidebar && !sidebar.classList.contains('collapsed')) {
+        if (sidebar && !sidebar.classList.contains('collapsed')) {
             sidebar.classList.add('collapsed');
             const mainContent = document.getElementById('main-content');
             if (mainContent) mainContent.classList.add('expanded');
@@ -1692,11 +1826,13 @@ async function loadSyncStatus() {
         const pepsicoEl = document.getElementById('sync-time-pepsico');
         const salliqueloEl = document.getElementById('sync-time-salliquelo');
         const trenqueEl = document.getElementById('sync-time-trenque');
+        const digipEl = document.getElementById('sync-time-digip');
         
         if (aguasEl) aguasEl.textContent = formatSyncDate(status.Aguas);
         if (pepsicoEl) pepsicoEl.textContent = formatSyncDate(status.PepsiCo);
         if (salliqueloEl) salliqueloEl.textContent = formatSyncDate(status.Salliquelo);
         if (trenqueEl) trenqueEl.textContent = formatSyncDate(status['Trenque Lauquen']);
+        if (digipEl) digipEl.textContent = formatSyncDate(status.Digip);
     } catch (e) {
         console.error("Error al cargar estado de sincronización:", e);
     }
@@ -1723,6 +1859,1223 @@ function initSyncStatusPanel() {
         syncPanel.classList.toggle('expanded');
     });
 }
+
+// ═══════════════════════════════════════════════════════════════
+// MÓDULO DE GESTIÓN DE VENCIMIENTOS DE STOCK (BETA)
+// ═══════════════════════════════════════════════════════════════
+
+// Modelo de datos de lotes de stock (Mock inicial vacío para evitar datos falsos)
+const fallbackStockData = [];
+
+let stockData = [...fallbackStockData];
+let stockHistory = {};
+let isRealStockLoaded = false;
+
+// Función asíncrona para cargar stock real del backend
+async function loadRealStockData() {
+    try {
+        const response = await fetch('/api/stock');
+        if (response.ok) {
+            const data = await response.json();
+            
+            let rawList = [];
+            if (Array.isArray(data)) {
+                // Formato antiguo
+                rawList = data;
+                stockHistory = {};
+            } else if (data && Array.isArray(data.current)) {
+                // Nuevo formato estructurado con histórico
+                rawList = data.current;
+                stockHistory = data.history || {};
+            }
+            
+            if (rawList.length > 0) {
+                // Agrupar y normalizar registros por Código, Producto, Lote y Vencimiento
+                const groupedMap = new Map();
+                rawList.forEach(item => {
+                    const codigo = String(item.codigo || item.ean || '').trim();
+                    const producto = String(item.producto || item.descripcion || 'Sin Nombre').trim();
+                    const categoria = String(item.categoria || 'Almacén').trim();
+                    const lote = String(item.lote || 'S/L').trim();
+                    const fechaVencimiento = String(item.fechaVencimiento || item.vencimiento || '').trim();
+                    const cantidad = parseFloat(item.cantidad || 0);
+
+                    // Clave compuesta única para la agrupación
+                    const key = `${codigo}_${producto}_${lote}_${fechaVencimiento}`;
+                    
+                    if (groupedMap.has(key)) {
+                        const existing = groupedMap.get(key);
+                        existing.cantidad += cantidad;
+                    } else {
+                        groupedMap.set(key, {
+                            codigo,
+                            producto,
+                            categoria,
+                            lote,
+                            cantidad,
+                            fechaVencimiento
+                        });
+                    }
+                });
+
+                stockData = Array.from(groupedMap.values());
+                isRealStockLoaded = true;
+                console.log(`[Stock Engine] Poblado y agrupado con ${stockData.length} registros únicos reales de Digip WMS.`);
+                return true;
+            }
+        }
+    } catch (e) {
+        console.error("[Stock Engine] Error consultando /api/stock, usando mock data:", e);
+    }
+    // Fallback si no hay datos o falló la conexión
+    if (!isRealStockLoaded) {
+        stockData = [...fallbackStockData];
+        stockHistory = {};
+    }
+    return false;
+}
+
+// Helper para calcular la variación de cantidad respecto al snapshot anterior (Dinámico)
+function getStockVariation(item) {
+    if (!stockHistory || Object.keys(stockHistory).length === 0) return '';
+    
+    // Obtener fechas disponibles en el histórico
+    const availableDates = Object.keys(stockHistory).sort();
+    if (availableDates.length === 0) return '';
+    
+    // Obtener el día de hoy en hora local (Argentina UTC-3)
+    const localDate = new Date(new Date().getTime() - 3 * 3600 * 1000);
+    const todayStr = localDate.toISOString().split('T')[0];
+    
+    // Encontrar el último snapshot histórico anterior a hoy
+    let prevDate = '';
+    for (let i = availableDates.length - 1; i >= 0; i--) {
+        if (availableDates[i] < todayStr) {
+            prevDate = availableDates[i];
+            break;
+        }
+    }
+    
+    if (!prevDate) prevDate = availableDates[0]; // Fallback al registro disponible
+    
+    const yesterdayData = stockHistory[prevDate] || [];
+    const key = `${String(item.codigo).trim()}_${String(item.fechaVencimiento).trim()}`;
+    
+    // Cachear el mapa de cantidades del día anterior
+    if (!window.yesterdayQtyMap || window.yesterdayQtyMapDate !== prevDate) {
+        window.yesterdayQtyMap = new Map();
+        yesterdayData.forEach(yItem => {
+            const yKey = `${String(yItem.codigo || yItem.ean || '').trim()}_${String(yItem.fechaVencimiento || yItem.vencimiento || '').trim()}`;
+            const currentQty = window.yesterdayQtyMap.get(yKey) || 0;
+            window.yesterdayQtyMap.set(yKey, currentQty + parseFloat(yItem.cantidad || 0));
+        });
+        window.yesterdayQtyMapDate = prevDate;
+    }
+    
+    // Cachear el mapa de cantidades de hoy agrupado por codigo+vencimiento para comparar correctamente
+    if (!window.todayQtyMap) {
+        window.todayQtyMap = new Map();
+        stockData.forEach(tItem => {
+            const tKey = `${String(tItem.codigo).trim()}_${String(tItem.fechaVencimiento).trim()}`;
+            const currentQty = window.todayQtyMap.get(tKey) || 0;
+            window.todayQtyMap.set(tKey, currentQty + parseFloat(tItem.cantidad || 0));
+        });
+    }
+    
+    const yesterdayTotal = window.yesterdayQtyMap.get(key);
+    if (yesterdayTotal === undefined) {
+        // Artículo nuevo
+        return `<span style="font-size: 10px; color: #60a5fa; background: rgba(96, 165, 250, 0.15); border: 1px solid rgba(96, 165, 250, 0.25); padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; font-weight: 500;"><i class="fas fa-plus-circle"></i> Nuevo</span>`;
+    }
+    
+    const todayTotal = window.todayQtyMap.get(key) || 0;
+    const variation = todayTotal - yesterdayTotal;
+    
+    if (variation > 0) {
+        return `<span class="badge badge-ok" style="font-size: 10px; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;"><i class="fas fa-arrow-up"></i> +${variation}</span>`;
+    } else if (variation < 0) {
+        return `<span class="badge badge-expired" style="font-size: 10px; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;"><i class="fas fa-arrow-down"></i> ${variation}</span>`;
+    } else {
+        return `<span class="badge" style="font-size: 10px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: rgba(255, 255, 255, 0.4); padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; font-weight: 500;"><i class="fas fa-minus"></i> Sin cambios</span>`;
+    }
+}
+
+// Helper numérico de variación para ordenación
+function getStockVariationValue(item) {
+    if (!stockHistory || Object.keys(stockHistory).length === 0) return 0;
+    const availableDates = Object.keys(stockHistory).sort();
+    if (availableDates.length === 0) return 0;
+    
+    const localDate = new Date(new Date().getTime() - 3 * 3600 * 1000);
+    const todayStr = localDate.toISOString().split('T')[0];
+    
+    let prevDate = '';
+    for (let i = availableDates.length - 1; i >= 0; i--) {
+        if (availableDates[i] < todayStr) {
+            prevDate = availableDates[i];
+            break;
+        }
+    }
+    if (!prevDate) prevDate = availableDates[0];
+    
+    const key = `${String(item.codigo).trim()}_${String(item.fechaVencimiento).trim()}`;
+    
+    // Inicializar mapas si no existen (necesario ya que la ordenación ocurre antes del renderizado de filas)
+    if (!window.yesterdayQtyMap || window.yesterdayQtyMapDate !== prevDate) {
+        const yesterdayData = stockHistory[prevDate] || [];
+        window.yesterdayQtyMap = new Map();
+        yesterdayData.forEach(yItem => {
+            const yKey = `${String(yItem.codigo || yItem.ean || '').trim()}_${String(yItem.fechaVencimiento || yItem.vencimiento || '').trim()}`;
+            const currentQty = window.yesterdayQtyMap.get(yKey) || 0;
+            window.yesterdayQtyMap.set(yKey, currentQty + parseFloat(yItem.cantidad || 0));
+        });
+        window.yesterdayQtyMapDate = prevDate;
+    }
+    
+    if (!window.todayQtyMap) {
+        window.todayQtyMap = new Map();
+        stockData.forEach(tItem => {
+            const tKey = `${String(tItem.codigo).trim()}_${String(tItem.fechaVencimiento).trim()}`;
+            const currentQty = window.todayQtyMap.get(tKey) || 0;
+            window.todayQtyMap.set(tKey, currentQty + parseFloat(tItem.cantidad || 0));
+        });
+    }
+    
+    const yesterdayTotal = window.yesterdayQtyMap.get(key);
+    if (yesterdayTotal === undefined) {
+        return window.todayQtyMap.get(key) || 0; // Tratar como cantidad actual si es nuevo
+    }
+    
+    const todayTotal = window.todayQtyMap.get(key) || 0;
+    return todayTotal - yesterdayTotal;
+}
+
+// Helper para calcular días restantes entre la fecha actual y la de vencimiento
+function getDaysRemaining(expiryStr) {
+    const localDate = new Date(new Date().getTime() - 3 * 3600 * 1000); // Argentina UTC-3
+    const todayStr = localDate.toISOString().split('T')[0];
+    const today = new Date(todayStr + "T00:00:00");
+    const expiry = new Date(expiryStr + "T00:00:00");
+    const diffTime = expiry - today;
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+}
+
+// Clasificación de lotes por estado
+function getStockStatus(days) {
+    if (days <= 0) return { text: 'VENCIDO', class: 'badge-expired' };
+    if (days <= 30) return { text: 'ALERTA CRÍTICA', class: 'badge-critical' };
+    if (days <= 90) return { text: 'PRÓXIMO', class: 'badge-upcoming' };
+    return { text: 'EN REGLA', class: 'badge-ok' };
+}
+
+// Formatear fecha AAAA-MM-DD a DD/MM/AA
+function formatDateToES(dateStr) {
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    return `${parts[2]}/${parts[1]}/${parts[0].slice(2, 4)}`;
+}
+
+// Actualización de KPIs del módulo de stock
+function updateStockKPIs() {
+    let total = stockData.length;
+    let expired = 0;
+    let critical = 0;
+    let ok = 0;
+    
+    stockData.forEach(item => {
+        const days = getDaysRemaining(item.fechaVencimiento);
+        if (days <= 0) expired++;
+        else if (days <= 30) critical++;
+        else ok++;
+    });
+    
+    const kpiTotalEl = document.getElementById('stock-kpi-total');
+    const kpiExpiredEl = document.getElementById('stock-kpi-expired');
+    const kpiCriticalEl = document.getElementById('stock-kpi-critical');
+    const kpiOkEl = document.getElementById('stock-kpi-ok');
+    
+    if (kpiTotalEl) kpiTotalEl.textContent = total;
+    if (kpiExpiredEl) kpiExpiredEl.textContent = expired;
+    if (kpiCriticalEl) kpiCriticalEl.textContent = critical;
+    if (kpiOkEl) kpiOkEl.textContent = ok;
+}
+
+// Variables globales de ordenación de stock
+window.stockSortColumn = 'restante'; // Ordenar por fecha restante de forma predeterminada
+window.stockSortDirection = 'asc'; // De menor a mayor (más próximos a vencer primero)
+
+window.sortStockTable = function(column) {
+    if (window.stockSortColumn === column) {
+        window.stockSortDirection = window.stockSortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+        window.stockSortColumn = column;
+        window.stockSortDirection = 'asc';
+    }
+    window.updateSortIcons();
+    renderStockTable();
+};
+
+window.updateSortIcons = function() {
+    const columns = ['codigo', 'producto', 'cantidad', 'variacion', 'vencimiento', 'restante'];
+    columns.forEach(col => {
+        const iconEl = document.getElementById(`sort-icon-${col}`);
+        const thEl = iconEl?.closest('th');
+        if (iconEl) {
+            if (col === window.stockSortColumn) {
+                if (thEl) thEl.classList.add('active-sort');
+                iconEl.innerHTML = window.stockSortDirection === 'asc' 
+                    ? '<i class="fas fa-sort-up"></i>' 
+                    : '<i class="fas fa-sort-down"></i>';
+            } else {
+                if (thEl) thEl.classList.remove('active-sort');
+                iconEl.innerHTML = '<i class="fas fa-sort"></i>';
+            }
+        }
+    });
+};
+
+// Helper para obtener las variaciones diarias de los últimos 7 días
+function getItemDailyVariations(item) {
+    const dates = [];
+    const localDate = new Date(new Date().getTime() - 3 * 3600 * 1000); // Argentina UTC-3
+    
+    // Necesitamos 8 días para poder calcular la variación diaria de los últimos 7 días
+    for (let i = 7; i >= 0; i--) {
+        const d = new Date(localDate.getTime() - i * 24 * 3600 * 1000);
+        dates.push(d.toISOString().split('T')[0]);
+    }
+    
+    const key = `${String(item.codigo).trim()}_${String(item.fechaVencimiento).trim()}`;
+    
+    // Encontrar cantidad inicial e identificar si existía antes del rango de 8 días (para forward-fill)
+    let lastKnownQty = 0;
+    let hasAnyPastRecord = false;
+    
+    if (stockHistory) {
+        const sortedHistoryDates = Object.keys(stockHistory).sort();
+        // Buscar el último snapshot antes de dates[0] que contenga el artículo
+        for (let i = sortedHistoryDates.length - 1; i >= 0; i--) {
+            const histDate = sortedHistoryDates[i];
+            if (histDate < dates[0]) {
+                const histData = stockHistory[histDate] || [];
+                const found = histData.find(hItem => {
+                    const hKey = `${String(hItem.codigo || hItem.ean || '').trim()}_${String(hItem.fechaVencimiento || hItem.vencimiento || '').trim()}`;
+                    return hKey === key;
+                });
+                if (found) {
+                    lastKnownQty = parseFloat(found.cantidad || 0);
+                    hasAnyPastRecord = true;
+                    break;
+                }
+            }
+        }
+    }
+    
+    // Obtener cantidades para los 8 días
+    const dailyQtys = dates.map(dateStr => {
+        let qty = 0;
+        let hasRecord = false;
+        let dayHasSnapshot = false;
+        
+        const localToday = new Date(new Date().getTime() - 3 * 3600 * 1000).toISOString().split('T')[0];
+        if (dateStr === localToday) {
+            dayHasSnapshot = true;
+            stockData.forEach(tItem => {
+                const tKey = `${String(tItem.codigo).trim()}_${String(tItem.fechaVencimiento).trim()}`;
+                if (tKey === key) {
+                    qty += parseFloat(tItem.cantidad || 0);
+                    hasRecord = true;
+                }
+            });
+        } else if (stockHistory) {
+            if (stockHistory[dateStr]) {
+                dayHasSnapshot = true;
+                stockHistory[dateStr].forEach(hItem => {
+                    const hKey = `${String(hItem.codigo || hItem.ean || '').trim()}_${String(hItem.fechaVencimiento || hItem.vencimiento || '').trim()}`;
+                    if (hKey === key) {
+                        qty += parseFloat(hItem.cantidad || 0);
+                        hasRecord = true;
+                    }
+                });
+            } else {
+                dayHasSnapshot = false;
+            }
+        }
+        
+        // Si el día no tiene snapshot de sincronización, arrastramos el último valor conocido (Forward Fill)
+        if (!dayHasSnapshot && hasAnyPastRecord) {
+            qty = lastKnownQty;
+            hasRecord = true;
+        } else if (dayHasSnapshot) {
+            lastKnownQty = qty;
+            if (hasRecord) {
+                hasAnyPastRecord = true;
+            }
+        }
+        
+        return { dateStr, qty, hasRecord, dayHasSnapshot };
+    });
+    
+    // Calcular variaciones diarias de los últimos 7 días
+    let hasSeenBefore = hasAnyPastRecord;
+    const variations = [];
+    for (let i = 1; i < dailyQtys.length; i++) {
+        const day = dailyQtys[i];
+        const prevDay = dailyQtys[i-1];
+        const parts = day.dateStr.split('-');
+        const label = `${parts[2]}/${parts[1]}`; // Formato DD/MM
+        
+        let variationText = '';
+        let variationClass = '';
+        
+        const localToday = new Date(new Date().getTime() - 3 * 3600 * 1000).toISOString().split('T')[0];
+        const isToday = (day.dateStr === localToday);
+        
+        if (isToday) {
+            // Para el día actual, si existe un snapshot de hoy en el historial,
+            // la variación debe ser respecto a ese snapshot de hoy (al igual que la fila principal)
+            let todaySnapshotQty = null;
+            if (stockHistory && stockHistory[localToday]) {
+                stockHistory[localToday].forEach(hItem => {
+                    const hKey = `${String(hItem.codigo || hItem.ean || '').trim()}_${String(hItem.fechaVencimiento || hItem.vencimiento || '').trim()}`;
+                    if (hKey === key) {
+                        todaySnapshotQty = (todaySnapshotQty || 0) + parseFloat(hItem.cantidad || 0);
+                    }
+                });
+            }
+            
+            if (todaySnapshotQty !== null) {
+                const diff = day.qty - todaySnapshotQty;
+                if (diff > 0) {
+                    variationText = `+${diff}`;
+                    variationClass = 'positive';
+                } else if (diff < 0) {
+                    variationText = `${diff}`;
+                    variationClass = 'negative';
+                } else {
+                    variationText = 'Sin cambios';
+                    variationClass = 'neutral';
+                }
+            } else {
+                calculateNormalDiff();
+            }
+        } else {
+            calculateNormalDiff();
+        }
+        
+        function calculateNormalDiff() {
+            if (!day.hasRecord && !prevDay.hasRecord) {
+                variationText = '-';
+                variationClass = 'neutral';
+            } else if (!prevDay.hasRecord && day.hasRecord) {
+                if (!hasSeenBefore) {
+                    variationText = 'Nuevo';
+                    variationClass = 'new';
+                } else {
+                    const diff = day.qty;
+                    variationText = `+${diff}`;
+                    variationClass = 'positive';
+                }
+            } else {
+                const diff = day.qty - prevDay.qty;
+                if (diff > 0) {
+                    variationText = `+${diff}`;
+                    variationClass = 'positive';
+                } else if (diff < 0) {
+                    variationText = `${diff}`;
+                    variationClass = 'negative';
+                } else {
+                    variationText = 'Sin cambios';
+                    variationClass = 'neutral';
+                }
+            }
+        }
+        
+        // Si hoy o ayer se marcó que tiene registro y cantidad, actualizamos que ya fue visto
+        if (day.hasRecord && day.qty > 0) {
+            hasSeenBefore = true;
+        }
+        if (prevDay.hasRecord && prevDay.qty > 0) {
+            hasSeenBefore = true;
+        }
+        
+        variations.push({
+            label,
+            text: variationText,
+            class: variationClass,
+            qty: day.qty
+        });
+    }
+    
+    return variations;
+}
+
+// Renderizado dinámico de la tabla de stock
+function renderStockTable() {
+    window.todayQtyMap = null; // Reiniciar mapa de hoy para recálculo dinámico en cada dibujado
+    window.yesterdayQtyMap = null; // Reiniciar mapa del día anterior para evitar cachés obsoletas al recargar
+    
+    const tbody = document.getElementById('stock-table-body');
+    if (!tbody) return;
+    
+    const searchVal = (document.getElementById('search-stock')?.value || '').toLowerCase();
+    const hideExpired = document.getElementById('hide-expired-checkbox')?.checked || false;
+    
+    tbody.innerHTML = '';
+    
+    let filtered = stockData.filter(item => {
+        const days = getDaysRemaining(item.fechaVencimiento);
+        
+        // Filtro por buscador
+        const matchSearch = item.producto.toLowerCase().includes(searchVal) || 
+                            item.codigo.includes(searchVal) ||
+                            item.categoria.toLowerCase().includes(searchVal);
+                            
+        // Filtro "Ocultar vencidos"
+        let matchExpired = true;
+        if (hideExpired) {
+            matchExpired = days > 0;
+        }
+        
+        return matchSearch && matchExpired;
+    });
+    
+    // Aplicar ordenación dinámica
+    if (window.stockSortColumn) {
+        filtered.sort((a, b) => {
+            let valA, valB;
+            
+            switch (window.stockSortColumn) {
+                case 'codigo':
+                    valA = a.codigo || '';
+                    valB = b.codigo || '';
+                    return window.stockSortDirection === 'asc' 
+                        ? valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' })
+                        : valB.localeCompare(valA, undefined, { numeric: true, sensitivity: 'base' });
+                
+                case 'producto':
+                    valA = (a.producto || '').toLowerCase();
+                    valB = (b.producto || '').toLowerCase();
+                    return window.stockSortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                
+                case 'cantidad':
+                    valA = parseFloat(a.cantidad) || 0;
+                    valB = parseFloat(b.cantidad) || 0;
+                    break;
+                
+                case 'variacion':
+                    valA = getStockVariationValue(a);
+                    valB = getStockVariationValue(b);
+                    break;
+                
+                case 'vencimiento':
+                    valA = a.fechaVencimiento ? new Date(a.fechaVencimiento).getTime() : 0;
+                    valB = b.fechaVencimiento ? new Date(b.fechaVencimiento).getTime() : 0;
+                    break;
+                
+                case 'restante':
+                    valA = getDaysRemaining(a.fechaVencimiento);
+                    valB = getDaysRemaining(b.fechaVencimiento);
+                    break;
+                
+                default:
+                    return 0;
+            }
+            
+            if (valA < valB) return window.stockSortDirection === 'asc' ? -1 : 1;
+            if (valA > valB) return window.stockSortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }
+    
+    window.currentFilteredStock = filtered;
+    
+    if (filtered.length === 0) {
+        const msg = isRealStockLoaded 
+            ? "No se encontraron lotes con los filtros seleccionados"
+            : "No hay datos de stock sincronizados. Esperando primera ejecución del sincronizador local de DIGIP WMS...";
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="opacity: 0.5; padding: 30px;">${msg}</td></tr>`;
+        return;
+    }
+    
+    const fragment = document.createDocumentFragment();
+    filtered.forEach(item => {
+        const days = getDaysRemaining(item.fechaVencimiento);
+        const statusObj = getStockStatus(days);
+        
+        let daysText = '';
+        if (days < 0) daysText = `Venció hace ${Math.abs(days)}d`;
+        else if (days === 0) daysText = 'Vence Hoy';
+        else daysText = `${days}d restante${days > 1 ? 's' : ''}`;
+        
+        const tr = document.createElement('tr');
+        tr.style.cursor = 'pointer';
+        tr.className = 'stock-main-row';
+        tr.innerHTML = `
+            <td><code style="font-size: 11px; opacity: 0.85;">${item.codigo}</code></td>
+            <td>
+                <div style="font-weight: 600; color: var(--text-primary);">${item.producto}</div>
+            </td>
+            <td style="font-weight: 600; color: var(--text-primary);">${item.cantidad} un.</td>
+            <td>${getStockVariation(item)}</td>
+            <td>${formatDateToES(item.fechaVencimiento)}</td>
+            <td style="font-weight: 600; color: ${days <= 30 ? '#f87171' : 'inherit'}; display: flex; align-items: center; gap: 8px; justify-content: space-between;">
+                <span>${daysText}</span>
+                <i class="fas fa-chevron-down toggle-icon" style="transition: transform 0.3s; opacity: 0.5;"></i>
+            </td>
+        `;
+        
+        // Crear fila de detalle (vacia inicialmente)
+        const detailTr = document.createElement('tr');
+        detailTr.className = 'stock-detail-row';
+        detailTr.style.display = 'none';
+        detailTr.style.background = 'rgba(255, 255, 255, 0.005)';
+        
+        // Evento toggle al hacer click en la fila principal (comportamiento de acordeón único con carga perezosa)
+        tr.addEventListener('click', () => {
+            const isVisible = detailTr.style.display !== 'none';
+            
+            if (!isVisible) {
+                // Colapsar cualquier otra fila que esté abierta
+                const openMainRows = tbody.querySelectorAll('.stock-main-row.expanded-main');
+                openMainRows.forEach(row => {
+                    row.classList.remove('expanded-main');
+                    const icon = row.querySelector('.toggle-icon');
+                    if (icon) icon.style.transform = 'rotate(0deg)';
+                });
+                
+                const openDetailRows = tbody.querySelectorAll('.stock-detail-row');
+                openDetailRows.forEach(dRow => {
+                    dRow.style.display = 'none';
+                });
+                
+                // Carga perezosa del contenido de historial
+                if (!detailTr.dataset.loaded) {
+                    detailTr.innerHTML = `
+                        <td colspan="6" style="padding: 16px 24px; text-align: center; color: var(--text-secondary);">
+                            <i class="fas fa-spinner fa-spin"></i> Cargando historial de variación...
+                        </td>
+                    `;
+                    
+                    // Ejecutamos en un setTimeout mínimo para permitir la animación inicial fluida del CSS
+                    setTimeout(() => {
+                        const variations = getItemDailyVariations(item);
+                        
+                        let variationsHtml = variations.map(v => {
+                            let badgeStyle = '';
+                            if (v.class === 'positive') badgeStyle = 'background: rgba(52, 211, 153, 0.15); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.25);';
+                            else if (v.class === 'negative') badgeStyle = 'background: rgba(248, 113, 113, 0.15); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.25);';
+                            else if (v.class === 'new') badgeStyle = 'background: rgba(96, 165, 250, 0.15); color: #60a5fa; border: 1px solid rgba(96, 165, 250, 0.25);';
+                            else badgeStyle = 'background: rgba(255, 255, 255, 0.05); color: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.1);';
+                            
+                            return `
+                                <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.06); padding: 12px 14px; border-radius: 12px; min-width: 76px; flex: 1; box-sizing: border-box; transition: background 0.2s;">
+                                    <div style="font-size: 13px; opacity: 0.95; font-weight: 600; color: #ffffff;">${v.label}</div>
+                                    <div style="font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 6px; ${badgeStyle} text-align: center; width: 100%; box-sizing: border-box; display: block;">${v.text}</div>
+                                    <div style="font-size: 12px; opacity: 0.85; font-weight: 600; color: var(--text-secondary); text-align: center;">${v.qty} un.</div>
+                                </div>
+                            `;
+                        }).join('');
+                        
+                        detailTr.innerHTML = `
+                            <td colspan="6" style="padding: 0; border-top: none;">
+                                <div class="detail-wrapper" style="padding: 16px 24px; display: flex; flex-direction: column; gap: 12px; transform-origin: top;">
+                                    <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--accent-color);">
+                                        <i class="fas fa-history"></i> Historial de Variación Diaria (Últimos 7 días)
+                                    </div>
+                                    <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: space-between; width: 100%;">
+                                        ${variationsHtml}
+                                    </div>
+                                </div>
+                            </td>
+                        `;
+                        detailTr.dataset.loaded = "true";
+                    }, 20);
+                }
+            }
+            
+            detailTr.style.display = isVisible ? 'none' : 'table-row';
+            tr.classList.toggle('expanded-main', !isVisible);
+            const icon = tr.querySelector('.toggle-icon');
+            if (icon) {
+                icon.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)';
+            }
+        });
+        
+        fragment.appendChild(tr);
+        fragment.appendChild(detailTr);
+    });
+    tbody.appendChild(fragment);
+}
+
+// Variables para los gráficos
+let stockRiskChart = null;
+let stockTimelineChart = null;
+
+// Lógica de dibujo y actualización de gráficos
+function updateStockCharts() {
+    let expired = 0;
+    let critical = 0;
+    let upcoming = 0;
+    let ok = 0;
+    
+    stockData.forEach(item => {
+        const days = getDaysRemaining(item.fechaVencimiento);
+        if (days <= 0) expired++;
+        else if (days <= 30) critical++;
+        else if (days <= 90) upcoming++;
+        else ok++;
+    });
+    
+    // 1. Gráfico de Dona: Distribución de Riesgo
+    const canvasRisk = document.getElementById('stock-risk-chart');
+    if (canvasRisk) {
+        const ctxRisk = canvasRisk.getContext('2d');
+        if (stockRiskChart) {
+            stockRiskChart.data.datasets[0].data = [expired, critical, upcoming, ok];
+            stockRiskChart.update('none');
+        } else {
+            stockRiskChart = new Chart(ctxRisk, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Vencido', 'Alerta Crítica', 'Próximo', 'En Regla'],
+                    datasets: [{
+                        data: [expired, critical, upcoming, ok],
+                        backgroundColor: ['#f87171', '#fbbf24', '#60a5fa', '#34d399'],
+                        borderColor: 'rgba(10, 10, 12, 0.6)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                color: 'rgba(255, 255, 255, 0.7)',
+                                font: { size: 10, family: 'Inter' }
+                            }
+                        }
+                    },
+                    cutout: '70%'
+                }
+            });
+        }
+    }
+    
+    // 2. Gráfico de Barras: Cronograma por Mes
+    const canvasTimeline = document.getElementById('stock-timeline-chart');
+    if (canvasTimeline) {
+        const ctxTimeline = canvasTimeline.getContext('2d');
+        
+        const monthsGroup = {};
+        stockData.forEach(item => {
+            const parts = item.fechaVencimiento.split('-');
+            const yearMonth = `${parts[0]}-${parts[1]}`;
+            if (!monthsGroup[yearMonth]) monthsGroup[yearMonth] = 0;
+            monthsGroup[yearMonth] += item.cantidad;
+        });
+        
+        const sortedMonths = Object.keys(monthsGroup).sort();
+        const monthLabels = sortedMonths.map(ym => {
+            const parts = ym.split('-');
+            const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            return `${months[parseInt(parts[1]) - 1]} '${parts[0].slice(2, 4)}`;
+        });
+        const timelineData = sortedMonths.map(ym => monthsGroup[ym]);
+        
+        if (stockTimelineChart) {
+            stockTimelineChart.data.labels = monthLabels;
+            stockTimelineChart.data.datasets[0].data = timelineData;
+            stockTimelineChart.update('none');
+        } else {
+            stockTimelineChart = new Chart(ctxTimeline, {
+                type: 'bar',
+                data: {
+                    labels: monthLabels,
+                    datasets: [{
+                        label: 'Unidades a vencer',
+                        data: timelineData,
+                        backgroundColor: 'rgba(10, 132, 255, 0.3)',
+                        borderColor: '#0a84ff',
+                        borderWidth: 1.5,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: {
+                                color: 'rgba(255, 255, 255, 0.6)',
+                                font: { size: 10, family: 'Inter' }
+                            }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: {
+                                color: 'rgba(255, 255, 255, 0.6)',
+                                font: { size: 10, family: 'Inter' }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+}
+
+// Acción interactiva: Retirar lote de stock
+window.removeStockItem = function(codigo, lote) {
+    stockData = stockData.filter(item => !(item.codigo === codigo && item.lote === lote));
+    updateStockKPIs();
+    renderStockTable();
+    updateStockCharts();
+};
+
+// Controlador y ruteo de Vistas en el Frontend
+function initNavigation() {
+    const navItems = document.querySelectorAll('.nav-menu .nav-item[data-view]');
+    
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            const selectedView = item.getAttribute('data-view');
+            
+            // Si es móvil, colapsar el menú lateral (hamburguesa) al tocar un módulo
+            const isMobile = window.innerWidth <= 768;
+            if (isMobile) {
+                const sidebar = document.getElementById('sidebar');
+                const mainContent = document.getElementById('main-content');
+                if (sidebar) sidebar.classList.add('collapsed');
+                if (mainContent) mainContent.classList.add('expanded');
+            }
+            
+            if (selectedView === 'dashboard') {
+                navigateToModule('CuentasCorrientes');
+            } else if (selectedView === 'stock-expiration') {
+                navigateToModule('ControlVencimientos');
+            }
+        });
+    });
+}
+
+// Navegar a un módulo actualizando la URL y el historial de navegación (SPA)
+window.navigateToModule = function(moduleName) {
+    let path = '/';
+    if (moduleName === 'CuentasCorrientes') {
+        path = '/CuentasCorrientes';
+    } else if (moduleName === 'ControlVencimientos') {
+        path = '/ControlVencimientos';
+    }
+    
+    history.pushState({ module: moduleName }, '', path);
+    applyRoute(moduleName);
+};
+
+// Aplicar visualmente la ruta activa (mostrar/ocultar vistas, filtros, cabeceras y liberar memoria de otros módulos)
+function applyRoute(moduleName) {
+    const views = document.querySelectorAll('.view-section');
+    const navItems = document.querySelectorAll('.nav-menu .nav-item[data-view]');
+    const mobileFilterToggle = document.getElementById('mobile-filter-toggle');
+    const filtersContainer = document.getElementById('filters-container');
+    const titleEl = document.getElementById('view-title');
+    const subtitleEl = document.getElementById('view-subtitle');
+    
+    // LIBERACIÓN DE MEMORIA Y LIMPIEZA DE DOM DE LOS MÓDULOS INACTIVOS
+    if (moduleName !== 'CuentasCorrientes') {
+        unloadModule('CuentasCorrientes');
+    }
+    if (moduleName !== 'ControlVencimientos') {
+        unloadModule('ControlVencimientos');
+    }
+    
+    // Ocultar todas las vistas
+    views.forEach(v => v.style.display = 'none');
+    
+    // Toggle class on body for CSS styling specific to home view
+    document.body.classList.toggle('route-home', moduleName === 'home');
+    
+    // Quitar clase activa de todos los botones de navegación lateral
+    navItems.forEach(nav => nav.classList.remove('active'));
+    
+    // Control dinámico de la cabecera, barra lateral y layout en Home
+    const header = document.querySelector('.top-header');
+    const sidebar = document.getElementById('sidebar');
+    const mainContent = document.getElementById('main-content');
+    const mobileTopBar = document.querySelector('.mobile-top-bar');
+    
+    if (moduleName === 'home') {
+        if (header) header.style.setProperty('display', 'none', 'important');
+        if (sidebar) sidebar.style.setProperty('display', 'none', 'important');
+        if (mobileTopBar) mobileTopBar.style.setProperty('display', 'none', 'important');
+        if (mainContent) {
+            mainContent.style.setProperty('margin-left', '0', 'important');
+            mainContent.style.setProperty('max-width', '100%', 'important');
+            mainContent.style.setProperty('width', '100%', 'important');
+            mainContent.style.setProperty('padding', '20px', 'important');
+        }
+    } else {
+        if (header) header.style.removeProperty('display');
+        if (sidebar) sidebar.style.removeProperty('display');
+        if (mobileTopBar) mobileTopBar.style.removeProperty('display');
+        if (mainContent) {
+            mainContent.style.removeProperty('margin-left');
+            mainContent.style.removeProperty('max-width');
+            mainContent.style.removeProperty('width');
+            mainContent.style.removeProperty('padding');
+        }
+    }
+    
+    if (moduleName === 'CuentasCorrientes') {
+        const targetView = document.getElementById('dashboard-view');
+        if (targetView) targetView.style.display = 'block';
+        
+        const navItem = Array.from(navItems).find(n => n.getAttribute('data-view') === 'dashboard');
+        if (navItem) navItem.classList.add('active');
+        
+        if (mobileFilterToggle) mobileFilterToggle.style.setProperty('display', '', 'important');
+        if (filtersContainer) filtersContainer.style.setProperty('display', '', 'important');
+        if (titleEl) titleEl.textContent = 'Cuentas Corrientes';
+        if (subtitleEl) subtitleEl.textContent = 'Resumen de cuentas corrientes';
+        
+        // Carga perezosa de Cuentas Corrientes
+        loadCuentasCorrientesData();
+        
+    } else if (moduleName === 'ControlVencimientos') {
+        const targetView = document.getElementById('stock-expiration-view');
+        if (targetView) targetView.style.display = 'block';
+        
+        const navItem = Array.from(navItems).find(n => n.getAttribute('data-view') === 'stock-expiration');
+        if (navItem) navItem.classList.add('active');
+        
+        if (mobileFilterToggle) mobileFilterToggle.style.setProperty('display', 'none', 'important');
+        if (filtersContainer) filtersContainer.style.setProperty('display', 'none', 'important');
+        if (titleEl) titleEl.textContent = 'Vencimientos de Stock';
+        if (subtitleEl) subtitleEl.textContent = 'Módulo de control de caducidades';
+        
+        // Cargar datos de stock actualizados perezosamente
+        const loadingIndicator = document.getElementById('processing-overlay');
+        if (loadingIndicator) {
+            loadingIndicator.classList.add('show');
+            loadingIndicator.querySelector('span').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando Vencimientos...';
+            loadingIndicator.querySelector('span').style.color = 'inherit';
+            const spinner = loadingIndicator.querySelector('.processing-spinner');
+            if (spinner) spinner.style.display = '';
+        }
+        
+        loadRealStockData().finally(() => {
+            updateStockKPIs();
+            renderStockTable();
+            updateStockCharts();
+            if (loadingIndicator) loadingIndicator.classList.remove('show');
+        });
+        
+    } else {
+        // Vista Home (Landing de Selección de Módulos)
+        const targetView = document.getElementById('home-view');
+        if (targetView) targetView.style.display = 'flex';
+        
+        if (mobileFilterToggle) mobileFilterToggle.style.setProperty('display', 'none', 'important');
+        if (filtersContainer) filtersContainer.style.setProperty('display', 'none', 'important');
+        if (titleEl) titleEl.textContent = 'Módulos Ingentron';
+        if (subtitleEl) subtitleEl.textContent = 'Panel de selección de módulos';
+        
+        const overlay = document.getElementById('processing-overlay');
+        if (overlay) overlay.classList.remove('show');
+    }
+}
+
+// Función para liberar memoria y limpiar el DOM del módulo inactivo
+function unloadModule(moduleName) {
+    if (moduleName === 'CuentasCorrientes') {
+        if (globalData && globalData.length > 0) {
+            console.log("[Lazy Engine] Liberando memoria de Cuentas Corrientes.");
+            globalData = [];
+            availableWeeks = new Set();
+            
+            // Limpiar DOM de tablas
+            const mainTbody = document.getElementById('main-tbody');
+            if (mainTbody) mainTbody.innerHTML = '';
+            
+            // Destruir instancias de gráficos Chart.js
+            if (statusChart) {
+                statusChart.destroy();
+                statusChart = null;
+            }
+            if (trendChart) {
+                trendChart.destroy();
+                trendChart = null;
+            }
+        }
+    } else if (moduleName === 'ControlVencimientos') {
+        if (stockData && stockData.length > 0) {
+            console.log("[Lazy Engine] Liberando memoria de Control Vencimientos.");
+            stockData = [];
+            stockHistory = {};
+            isRealStockLoaded = false;
+            
+            // Limpiar DOM de tablas de stock
+            const stockTbody = document.getElementById('stock-table-body');
+            if (stockTbody) stockTbody.innerHTML = '';
+            
+            // Destruir instancias de gráficos de stock
+            if (stockRiskChart) {
+                stockRiskChart.destroy();
+                stockRiskChart = null;
+            }
+            if (stockTimelineChart) {
+                stockTimelineChart.destroy();
+                stockTimelineChart = null;
+            }
+        }
+    }
+}
+
+// Analizar la URL actual y aplicar la ruta correspondiente
+function applyRouteFromLocation() {
+    const path = window.location.pathname;
+    if (path.includes('/CuentasCorrientes')) {
+        applyRoute('CuentasCorrientes');
+    } else if (path.includes('/ControlVencimientos')) {
+        applyRoute('ControlVencimientos');
+    } else {
+        applyRoute('home');
+    }
+}
+
+// Helper para extraer texto plano de la variación sin HTML (usado en exportaciones)
+function getStockVariationText(item) {
+    if (!stockHistory || Object.keys(stockHistory).length === 0) return 'Sin cambios';
+    const availableDates = Object.keys(stockHistory).sort();
+    if (availableDates.length === 0) return 'Sin cambios';
+    
+    // Obtener el día de hoy en hora local (Argentina UTC-3)
+    const localDate = new Date(new Date().getTime() - 3 * 3600 * 1000);
+    const todayStr = localDate.toISOString().split('T')[0];
+    
+    // Encontrar el último snapshot histórico anterior a hoy
+    let prevDate = '';
+    for (let i = availableDates.length - 1; i >= 0; i--) {
+        if (availableDates[i] < todayStr) {
+            prevDate = availableDates[i];
+            break;
+        }
+    }
+    
+    if (!prevDate) prevDate = availableDates[0]; // Fallback al registro disponible
+    
+    const key = `${String(item.codigo).trim()}_${String(item.fechaVencimiento).trim()}`;
+    
+    // Cachear el mapa de cantidades del día anterior
+    if (!window.yesterdayQtyMap || window.yesterdayQtyMapDate !== prevDate) {
+        window.yesterdayQtyMap = new Map();
+        const yesterdayData = stockHistory[prevDate] || [];
+        yesterdayData.forEach(yItem => {
+            const yKey = `${String(yItem.codigo || yItem.ean || '').trim()}_${String(yItem.fechaVencimiento || yItem.vencimiento || '').trim()}`;
+            const currentQty = window.yesterdayQtyMap.get(yKey) || 0;
+            window.yesterdayQtyMap.set(yKey, currentQty + parseFloat(yItem.cantidad || 0));
+        });
+        window.yesterdayQtyMapDate = prevDate;
+    }
+    
+    const yesterdayTotal = window.yesterdayQtyMap.get(key);
+    if (yesterdayTotal === undefined) {
+        return 'Nuevo';
+    }
+    
+    // Cachear el mapa de cantidades de hoy agrupado por codigo+vencimiento
+    if (!window.todayQtyMap) {
+        window.todayQtyMap = new Map();
+        stockData.forEach(tItem => {
+            const tKey = `${String(tItem.codigo).trim()}_${String(tItem.fechaVencimiento).trim()}`;
+            const currentQty = window.todayQtyMap.get(tKey) || 0;
+            window.todayQtyMap.set(tKey, currentQty + parseFloat(tItem.cantidad || 0));
+        });
+    }
+    
+    const todayTotal = window.todayQtyMap.get(key) || 0;
+    const variation = todayTotal - yesterdayTotal;
+    
+    if (variation > 0) {
+        return `+${variation}`;
+    } else if (variation < 0) {
+        return `${variation}`;
+    } else {
+        return 'Sin cambios';
+    }
+}
+
+// Exportar listado de vencimientos de stock filtrado a PDF
+window.exportStockToPDF = function(event) {
+    if (event) event.preventDefault();
+    const dataToExport = window.currentFilteredStock || stockData;
+    if (dataToExport.length === 0) {
+        alert("No hay datos de stock disponibles para exportar.");
+        return;
+    }
+    
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    // Título principal
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text("Reporte de Vencimientos de Stock - Ingentron", 14, 20);
+    
+    // Datos de creación y metadatos
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    const dateStr = new Date().toLocaleDateString('es-AR') + ' ' + new Date().toLocaleTimeString('es-AR');
+    doc.text(`Generado el: ${dateStr} | Total de registros: ${dataToExport.length}`, 14, 27);
+    
+    // Configuración de tabla
+    const tableColumns = ["Código Artículo", "Producto", "Cantidad", "Variación", "Vencimiento", "Restante"];
+    const tableRows = dataToExport.map(item => {
+        const days = getDaysRemaining(item.fechaVencimiento);
+        
+        let daysText = '';
+        if (days < 0) daysText = `Venció hace ${Math.abs(days)}d`;
+        else if (days === 0) daysText = 'Vence Hoy';
+        else daysText = `${days}d restante${days > 1 ? 's' : ''}`;
+        
+        return [
+            item.codigo,
+            item.producto,
+            `${item.cantidad} un.`,
+            getStockVariationText(item),
+            formatDateToES(item.fechaVencimiento),
+            daysText
+        ];
+    });
+    
+    doc.autoTable({
+        head: [tableColumns],
+        body: tableRows,
+        startY: 34,
+        theme: 'striped',
+        headStyles: { fillColor: [59, 130, 246] }, // Azul primario
+        styles: { fontSize: 8 },
+        columnStyles: {
+            0: { cellWidth: 32 }, // Código artículo
+            1: { cellWidth: 70 }, // Producto
+            2: { cellWidth: 20 }, // Cantidad
+            3: { cellWidth: 20 }, // Variación
+            4: { cellWidth: 20 }, // Vencimiento
+            5: { cellWidth: 20 }  // Restante
+        }
+    });
+    
+    doc.save(`Reporte_Vencimientos_Stock_${new Date().toISOString().slice(0, 10)}.pdf`);
+};
+
+// Exportar listado de vencimientos de stock filtrado a Excel (XLSX)
+window.exportStockToExcel = function(event) {
+    if (event) event.preventDefault();
+    const dataToExport = window.currentFilteredStock || stockData;
+    if (dataToExport.length === 0) {
+        alert("No hay datos de stock disponibles para exportar.");
+        return;
+    }
+    
+    const rows = dataToExport.map(item => {
+        const days = getDaysRemaining(item.fechaVencimiento);
+        
+        let daysText = '';
+        if (days < 0) daysText = `Venció hace ${Math.abs(days)}d`;
+        else if (days === 0) daysText = 'Vence Hoy';
+        else daysText = `${days}d restante${days > 1 ? 's' : ''}`;
+        
+        return {
+            "Código Artículo": item.codigo,
+            "Producto": item.producto,
+            "Cantidad": item.cantidad,
+            "Variación (24h)": getStockVariationText(item),
+            "Vencimiento": formatDateToES(item.fechaVencimiento),
+            "Días Restantes": days,
+            "Restante Detalle": daysText
+        };
+    });
+    
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Vencimientos Stock");
+    
+    // Auto-ajustar anchos de columnas
+    worksheet['!cols'] = [
+        {wch: 16}, // Código Artículo
+        {wch: 50}, // Producto
+        {wch: 12}, // Cantidad
+        {wch: 16}, // Variación (24h)
+        {wch: 15}, // Vencimiento
+        {wch: 15}, // Días restantes
+        {wch: 22}  // Restante Detalle
+    ];
+    
+    XLSX.writeFile(workbook, `Reporte_Vencimientos_Stock_${new Date().toISOString().slice(0, 10)}.xlsx`);
+};
+
+// Iniciar eventos del buscador y select de stock al cargarse el documento
+document.addEventListener('DOMContentLoaded', () => {
+    initNavigation();
+    
+    // Vincular logos superiores y laterales para que naveguen al Home
+    const logoIds = ['sidebar-logo-ingentron', 'sidebar-logo-gruya', 'header-logo-ingentron', 'header-logo-gruya'];
+    logoIds.forEach(id => {
+        const logoEl = document.getElementById(id);
+        if (logoEl) {
+            logoEl.style.cursor = 'pointer';
+            logoEl.addEventListener('click', () => {
+                navigateToModule('home');
+            });
+        }
+    });
+
+    // Control del desplegable de exportación de stock
+    const downloadBtn = document.getElementById('download-stock-btn');
+    const downloadDropdown = document.getElementById('download-dropdown');
+    if (downloadBtn && downloadDropdown) {
+        downloadBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const show = downloadDropdown.style.display === 'block';
+            downloadDropdown.style.display = show ? 'none' : 'block';
+        });
+        document.addEventListener('click', () => {
+            downloadDropdown.style.display = 'none';
+        });
+    }
+
+    // Escuchar el evento popstate para soportar navegación del historial (atrás/adelante)
+    window.addEventListener('popstate', () => {
+        applyRouteFromLocation();
+    });
+
+    // Aplicar la ruta inicial según la URL del navegador al cargar la página
+    applyRouteFromLocation();
+    
+    const searchStockEl = document.getElementById('search-stock');
+    const hideExpiredEl = document.getElementById('hide-expired-checkbox');
+    
+    let _stockSearchDebounce = null;
+    if (searchStockEl) {
+        searchStockEl.addEventListener('input', () => {
+            clearTimeout(_stockSearchDebounce);
+            _stockSearchDebounce = setTimeout(() => {
+                renderStockTable();
+            }, 250);
+        });
+    }
+    if (hideExpiredEl) hideExpiredEl.addEventListener('change', renderStockTable);
+    
+    // Inicializar íconos de ordenación de stock
+    window.updateSortIcons();
+});
 
 
 
