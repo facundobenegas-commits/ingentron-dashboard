@@ -1609,7 +1609,7 @@ function updateStatusPieChart(ok, vencido, critico) {
     });
 }
 
-// Premium Weekly Balance Trend Combination Chart (Bar + Trend Line)
+// Premium Weekly Balance Trend Combination Chart (Area + Trend Line)
 function updateTrendChart(weeks, balances) {
     const ctx = document.getElementById('trend-bar-chart');
     if (!ctx) return;
@@ -1630,21 +1630,33 @@ function updateTrendChart(weeks, balances) {
         return;
     }
     
+    // Create background gradient for the area chart
+    const canvasCtx = ctx.getContext('2d');
+    let gradient = 'rgba(58, 134, 255, 0.2)';
+    if (canvasCtx) {
+        gradient = canvasCtx.createLinearGradient(0, 0, 0, 300);
+        gradient.addColorStop(0, 'rgba(58, 134, 255, 0.45)');
+        gradient.addColorStop(1, 'rgba(58, 134, 255, 0.01)');
+    }
+    
     trendChart = new Chart(ctx, {
-        type: 'bar',
+        type: 'line',
         data: {
             labels: weeks,
             datasets: [
                 {
                     label: 'Saldo de la Semana',
                     data: balances,
-                    backgroundColor: 'rgba(58, 134, 255, 0.45)', // Cyan-blue glass bar
+                    type: 'line',
+                    backgroundColor: gradient,
                     borderColor: 'rgba(58, 134, 255, 0.85)',
-                    borderWidth: 1.5,
-                    borderRadius: 8,
-                    maxBarThickness: 120, // Keep bar sized nicely
-                    barPercentage: 0.5,
-                    categoryPercentage: 0.5,
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointBackgroundColor: 'rgba(58, 134, 255, 1)',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 1.5,
                     order: 2
                 },
                 {
@@ -1704,7 +1716,21 @@ function updateTrendChart(weeks, balances) {
                     grid: { color: 'rgba(255, 255, 255, 0.05)' },
                     ticks: {
                         color: 'rgba(255, 255, 255, 0.6)',
-                        font: { family: 'Inter', size: 11 }
+                        font: { family: 'Inter', size: 11 },
+                        maxRotation: 45,
+                        minRotation: 0,
+                        autoSkip: true,
+                        callback: function(value, index) {
+                            const label = this.chart.data.labels[value];
+                            if (label && label.startsWith('Del ')) {
+                                // Shorten "Del 25/03/2026 al 01/04/2026" to "25/03 - 01/04"
+                                const match = label.match(/Del\s+(\d{2})\/(\d{2})(?:\/\d{4})?\s+al\s+(\d{2})\/(\d{2})/i);
+                                if (match) {
+                                    return `${match[1]}/${match[2]} - ${match[3]}/${match[4]}`;
+                                }
+                            }
+                            return label;
+                        }
                     }
                 },
                 y: {
@@ -3076,6 +3102,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // Inicializar íconos de ordenación de stock
     window.updateSortIcons();
 });
+
+// Force redrawing the charts when fonts are fully loaded to prevent measuring layout glitches
+if (document.fonts) {
+    document.fonts.ready.then(() => {
+        if (trendChart) trendChart.update('none');
+        if (statusChart) statusChart.update('none');
+        if (typeof stockRiskChart !== 'undefined' && stockRiskChart) stockRiskChart.update('none');
+        if (typeof stockTimelineChart !== 'undefined' && stockTimelineChart) stockTimelineChart.update('none');
+    });
+}
 
 
 
