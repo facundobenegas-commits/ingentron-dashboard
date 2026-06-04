@@ -579,7 +579,7 @@ app.get(/^\/beta/, (req, res) => {
 });
 
 // Catch-all para la versión estable (HTML5 History API)
-app.get('*', (req, res) => {
+app.get('/*splat', (req, res) => {
     if (req.path.startsWith('/api')) {
         return res.status(404).json({ error: 'Not Found' });
     }
