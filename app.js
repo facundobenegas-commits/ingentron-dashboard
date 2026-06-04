@@ -718,6 +718,33 @@ function formatCurrency(value) {
     }).format(value);
 }
 
+function formatAbbreviatedCurrency(value) {
+    const isNegative = value < 0;
+    const absValue = Math.abs(value);
+    
+    let formatted = '';
+    if (absValue >= 1e6) {
+        const millions = absValue / 1e6;
+        formatted = new Intl.NumberFormat('es-AR', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 1
+        }).format(millions) + 'M';
+    } else if (absValue >= 1e3) {
+        const thousands = absValue / 1e3;
+        formatted = new Intl.NumberFormat('es-AR', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 1
+        }).format(thousands) + 'K';
+    } else {
+        formatted = new Intl.NumberFormat('es-AR', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2
+        }).format(absValue);
+    }
+    
+    return (isNegative ? '-$ ' : '$ ') + formatted;
+}
+
 function escapeHtml(unsafe) {
     return String(unsafe)
          .replace(/&/g, "&amp;")
@@ -1740,7 +1767,7 @@ function updateTrendChart(weeks, balances) {
                         color: 'rgba(255, 255, 255, 0.6)',
                         font: { family: 'Inter', size: 11 },
                         callback: function(value) {
-                            return formatCurrency(value);
+                            return formatAbbreviatedCurrency(value);
                         }
                     }
                 }
