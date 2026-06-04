@@ -9,8 +9,16 @@ console.log(`[Persistence] Usando directorio de persistencia: ${DATA_DIR}`);
 
 const app = express();
 
-// Servir archivos estáticos del dashboard (index.html, styles.css, app.js)
-app.use(express.static(__dirname));
+// Servir archivos estáticos del dashboard con control de caché estricto para HTML
+app.use(express.static(__dirname, {
+    setHeaders: (res, filepath) => {
+        if (path.extname(filepath) === '.html') {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+        }
+    }
+}));
 
 // Opciones de conexión a Firebird de pruebas (Copia local actualizada hoy)
 const dbOptions = {
