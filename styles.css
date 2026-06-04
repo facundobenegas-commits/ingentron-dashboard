@@ -1613,7 +1613,7 @@ body.route-home .mobile-top-bar {
     }
 
     #stock-table tbody tr.stock-detail-row {
-        display: flex !important;
+        display: none !important;
         flex-direction: column !important;
         background: rgba(255, 255, 255, 0.01) !important;
         border: 1px solid rgba(255, 255, 255, 0.06) !important;
@@ -1628,6 +1628,7 @@ body.route-home .mobile-top-bar {
     }
     
     #stock-table tbody tr.stock-main-row.expanded-main + tr.stock-detail-row {
+        display: flex !important;
         border-color: rgba(10, 132, 255, 0.45) !important;
         border-left: 4px solid #0a84ff !important;
         border-top: 1px dashed rgba(10, 132, 255, 0.4) !important;
