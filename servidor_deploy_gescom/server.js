@@ -4,10 +4,21 @@ const fs = require('fs');
 const XLSX = require('xlsx');
 const firebird = require('node-firebird');
 
+const DATA_DIR = process.env.DATA_DIR || (fs.existsSync('/data') ? '/data' : __dirname);
+console.log(`[Persistence] Usando directorio de persistencia: ${DATA_DIR}`);
+
 const app = express();
 
-// Servir archivos estáticos del dashboard (index.html, styles.css, app.js)
-app.use(express.static(__dirname));
+// Servir archivos estáticos del dashboard con control de caché estricto para HTML
+app.use(express.static(__dirname, {
+    setHeaders: (res, filepath) => {
+        if (path.extname(filepath) === '.html') {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+        }
+    }
+}));
 
 // Opciones de conexión a Firebird de pruebas (Copia local actualizada hoy)
 const dbOptions = {
@@ -255,7 +266,7 @@ app.post('/api/update-saldos', express.json({ limit: '15mb' }), (req, res) => {
     const syncOrigin = req.headers['x-sync-origin']; // Ej: 'Aguas' o 'PepsiCo'
     
     try {
-        const cachePath = path.join(__dirname, 'saldos_cache.json');
+        const cachePath = path.join(DATA_DIR, 'saldos_cache.json');
         let currentCache = [];
         if (fs.existsSync(cachePath)) {
             try {
@@ -285,11 +296,12 @@ app.post('/api/update-saldos', express.json({ limit: '15mb' }), (req, res) => {
         fs.writeFileSync(cachePath, JSON.stringify(updatedCache));
         
         // Guardar la fecha y hora de la última sincronización exitosa por origen
-        const statusPath = path.join(__dirname, 'sync_status.json');
-        let syncStatus = { Aguas: null, PepsiCo: null, 'Trenque Lauquen': null, Salliquelo: null };
+        const statusPath = path.join(DATA_DIR, 'sync_status.json');
+        let syncStatus = { Aguas: null, PepsiCo: null, 'Trenque Lauquen': null, Salliquelo: null, Digip: null };
         if (fs.existsSync(statusPath)) {
             try {
-                syncStatus = JSON.parse(fs.readFileSync(statusPath, 'utf8')) || syncStatus;
+                const parsed = JSON.parse(fs.readFileSync(statusPath, 'utf8'));
+                syncStatus = { ...syncStatus, ...parsed };
             } catch (err) {}
         }
         
@@ -307,13 +319,123 @@ app.post('/api/update-saldos', express.json({ limit: '15mb' }), (req, res) => {
     }
 });
 
+// --- SISTEMA DE CONTROL DE VENCIMIENTOS DE STOCK (DIGIP WMS NUBE) ---
+
+// Endpoint POST para recibir actualizaciones de stock desde el bot rpa
+app.post('/api/update-stock', express.json({ limit: '15mb' }), (req, res) => {
+    const clientToken = req.headers['x-sync-token'];
+    if (clientToken !== SYNC_TOKEN) {
+        console.warn("[Stock Sync] Intento de sincronización no autorizado.");
+        return res.status(401).json({ error: "No autorizado" });
+    }
+    
+    const payload = req.body;
+    let currentData = [];
+    let historyData = null;
+    
+    if (Array.isArray(payload)) {
+        // Formato clásico retrocompatible
+        currentData = payload;
+    } else if (payload && Array.isArray(payload.current)) {
+        // Nuevo formato robusto (snapshot actual + histórico)
+        currentData = payload.current;
+        historyData = payload.history;
+    } else {
+        return res.status(400).json({ error: "El payload de stock debe ser un array o un objeto estructurado {current, history}." });
+    }
+    
+    try {
+        const cachePath = path.join(DATA_DIR, 'stock_cache.json');
+        fs.writeFileSync(cachePath, JSON.stringify(currentData));
+        
+        // Registrar hora de sinc de Digip
+        const statusPath = path.join(DATA_DIR, 'sync_status.json');
+        let syncStatus = { Aguas: null, PepsiCo: null, 'Trenque Lauquen': null, Salliquelo: null, Digip: null };
+        if (fs.existsSync(statusPath)) {
+            try {
+                const parsed = JSON.parse(fs.readFileSync(statusPath, 'utf8'));
+                syncStatus = { ...syncStatus, ...parsed };
+            } catch (err) {}
+        }
+        syncStatus.Digip = new Date().toISOString();
+        fs.writeFileSync(statusPath, JSON.stringify(syncStatus));
+        
+        // --- GUARDAR EN HISTÓRICO DIARIO ---
+        const historyPath = path.join(DATA_DIR, 'stock_history.json');
+        let history = {};
+        
+        if (historyData) {
+            // Si el sincronizador local envió el histórico completo, lo adoptamos directamente (resiliencia nube)
+            history = historyData;
+        } else {
+            // Fallback: lo generamos en el servidor a partir del cache actual
+            if (fs.existsSync(historyPath)) {
+                try {
+                    history = JSON.parse(fs.readFileSync(historyPath, 'utf8')) || {};
+                } catch (err) {}
+            }
+            // Solo agregar al histórico de forma automática si es al final del día (ej. de 23:00 a 23:59 hs de Argentina)
+            const localDate = new Date(new Date().getTime() - 3 * 3600 * 1000);
+            const localHour = localDate.getHours();
+            if (localHour >= 23) {
+                const todayStr = localDate.toISOString().split('T')[0];
+                history[todayStr] = currentData;
+            }
+        }
+        
+        // Mantener solo los últimos 15 días de capturas para optimizar disco
+        const dates = Object.keys(history).sort();
+        if (dates.length > 15) {
+            const datesToRemove = dates.slice(0, dates.length - 15);
+            for (const d of datesToRemove) {
+                delete history[d];
+            }
+        }
+        fs.writeFileSync(historyPath, JSON.stringify(history));
+        
+        console.log(`[Stock Sync] Recibidos ${currentData.length} lotes de stock de Digip WMS (Histórico: ${historyData ? 'Sincronizado' : 'Autogenerado'}).`);
+        res.json({ success: true, count: currentData.length });
+    } catch (err) {
+        console.error("Error escribiendo archivo de caché de stock:", err);
+        res.status(500).json({ error: "Error interno al escribir caché de stock." });
+    }
+});
+
+// Endpoint GET para servir el stock consolidado (usado por el dashboard beta)
+app.get('/api/stock', (req, res) => {
+    const cachePath = path.join(DATA_DIR, 'stock_cache.json');
+    const historyPath = path.join(DATA_DIR, 'stock_history.json');
+    
+    let current = [];
+    let history = {};
+    
+    if (fs.existsSync(cachePath)) {
+        try {
+            current = JSON.parse(fs.readFileSync(cachePath, 'utf8')) || [];
+        } catch (err) {
+            console.error("Error leyendo caché de stock:", err.message);
+        }
+    }
+    
+    if (fs.existsSync(historyPath)) {
+        try {
+            history = JSON.parse(fs.readFileSync(historyPath, 'utf8')) || {};
+        } catch (err) {
+            console.error("Error leyendo histórico de stock:", err.message);
+        }
+    }
+    
+    res.json({ current, history });
+});
+
 // Endpoint para consultar el estado de la última sincronización de los servidores locales
 app.get('/api/sync-status', (req, res) => {
-    const statusPath = path.join(__dirname, 'sync_status.json');
-    let syncStatus = { Aguas: null, PepsiCo: null, 'Trenque Lauquen': null, Salliquelo: null };
+    const statusPath = path.join(DATA_DIR, 'sync_status.json');
+    let syncStatus = { Aguas: null, PepsiCo: null, 'Trenque Lauquen': null, Salliquelo: null, Digip: null };
     if (fs.existsSync(statusPath)) {
         try {
-            syncStatus = JSON.parse(fs.readFileSync(statusPath, 'utf8')) || syncStatus;
+            const parsed = JSON.parse(fs.readFileSync(statusPath, 'utf8'));
+            syncStatus = { ...syncStatus, ...parsed };
         } catch (err) {}
     }
     res.json(syncStatus);
@@ -322,7 +444,7 @@ app.get('/api/sync-status', (req, res) => {
 // Endpoint unificado y ultra-rápido en tiempo real (para versión Beta)
 app.get('/api/saldos', async (req, res) => {
     // 0. Si existe el archivo caché sincronizado (ej. en Render), lo servimos instantáneamente
-    const cachePath = path.join(__dirname, 'saldos_cache.json');
+    const cachePath = path.join(DATA_DIR, 'saldos_cache.json');
     if (fs.existsSync(cachePath)) {
         try {
             const cacheContent = fs.readFileSync(cachePath, 'utf8');
@@ -362,7 +484,7 @@ app.get('/api/saldos', async (req, res) => {
         JOIN PERSONA p ON ct.PROPIETARIO_OID = p.OID
         WHERE cp.IMPORTE > 0 
           AND p.dtype = 'Cliente'
-          AND c.VISIBILIDAD = 0
+          AND c.VISIBILIDAD IN (0, 16)
           AND p.VISIBILIDAD = 0
           AND c.TIPOCOMPROBANTE_OID IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 43, 56)
           AND (cp.IMPORTE + COALESCE((SELECT SUM(can.IMPORTE) FROM CANCELACION can WHERE can.COMPROBANTECANCELADO_OID = c.OID), 0)) > 0.01
@@ -393,7 +515,7 @@ app.get('/api/saldos', async (req, res) => {
         JOIN PERSONA p ON ct.PROPIETARIO_OID = p.OID
         WHERE cp.IMPORTE > 0 
           AND p.dtype = 'Cliente'
-          AND c.VISIBILIDAD = 0
+          AND c.VISIBILIDAD IN (0, 16)
           AND p.VISIBILIDAD = 0
           AND c.TIPOCOMPROBANTE_OID IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 43, 56)
           AND (cp.IMPORTE + COALESCE((SELECT SUM(can.IMPORTE) FROM CANCELACION can WHERE can.COMPROBANTECANCELADO_OID = c.OID), 0)) > 0.01
@@ -451,14 +573,26 @@ app.get('/api/saldos', async (req, res) => {
     res.json(globalData);
 });
 
+// Redireccionar antiguas URLs de Beta a la versión estable en la raíz
+app.get(/^\/beta/, (req, res) => {
+    res.redirect('/');
+});
+
+// Catch-all para la versión estable (HTML5 History API)
+app.get('/*splat', (req, res) => {
+    if (req.path.startsWith('/api')) {
+        return res.status(404).json({ error: 'Not Found' });
+    }
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n======================================================`);
-    console.log(`🚀 SERVIDOR INGENTRON INICIADO (BETA SQL ACTIVA)`);
+    console.log(`🚀 SERVIDOR INGENTRON INICIADO (DASHBOARD ACTIVO)`);
     console.log(`======================================================`);
     console.log(`\nEl dashboard está disponible en tu computadora local en:`);
     console.log(`-> http://localhost:${PORT}`);
-    console.log(`-> http://localhost:${PORT}/beta/ (Versión con Base de Datos SQL)`);
     console.log(`\nPara que otras computadoras lo vean, dales la IP de esta PC.`);
     console.log(`(Asegúrate de no cerrar esta ventana mientras quieras que el sistema funcione)`);
 });
