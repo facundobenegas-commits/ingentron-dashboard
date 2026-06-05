@@ -119,6 +119,7 @@ async function runSynchronization() {
           AND c.VISIBILIDAD IN (0, 16)
           AND p.VISIBILIDAD = 0
           AND c.TIPOCOMPROBANTE_OID IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 43, 56)
+          AND NOT EXISTS (SELECT 1 FROM COMPROBANTE baja WHERE baja.COMPROBANTERELACIONADO_OID = c.OID AND baja.TIPOCOMPROBANTE_OID = 52)
           AND (cp.IMPORTE + COALESCE((SELECT SUM(can.IMPORTE) FROM CANCELACION can WHERE can.COMPROBANTECANCELADO_OID = c.OID), 0)) > 0.01
           AND c.TALONARIO_OID NOT IN (23, 24)
           AND ci.ALNUMERO > 0
@@ -172,6 +173,7 @@ async function runSynchronization() {
                   AND c.VISIBILIDAD IN (0, 16)
                   AND p.VISIBILIDAD = 0
                   AND c.TIPOCOMPROBANTE_OID IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 43, 56)
+                  AND NOT EXISTS (SELECT 1 FROM COMPROBANTE baja WHERE baja.COMPROBANTERELACIONADO_OID = c.OID AND baja.TIPOCOMPROBANTE_OID = 52 AND baja.FECHA <= '${cut.dateSql}')
                   AND c.TALONARIO_OID NOT IN (23, 24)
                   AND ci.ALNUMERO > 0
                   AND c.FECHA <= '${cut.dateSql}'
