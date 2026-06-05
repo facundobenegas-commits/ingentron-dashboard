@@ -390,6 +390,34 @@
         </div>
     </div>
 
+    <!-- Modal for Connection Alert -->
+    <div id="connection-alert-modal" class="modal">
+        <div class="modal-content glass-card" style="max-width: 450px; text-align: center; padding: 32px; gap: 20px; align-items: center;">
+            <div style="font-size: 52px; color: #ff9f0a; margin-bottom: 8px;">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h3 style="font-size: 20px; font-weight: 700; margin: 0; color: #fff;">Servidor Desconectado</h3>
+            <p id="connection-alert-message" style="font-size: 14.5px; opacity: 0.85; margin: 0; line-height: 1.6; color: #f2f2f7;">
+                Se ha perdido la conexión con el servidor.
+            </p>
+            <button id="connection-alert-btn" class="glass-btn" style="
+                background: #ff9f0a;
+                border: none;
+                border-radius: 12px;
+                padding: 12px 28px;
+                color: #000;
+                font-weight: 700;
+                font-size: 14px;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                margin-top: 8px;
+                box-shadow: 0 4px 12px rgba(255, 159, 10, 0.25);
+            " onmouseover="this.style.transform='scale(1.02)';" onmouseout="this.style.transform='scale(1)';">
+                Aceptar
+            </button>
+        </div>
+    </div>
+
 
     <!-- Sync Status Panel -->
     <div id="sync-status-panel" class="glass-card">

@@ -1,5 +1,7 @@
 // Global State
 let globalData = [];
+const pageLoadTime = Date.now();
+const acknowledgedOfflineServers = new Set();
 let availableWeeks = new Set();
 let currentEmpresaFilter = '';
 let currentWeekFilter = '';
@@ -201,6 +203,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Consultar estado de sincronización inicial
     loadSyncStatus();
     initSyncStatusPanel();
+    
+    // Monitoreo periódico del estado de sincronización cada 30 segundos
+    setInterval(loadSyncStatus, 30000);
 
     // Process logos for both themes
     processLogo('../logo_ingentron.png', false, (res) => {
@@ -1886,6 +1891,65 @@ async function loadSyncStatus() {
         if (salliqueloEl) salliqueloEl.textContent = formatSyncDate(status.Salliquelo);
         if (trenqueEl) trenqueEl.textContent = formatSyncDate(status['Trenque Lauquen']);
         if (digipEl) digipEl.textContent = formatSyncDate(status.Digip);
+
+        // --- SISTEMA DE DETECCIÓN DE PÉRDIDA DE CONEXIÓN ---
+        const serverNames = {
+            'Aguas': 'Calvo (Aguas)',
+            'PepsiCo': 'Gescom (PepsiCo)',
+            'Salliquelo': 'Calvo (Salliqueló)',
+            'Trenque Lauquen': 'Gescom (T. Lauquen)',
+            'Digip': 'Digip WMS (Stock)'
+        };
+
+        const isServerOffline = (lastSync) => {
+            if (!lastSync) {
+                // Caído si no hay registros y la página lleva cargada más de 60 segundos
+                return (Date.now() - pageLoadTime) > 60000;
+            }
+            const diff = Date.now() - new Date(lastSync).getTime();
+            return diff > 5 * 60 * 1000; // 5 minutos de inactividad
+        };
+
+        const offlineServers = [];
+        for (const [key, displayName] of Object.entries(serverNames)) {
+            const syncTime = key === 'Trenque Lauquen' ? status['Trenque Lauquen'] : status[key];
+            if (isServerOffline(syncTime)) {
+                offlineServers.push({ key, name: displayName });
+            }
+        }
+
+        // Limpiar servidores reconocidos que volvieron a estar en línea
+        const offlineKeys = new Set(offlineServers.map(s => s.key));
+        for (const key of acknowledgedOfflineServers) {
+            if (!offlineKeys.has(key)) {
+                acknowledgedOfflineServers.delete(key);
+            }
+        }
+
+        // Mostrar alerta solo si la vista de Cuentas Corrientes está visible
+        const isCtaCteViewActive = document.getElementById('dashboard-view') && document.getElementById('dashboard-view').style.display === 'block';
+        if (isCtaCteViewActive && offlineServers.length > 0) {
+            // Verificar si hay algún servidor desconectado que no hayamos alertado aún
+            const newOffline = offlineServers.filter(s => !acknowledgedOfflineServers.has(s.key));
+            if (newOffline.length > 0) {
+                const alertModal = document.getElementById('connection-alert-modal');
+                const alertMessage = document.getElementById('connection-alert-message');
+                if (alertModal && alertMessage) {
+                    const serverListHtml = offlineServers.map(s => `<strong style="color: #ff9f0a;">${s.name}</strong>`).join(', ');
+                    alertMessage.innerHTML = `Se ha perdido la conexión con: ${serverListHtml}.<br><br>Por favor, se recomienda revisar el estado del servidor local y el sincronizador correspondiente.`;
+                    alertModal.classList.add('active');
+
+                    const acceptBtn = document.getElementById('connection-alert-btn');
+                    if (acceptBtn) {
+                        acceptBtn.onclick = () => {
+                            alertModal.classList.remove('active');
+                            // Agregar todos los servidores actualmente caídos al conjunto de reconocidos
+                            offlineServers.forEach(s => acknowledgedOfflineServers.add(s.key));
+                        };
+                    }
+                }
+            }
+        }
     } catch (e) {
         console.error("Error al cargar estado de sincronización:", e);
     }
