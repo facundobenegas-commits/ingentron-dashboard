@@ -1936,7 +1936,7 @@ async function loadSyncStatus() {
                 const alertMessage = document.getElementById('connection-alert-message');
                 if (alertModal && alertMessage) {
                     const serverListHtml = offlineServers.map(s => `<strong style="color: #ff9f0a;">${s.name}</strong>`).join(', ');
-                    alertMessage.innerHTML = `Se ha perdido la conexión con: ${serverListHtml}.<br><br>Por favor, se recomienda revisar el estado del servidor local y el sincronizador correspondiente.`;
+                    alertMessage.innerHTML = `Se ha perdido la conexión con: ${serverListHtml}.<br><br>Por favor, revisar el estado del servidor local y el sincronizador.`;
                     alertModal.classList.add('active');
 
                     const acceptBtn = document.getElementById('connection-alert-btn');
