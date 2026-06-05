@@ -239,8 +239,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 let isCuentasCorrientesLoading = false;
 
 // Carga perezosa e independiente para Cuentas Corrientes
-async function loadCuentasCorrientesData() {
-    if (globalData && globalData.length > 0) {
+async function loadCuentasCorrientesData(forceRefresh = false) {
+    if (globalData && globalData.length > 0 && !forceRefresh) {
         // Ya está cargado, simplemente actualizamos las vistas y KPIs
         updateDashboard();
         return;
@@ -249,7 +249,7 @@ async function loadCuentasCorrientesData() {
     isCuentasCorrientesLoading = true;
     
     const loadingIndicator = document.getElementById('processing-overlay');
-    if (loadingIndicator) {
+    if (loadingIndicator && !forceRefresh) {
         loadingIndicator.classList.add('show');
         loadingIndicator.querySelector('span').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando Cuentas Corrientes...';
         loadingIndicator.querySelector('span').style.color = 'inherit';
@@ -273,11 +273,11 @@ async function loadCuentasCorrientesData() {
         populateFilters();
         updateDashboard();
         
-        if (loadingIndicator) loadingIndicator.classList.remove('show');
+        if (loadingIndicator && !forceRefresh) loadingIndicator.classList.remove('show');
         
     } catch (error) {
         console.error(error);
-        if (loadingIndicator) {
+        if (loadingIndicator && !forceRefresh) {
             loadingIndicator.querySelector('span').innerHTML = `<i class="fas fa-exclamation-triangle"></i> Error al cargar datos: ${error.message}`;
             loadingIndicator.querySelector('span').style.color = 'var(--danger-color)';
             const spinner = loadingIndicator.querySelector('.processing-spinner');
@@ -3194,7 +3194,32 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Inicializar íconos de ordenación de stock
     window.updateSortIcons();
+    
+    // Iniciar auto-refresco periódico
+    startAutoRefresh();
 });
+
+let autoRefreshInterval = null;
+
+function startAutoRefresh() {
+    if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+    autoRefreshInterval = setInterval(() => {
+        const isCtaCteViewActive = document.getElementById('dashboard-view') && document.getElementById('dashboard-view').style.display === 'block';
+        const isStockViewActive = document.getElementById('stock-expiration-view') && document.getElementById('stock-expiration-view').style.display === 'block';
+        
+        if (isCtaCteViewActive) {
+            console.log("[Auto-Refresh] Actualizando Cuentas Corrientes en segundo plano...");
+            loadCuentasCorrientesData(true);
+        } else if (isStockViewActive) {
+            console.log("[Auto-Refresh] Actualizando Vencimientos de Stock en segundo plano...");
+            loadRealStockData().finally(() => {
+                updateStockKPIs();
+                renderStockTable();
+                updateStockCharts();
+            });
+        }
+    }, 60000); // 1 minuto
+}
 
 // Force redrawing the charts when fonts are fully loaded to prevent measuring layout glitches
 if (document.fonts) {
