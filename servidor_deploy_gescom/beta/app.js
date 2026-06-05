@@ -1903,8 +1903,8 @@ async function loadSyncStatus() {
 
         const isServerOffline = (lastSync) => {
             if (!lastSync) {
-                // Caído si no hay registros y la página lleva cargada más de 60 segundos
-                return (Date.now() - pageLoadTime) > 60000;
+                // Caído si no hay registros
+                return true;
             }
             const diff = Date.now() - new Date(lastSync).getTime();
             return diff > 5 * 60 * 1000; // 5 minutos de inactividad
@@ -2861,8 +2861,10 @@ function applyRoute(moduleName) {
         if (titleEl) titleEl.textContent = 'Cuentas Corrientes';
         if (subtitleEl) subtitleEl.textContent = 'Resumen de cuentas corrientes';
         
-        // Carga perezosa de Cuentas Corrientes
+        // Carga perezosa de Cuentas Corrientes y estado de sincronización inmediato
         loadCuentasCorrientesData();
+        acknowledgedOfflineServers.clear();
+        loadSyncStatus();
         
     } else if (moduleName === 'ControlVencimientos') {
         const targetView = document.getElementById('stock-expiration-view');
