@@ -4,7 +4,7 @@ const pageLoadTime = Date.now();
 const acknowledgedOfflineServers = new Set();
 let availableWeeks = new Set();
 let currentEmpresaFilter = '';
-let currentWeekFilter = '';
+let currentWeekFilter = 'Tiempo Real';
 let currentOriginFilter = '';
 let currentStatusFilter = '';
 let statusChart = null;
@@ -397,12 +397,6 @@ function updateWeekSelectorForCurrentOrigin() {
     
     const sortedWeeks = Array.from(weeksForOrigin).sort((a, b) => parseWeekEndDate(a) - parseWeekEndDate(b));
     
-    // Opción especial para mostrar la última semana automáticamente
-    const latestOption = document.createElement('option');
-    latestOption.value = 'LATEST';
-    latestOption.textContent = 'Última semana (Automático)';
-    weekEl.appendChild(latestOption);
-    
     sortedWeeks.forEach(week => {
         if(week && week !== 'undefined') {
             const option = document.createElement('option');
@@ -412,13 +406,20 @@ function updateWeekSelectorForCurrentOrigin() {
         }
     });
     
-    if (weeksForOrigin.has('Tiempo Real')) {
-        weekEl.value = 'Tiempo Real';
-        currentWeekFilter = 'Tiempo Real';
-    } else {
-        weekEl.value = 'LATEST';
-        currentWeekFilter = 'LATEST';
+    // Si la semana seleccionada sigue estando disponible, la conservamos.
+    // De lo contrario, elegimos 'Tiempo Real' si está disponible, o la primera opción disponible.
+    const hasCurrent = Array.from(weeksForOrigin).includes(currentWeekFilter);
+    if (!hasCurrent) {
+        if (weeksForOrigin.has('Tiempo Real')) {
+            currentWeekFilter = 'Tiempo Real';
+        } else if (sortedWeeks.length > 0) {
+            currentWeekFilter = sortedWeeks[0];
+        } else {
+            currentWeekFilter = 'Tiempo Real';
+        }
     }
+    
+    weekEl.value = currentWeekFilter;
     
     // Rebuild or build the custom dropdown for the week select
     if (weekEl._macRebuild) {
