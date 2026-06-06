@@ -1918,6 +1918,38 @@ async function loadSyncStatus() {
             }
         }
 
+        // Actualizar el estado visual de los puntos individuales en el panel de sincronización
+        const dotAguas = document.getElementById('status-dot-aguas');
+        const dotPepsico = document.getElementById('status-dot-pepsico');
+        const dotSalliquelo = document.getElementById('status-dot-salliquelo');
+        const dotTrenque = document.getElementById('status-dot-trenque');
+        const dotDigip = document.getElementById('status-dot-digip');
+
+        const updateDotState = (dotEl, isOffline) => {
+            if (!dotEl) return;
+            if (isOffline) {
+                dotEl.classList.add('offline');
+            } else {
+                dotEl.classList.remove('offline');
+            }
+        };
+
+        updateDotState(dotAguas, isServerOffline(status.Aguas));
+        updateDotState(dotPepsico, isServerOffline(status.PepsiCo));
+        updateDotState(dotSalliquelo, isServerOffline(status.Salliquelo));
+        updateDotState(dotTrenque, isServerOffline(status['Trenque Lauquen']));
+        updateDotState(dotDigip, isServerOffline(status.Digip));
+
+        // Actualizar el estado visual del panel colapsado
+        const syncPanel = document.getElementById('sync-status-panel');
+        if (syncPanel) {
+            if (offlineServers.length > 0) {
+                syncPanel.classList.add('has-offline');
+            } else {
+                syncPanel.classList.remove('has-offline');
+            }
+        }
+
         // Limpiar servidores reconocidos que volvieron a estar en línea
         const offlineKeys = new Set(offlineServers.map(s => s.key));
         for (const key of acknowledgedOfflineServers) {
