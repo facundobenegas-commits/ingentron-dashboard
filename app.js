@@ -297,10 +297,10 @@ function updateOriginOptionsForEmpresa() {
     let filteredOrigins;
     
     if (currentEmpresaFilter !== '') {
-        const allowed = empresaToOrigins[currentEmpresaFilter] || [];
-        filteredOrigins = Array.from(allOrigins).filter(o => allowed.includes(o)).sort();
+        filteredOrigins = empresaToOrigins[currentEmpresaFilter] || [];
     } else {
-        filteredOrigins = Array.from(allOrigins).sort();
+        const union = new Set([...Object.values(empresaToOrigins).flat(), ...allOrigins]);
+        filteredOrigins = Array.from(union).sort();
     }
     
     filteredOrigins.forEach(origin => {
