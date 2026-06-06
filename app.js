@@ -1866,9 +1866,9 @@ async function loadSyncStatus() {
         const status = await res.json();
         
         const formatSyncDate = (isoStr) => {
-            if (!isoStr) return 'Nunca';
+            if (!isoStr) return 'Sin conexión!';
             const d = new Date(isoStr);
-            if (isNaN(d.getTime())) return 'Nunca';
+            if (isNaN(d.getTime())) return 'Sin conexión!';
             
             const day = String(d.getDate()).padStart(2, '0');
             const month = String(d.getMonth() + 1).padStart(2, '0');
