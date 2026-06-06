@@ -2569,9 +2569,11 @@ function renderStockTable() {
             <td style="font-weight: 600; color: var(--text-primary);">${item.cantidad} un.</td>
             <td>${getStockVariation(item)}</td>
             <td>${formatDateToES(item.fechaVencimiento)}</td>
-            <td style="font-weight: 600; color: ${days <= 30 ? '#f87171' : 'inherit'}; display: flex; align-items: center; gap: 8px; justify-content: space-between;">
-                <span>${daysText}</span>
-                <i class="fas fa-chevron-down toggle-icon" style="transition: transform 0.3s; opacity: 0.5;"></i>
+            <td style="font-weight: 600; color: ${days <= 30 ? '#f87171' : 'inherit'};">
+                <div style="display: flex; align-items: center; gap: 8px; justify-content: space-between; width: 100%;">
+                    <span>${daysText}</span>
+                    <i class="fas fa-chevron-down toggle-icon" style="transition: transform 0.3s; opacity: 0.5;"></i>
+                </div>
             </td>
         `;
         
