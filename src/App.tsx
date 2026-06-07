@@ -74,6 +74,7 @@ export default function App() {
   // Logos base64 objects processed
   const logoIngentronObj = useRef<{ dark: string; light: string; width: number; height: number } | null>(null);
   const logoGruyaObj = useRef<{ dark: string; light: string; width: number; height: number } | null>(null);
+  const [logoIngentronSrc, setLogoIngentronSrc] = useState('/logo_ingentron.png');
   const [logoGruyaSrc, setLogoGruyaSrc] = useState('/logo_gruya.jpg');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
@@ -263,6 +264,7 @@ export default function App() {
 
     processLogo('/logo_ingentron.png', false, (res) => {
       logoIngentronObj.current = res;
+      setLogoIngentronSrc(res.dark);
     });
     processLogo('/logo_gruya.jpg', true, (res) => {
       logoGruyaObj.current = res;
@@ -1944,7 +1946,7 @@ export default function App() {
           style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'center', height: 'var(--header-height)', borderBottom: '1px solid var(--surface-border)', padding: '0 16px', cursor: 'pointer' }}
         >
           <div className="logo-badge" style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', padding: '4px 10px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '32px' }}>
-            <img src="/logo_ingentron.png" alt="Ingentron S.R.L." style={{ maxHeight: '20px', width: 'auto', objectFit: 'contain' }} />
+            <img src={logoIngentronSrc} alt="Ingentron S.R.L." style={{ maxHeight: '20px', width: 'auto', objectFit: 'contain' }} />
           </div>
           <div style={{ width: '1px', height: '18px', background: 'rgba(255,255,255,0.15)' }}></div>
           <div className="logo-badge" style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', padding: '4px 10px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '32px' }}>
@@ -1978,7 +1980,7 @@ export default function App() {
           </button>
           <div className="mobile-bar-logos" onClick={() => navigateToModule('home')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div className="logo-badge" style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', padding: '4px 10px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '32px' }}>
-              <img src="/logo_ingentron.png" alt="Ingentron S.R.L." style={{ maxHeight: '20px', width: 'auto', objectFit: 'contain' }} />
+              <img src={logoIngentronSrc} alt="Ingentron S.R.L." style={{ maxHeight: '20px', width: 'auto', objectFit: 'contain' }} />
             </div>
             <div style={{ width: '1px', height: '18px', background: 'rgba(255,255,255,0.15)' }}></div>
             <div className="logo-badge" style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', padding: '4px 10px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '32px' }}>
@@ -2003,7 +2005,7 @@ export default function App() {
             </button>
             <div className="header-logo-container" onClick={() => navigateToModule('home')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div className="logo-badge" style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', padding: '4px 10px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '32px' }}>
-                <img src="/logo_ingentron.png" alt="Ingentron" style={{ maxHeight: '20px', width: 'auto', objectFit: 'contain' }} />
+                <img src={logoIngentronSrc} alt="Ingentron" style={{ maxHeight: '20px', width: 'auto', objectFit: 'contain' }} />
               </div>
               <div style={{ width: '1px', height: '18px', background: 'rgba(255,255,255,0.15)' }}></div>
               <div className="logo-badge" style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', padding: '4px 10px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '32px' }}>
@@ -2126,7 +2128,7 @@ export default function App() {
                 <div className="home-logos-container" style={{ display: 'flex', alignItems: 'center', gap: '20px', justifyContent: 'center', marginBottom: '56px' }}>
                   <div className="glowing-logo-badge brand-ingentron">
                     <div className="glowing-logo-badge-inner">
-                      <img src="/logo_ingentron.png" alt="Ingentron" id="home-logo-ingentron" style={{ maxHeight: '44px', width: 'auto', objectFit: 'contain' }} />
+                      <img src={logoIngentronSrc} alt="Ingentron" id="home-logo-ingentron" style={{ maxHeight: '44px', width: 'auto', objectFit: 'contain' }} />
                     </div>
                   </div>
                   <div className="logo-separator" style={{ width: '1px', height: '36px', background: 'rgba(255,255,255,0.15)' }}></div>
