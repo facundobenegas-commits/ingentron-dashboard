@@ -22,3 +22,17 @@ screenshots/
 Thumbs.db
 ~$*.xlsx
 *.log
+
+# Build output
+dist/
+
+# Local cache/test databases
+saldos_cache.json
+stock_cache.json
+stock_history.json
+sync_status.json
+
+# Portable tools
+mingit/
+mingit.zip
+tmp_extract/

@@ -10,7 +10,8 @@ console.log(`[Persistence] Usando directorio de persistencia: ${DATA_DIR}`);
 const app = express();
 
 // Servir archivos estáticos del dashboard con control de caché estricto para HTML
-app.use(express.static(__dirname, {
+const DIST_DIR = path.join(__dirname, 'dist');
+app.use(express.static(DIST_DIR, {
     setHeaders: (res, filepath) => {
         if (path.extname(filepath) === '.html') {
             res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -585,7 +586,7 @@ app.get('/*splat', (req, res) => {
     if (req.path.startsWith('/api')) {
         return res.status(404).json({ error: 'Not Found' });
     }
-    res.sendFile(path.join(__dirname, 'index.html'));
+    res.sendFile(path.join(DIST_DIR, 'index.html'));
 });
 
 const PORT = process.env.PORT || 3000;

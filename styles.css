@@ -2113,7 +2113,45 @@ th.active-sort .sort-icon {
     }
 }
 
+/* Dynamic styling block from app.js */
+.bg-blue { background: rgba(59, 130, 246, 0.2) !important; color: #60a5fa !important; }
+.bg-green { background: rgba(16, 185, 129, 0.2) !important; color: #34d399 !important; }
+.bg-purple { background: rgba(139, 92, 246, 0.2) !important; color: #a78bfa !important; }
+.bg-red { background: rgba(239, 68, 68, 0.2) !important; color: #f87171 !important; }
+.bg-accent { background: rgba(245, 158, 11, 0.2) !important; color: #fbbf24 !important; }
+.bg-dark { background: rgba(30, 41, 59, 0.6) !important; color: #e2e8f0 !important; border-color: rgba(255,255,255,0.2) !important; }
+.font-medium { font-weight: 600; }
 
+.modal-filter-btn {
+    padding: 8px 18px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    opacity: 0.7;
+}
+.modal-filter-btn:hover {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.04);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+.modal-filter-btn.active {
+    opacity: 1;
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transform: translateY(-1px);
+}
 
-
-
+.row-fade-in {
+    animation: rowFadeIn 0.3s ease-out forwards;
+    opacity: 0;
+}
+@keyframes rowFadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
