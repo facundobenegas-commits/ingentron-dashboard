@@ -973,9 +973,11 @@ tbody tr:hover {
 .mobile-top-bar {
     display: none;
 }
-body.route-home .mobile-top-bar {
+body.route-home .mobile-top-bar,
+.app-container.route-home .mobile-top-bar {
     display: none !important;
 }
+
 
 /* Mobile: single column everything */
 @media (max-width: 640px) {

@@ -75,6 +75,7 @@ export default function App() {
   const logoIngentronObj = useRef<{ dark: string; light: string; width: number; height: number } | null>(null);
   const logoGruyaObj = useRef<{ dark: string; light: string; width: number; height: number } | null>(null);
   const [logoGruyaSrc, setLogoGruyaSrc] = useState('/logo_gruya.jpg');
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   // Chart refs
   const statusChartRef = useRef<Chart | null>(null);
@@ -105,6 +106,7 @@ export default function App() {
       } else {
         setCurrentView('home');
       }
+      setShowMobileFilters(false);
     };
     window.addEventListener('popstate', handlePopState);
     handlePopState();
@@ -117,6 +119,7 @@ export default function App() {
     else if (view === 'stock-expiration') path = '/ControlVencimientos';
     window.history.pushState({ module: view }, '', path);
     setCurrentView(view);
+    setShowMobileFilters(false);
   };
 
   // --- LOGO PROCESSING ---
@@ -2017,7 +2020,16 @@ export default function App() {
 
           <div className="header-actions">
             {currentView === 'dashboard' && (
-              <div className="selector-group" id="filters-container">
+              <>
+                <button 
+                  id="mobile-filter-toggle" 
+                  className={`mobile-filter-toggle-btn ${showMobileFilters ? 'active' : ''}`}
+                  onClick={() => setShowMobileFilters(prev => !prev)}
+                >
+                  <i className={showMobileFilters ? "fas fa-chevron-up" : "fas fa-filter"}></i>
+                  <span>{showMobileFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}</span>
+                </button>
+                <div className={`selector-group ${showMobileFilters ? 'show-mobile' : ''}`} id="filters-container">
                 
                 {/* Empresa Filter Custom Dropdown */}
                 <div className="empresa-selector-container">
@@ -2098,11 +2110,11 @@ export default function App() {
                       Ocultar cuentas a compensar
                     </label>
                   </div>
-                </div>
-
               </div>
-            )}
-          </div>
+            </div>
+          </>
+        )}
+        </div>
         </header>
 
         <div className="content-area">
