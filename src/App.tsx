@@ -2383,56 +2383,8 @@ export default function App() {
           {currentView === 'stock-expiration' && (
             <div id="stock-expiration-view" className="view-section">
               
-              {/* Stock Expirations KPIs Grid */}
-              <div className="kpi-grid">
-                <div className="kpi-card glass-card">
-                  <div className="kpi-icon blue"><i className="fas fa-boxes"></i></div>
-                  <div className="kpi-info">
-                    <h4>Lotes Consolidados</h4>
-                    <h2>{stockKPIs.total}</h2>
-                  </div>
-                </div>
-                <div className="kpi-card glass-card">
-                  <div className="kpi-icon red"><i className="fas fa-exclamation-triangle"></i></div>
-                  <div className="kpi-info">
-                    <h4>Lotes Vencidos</h4>
-                    <h2>{stockKPIs.expired}</h2>
-                  </div>
-                </div>
-                <div className="kpi-card glass-card">
-                  <div className="kpi-icon orange"><i className="fas fa-clock"></i></div>
-                  <div className="kpi-info">
-                    <h4>Alerta Crítica (&lt;30d)</h4>
-                    <h2>{stockKPIs.critical}</h2>
-                  </div>
-                </div>
-                <div className="kpi-card glass-card">
-                  <div className="kpi-icon green"><i className="fas fa-check-circle"></i></div>
-                  <div className="kpi-info">
-                    <h4>Lotes En Regla</h4>
-                    <h2>{stockKPIs.ok}</h2>
-                  </div>
-                </div>
-              </div>
-
-              {/* Chart panels */}
-              <div className="dashboard-grid mt-4" style={{ gridTemplateColumns: '1fr 1fr' }}>
-                <div className="chart-section glass-card" style={{ height: '260px' }}>
-                  <div className="section-header"><h3><i className="fas fa-chart-pie"></i> Distribución de Riesgo WMS</h3></div>
-                  <div style={{ position: 'relative', height: '180px', marginTop: '10px' }}>
-                    <canvas ref={stockRiskCanvasRef} id="stock-risk-chart"></canvas>
-                  </div>
-                </div>
-                <div className="chart-section glass-card" style={{ height: '260px' }}>
-                  <div className="section-header"><h3><i className="fas fa-chart-bar"></i> Cronograma de Vencimiento Mensual</h3></div>
-                  <div style={{ position: 'relative', height: '180px', marginTop: '10px' }}>
-                    <canvas ref={stockTimelineCanvasRef} id="stock-timeline-chart"></canvas>
-                  </div>
-                </div>
-              </div>
-
               {/* Table section */}
-              <div className="table-section glass-card mt-4" style={{ padding: '24px' }}>
+              <div className="table-section glass-card" style={{ padding: '24px' }}>
                 <div className="table-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
                   <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--accent-color)' }}>Control de Lotes y Caducidades</h3>
                   <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', flex: 1, justifyContent: 'flex-end', alignItems: 'center' }}>
