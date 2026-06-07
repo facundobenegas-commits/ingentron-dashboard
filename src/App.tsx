@@ -2525,7 +2525,7 @@ export default function App() {
                                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 600, color: 'var(--accent-color)' }}>
                                         <i className="fas fa-history"></i> Historial de Variación Diaria (Últimos 7 días)
                                       </div>
-                                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'space-between', width: '100%' }}>
+                                      <div className="daily-history-list" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'space-between', width: '100%' }}>
                                         {getStockDailyVariations(item).map(v => {
                                           let badgeStyle = {};
                                           if (v.class === 'positive') badgeStyle = { background: 'rgba(52, 211, 153, 0.15)', color: '#34d399', border: '1px solid rgba(52, 211, 153, 0.25)' };
@@ -2534,9 +2534,9 @@ export default function App() {
                                           else badgeStyle = { background: 'rgba(255, 255, 255, 0.05)', color: 'rgba(255, 255, 255, 0.4)', border: '1px solid rgba(255, 255, 255, 0.1)' };
 
                                           return (
-                                            <div key={v.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255,255,255,0.06)', padding: '12px 14px', borderRadius: '12px', minWidth: '76px', flex: '1', boxSizing: 'border-box' }}>
+                                            <div key={v.label} className="daily-history-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255,255,255,0.06)', padding: '12px 14px', borderRadius: '12px', minWidth: '76px', flex: '1', boxSizing: 'border-box' }}>
                                               <div style={{ fontSize: '13px', opacity: 0.95, fontWeight: 600, color: '#ffffff' }}>{v.label}</div>
-                                              <div style={{ fontSize: '12px', fontWeight: 700, padding: '4px 10px', borderRadius: '6px', textAlign: 'center', width: '100%', boxSizing: 'border-box', display: 'block', ...badgeStyle }}>{v.text}</div>
+                                              <div className="daily-history-badge" style={{ fontSize: '12px', fontWeight: 700, padding: '4px 10px', borderRadius: '6px', textAlign: 'center', width: '100%', boxSizing: 'border-box', display: 'block', ...badgeStyle }}>{v.text}</div>
                                               <div style={{ fontSize: '12px', opacity: 0.85, fontWeight: 600, color: 'var(--text-secondary)', textAlign: 'center' }}>{v.qty} un.</div>
                                             </div>
                                           );

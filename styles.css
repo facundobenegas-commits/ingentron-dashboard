@@ -1659,7 +1659,7 @@ body.route-home .mobile-top-bar,
     
     #stock-table tbody tr.stock-main-row td:nth-child(1)::before { content: "Código:"; font-weight: 600; color: var(--text-secondary); }
     #stock-table tbody tr.stock-main-row td:nth-child(3)::before { content: "Cantidad:"; font-weight: 600; color: var(--text-secondary); }
-    #stock-table tbody tr.stock-main-row td:nth-child(4)::before { content: "Variación:"; font-weight: 600; color: var(--text-secondary); }
+    #stock-table tbody tr.stock-main-row td:nth-child(4)::before { content: "Variación (24h):"; font-weight: 600; color: var(--text-secondary); }
     #stock-table tbody tr.stock-main-row td:nth-child(5)::before { content: "Vencimiento:"; font-weight: 600; color: var(--text-secondary); }
     #stock-table tbody tr.stock-main-row td:nth-child(6)::before { content: "Restante:"; font-weight: 600; color: var(--text-secondary); }
 }
@@ -2156,4 +2156,46 @@ th.active-sort .sort-icon {
 @keyframes rowFadeIn {
     from { opacity: 0; transform: translateY(-5px); }
     to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- REGISTRO DE HISTORIAL DIARIO RESPONSIVO EN MÓVIL --- */
+@media (max-width: 640px) {
+    .daily-history-list {
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        justify-content: flex-start !important;
+        padding-bottom: 8px !important;
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x mandatory;
+        gap: 6px !important;
+    }
+    
+    .daily-history-card {
+        flex: 0 0 98px !important;
+        min-width: 98px !important;
+        padding: 10px 8px !important;
+        scroll-snap-align: start;
+    }
+
+    .daily-history-badge {
+        font-size: 11px !important;
+        padding: 4px 4px !important;
+        white-space: nowrap !important;
+    }
+}
+
+/* Estilo de scrollbar sutil para el historial diario */
+.daily-history-list::-webkit-scrollbar {
+    height: 5px;
+}
+.daily-history-list::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.01);
+    border-radius: 4px;
+}
+.daily-history-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+}
+.daily-history-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.22);
 }
