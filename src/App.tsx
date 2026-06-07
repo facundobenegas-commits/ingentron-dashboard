@@ -74,6 +74,7 @@ export default function App() {
   // Logos base64 objects processed
   const logoIngentronObj = useRef<{ dark: string; light: string; width: number; height: number } | null>(null);
   const logoGruyaObj = useRef<{ dark: string; light: string; width: number; height: number } | null>(null);
+  const [logoGruyaSrc, setLogoGruyaSrc] = useState('/logo_gruya.jpg');
 
   // Chart refs
   const statusChartRef = useRef<Chart | null>(null);
@@ -262,6 +263,7 @@ export default function App() {
     });
     processLogo('/logo_gruya.jpg', true, (res) => {
       logoGruyaObj.current = res;
+      setLogoGruyaSrc(res.dark);
     });
   }, []);
 
@@ -280,9 +282,9 @@ export default function App() {
     const syncInterval = setInterval(loadSyncStatus, 30000);
     const dataInterval = setInterval(() => {
       if (currentView === 'dashboard') {
-        loadCuentasCorrientesData(true);
+        loadCuentasCorrientesData(true, true);
       } else if (currentView === 'stock-expiration') {
-        loadStockData(true);
+        loadStockData(true, true);
       }
     }, 60000);
 
@@ -312,9 +314,9 @@ export default function App() {
   }, []);
 
   // --- DATA LOADING ENGINES ---
-  const loadCuentasCorrientesData = async (force = false) => {
+  const loadCuentasCorrientesData = async (force = false, silent = false) => {
     if (globalData.length > 0 && !force) return;
-    setIsCuentasCorrientesLoading(true);
+    if (!silent) setIsCuentasCorrientesLoading(true);
 
     try {
       const response = await fetch('/api/saldos');
@@ -328,9 +330,9 @@ export default function App() {
     }
   };
 
-  const loadStockData = async (force = false) => {
+  const loadStockData = async (force = false, silent = false) => {
     if (isRealStockLoaded && !force) return;
-    setIsStockLoading(true);
+    if (!silent) setIsStockLoading(true);
 
     try {
       const response = await fetch('/api/stock');
@@ -1943,7 +1945,7 @@ export default function App() {
           </div>
           <div style={{ width: '1px', height: '18px', background: 'rgba(255,255,255,0.15)' }}></div>
           <div className="logo-badge" style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', padding: '4px 10px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '32px' }}>
-            <img src="/logo_gruya.jpg" alt="Gruya S.R.L." style={{ maxHeight: '20px', width: 'auto', objectFit: 'contain' }} />
+            <img src={logoGruyaSrc} alt="Gruya S.R.L." style={{ maxHeight: '20px', width: 'auto', objectFit: 'contain' }} />
           </div>
         </div>
         <nav className="nav-menu">
@@ -1977,7 +1979,7 @@ export default function App() {
             </div>
             <div style={{ width: '1px', height: '18px', background: 'rgba(255,255,255,0.15)' }}></div>
             <div className="logo-badge" style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', padding: '4px 10px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '32px' }}>
-              <img src="/logo_gruya.jpg" alt="Gruya S.R.L." style={{ maxHeight: '20px', width: 'auto', objectFit: 'contain' }} />
+              <img src={logoGruyaSrc} alt="Gruya S.R.L." style={{ maxHeight: '20px', width: 'auto', objectFit: 'contain' }} />
             </div>
           </div>
           <div style={{ width: '40px' }}></div>
@@ -2002,7 +2004,7 @@ export default function App() {
               </div>
               <div style={{ width: '1px', height: '18px', background: 'rgba(255,255,255,0.15)' }}></div>
               <div className="logo-badge" style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', padding: '4px 10px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '32px' }}>
-                <img src="/logo_gruya.jpg" alt="Gruya" style={{ maxHeight: '20px', width: 'auto', objectFit: 'contain' }} />
+                <img src={logoGruyaSrc} alt="Gruya" style={{ maxHeight: '20px', width: 'auto', objectFit: 'contain' }} />
               </div>
             </div>
             <div>
@@ -2112,13 +2114,13 @@ export default function App() {
                 <div className="home-logos-container" style={{ display: 'flex', alignItems: 'center', gap: '20px', justifyContent: 'center', marginBottom: '56px' }}>
                   <div className="glowing-logo-badge brand-ingentron">
                     <div className="glowing-logo-badge-inner">
-                      <img src="/logo_ingentron.png" alt="Ingentron" style={{ maxHeight: '44px', width: 'auto', objectFit: 'contain' }} />
+                      <img src="/logo_ingentron.png" alt="Ingentron" id="home-logo-ingentron" style={{ maxHeight: '44px', width: 'auto', objectFit: 'contain' }} />
                     </div>
                   </div>
                   <div className="logo-separator" style={{ width: '1px', height: '36px', background: 'rgba(255,255,255,0.15)' }}></div>
                   <div className="glowing-logo-badge brand-gruya">
                     <div className="glowing-logo-badge-inner">
-                      <img src="/logo_gruya.jpg" alt="Gruya" style={{ maxHeight: '44px', width: 'auto', objectFit: 'contain' }} />
+                      <img src={logoGruyaSrc} alt="Gruya" id="home-logo-gruya" style={{ maxHeight: '44px', width: 'auto', objectFit: 'contain' }} />
                     </div>
                   </div>
                 </div>
