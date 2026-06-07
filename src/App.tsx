@@ -2003,6 +2003,7 @@ export default function App() {
             id="mobile-menu-toggle" 
             className="btn-icon hamburger-btn" 
             onClick={() => setIsSidebarCollapsed(prev => !prev)}
+            aria-label="Alternar menú lateral"
             style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '4px' }}
           >
             <span className="bar"></span>
@@ -2028,6 +2029,7 @@ export default function App() {
               id="sidebar-toggle" 
               className="btn-icon hamburger-btn" 
               onClick={() => setIsSidebarCollapsed(prev => !prev)}
+              aria-label="Alternar menú lateral"
               style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '4px' }}
             >
               <span className="bar"></span>
