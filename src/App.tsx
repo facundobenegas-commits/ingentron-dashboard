@@ -77,6 +77,7 @@ export default function App() {
   const [logoIngentronSrc, setLogoIngentronSrc] = useState('/logo_ingentron.png');
   const [logoGruyaSrc, setLogoGruyaSrc] = useState('/logo_gruya.jpg');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [isSyncPanelExpanded, setIsSyncPanelExpanded] = useState(false);
 
   // Chart refs
   const statusChartRef = useRef<Chart | null>(null);
@@ -121,6 +122,36 @@ export default function App() {
     window.history.pushState({ module: view }, '', path);
     setCurrentView(view);
     setShowMobileFilters(false);
+  };
+
+  // --- SYNC STATUS PANEL AUTO-COLLAPSE & TOGGLE LOGIC ---
+  const autoCollapseTimeoutRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (currentView !== 'home') {
+      setIsSyncPanelExpanded(true);
+      if (autoCollapseTimeoutRef.current) {
+        clearTimeout(autoCollapseTimeoutRef.current);
+      }
+      autoCollapseTimeoutRef.current = setTimeout(() => {
+        setIsSyncPanelExpanded(false);
+      }, 3000);
+    } else {
+      setIsSyncPanelExpanded(false);
+    }
+    return () => {
+      if (autoCollapseTimeoutRef.current) {
+        clearTimeout(autoCollapseTimeoutRef.current);
+      }
+    };
+  }, [currentView]);
+
+  const handleSyncPanelClick = () => {
+    if (autoCollapseTimeoutRef.current) {
+      clearTimeout(autoCollapseTimeoutRef.current);
+      autoCollapseTimeoutRef.current = null;
+    }
+    setIsSyncPanelExpanded(prev => !prev);
   };
 
   // --- LOGO PROCESSING ---
@@ -2653,7 +2684,11 @@ export default function App() {
 
       {/* Sync Status Panel */}
       {currentView !== 'home' && (
-        <div id="sync-status-panel" className={`glass-card expanded ${syncPanelHasOffline ? 'has-offline' : ''}`}>
+        <div 
+          id="sync-status-panel" 
+          className={`glass-card ${isSyncPanelExpanded ? 'expanded' : ''} ${syncPanelHasOffline ? 'has-offline' : ''}`}
+          onClick={handleSyncPanelClick}
+        >
           <div style={{ fontWeight: 600, opacity: 0.5, textTransform: 'uppercase', fontSize: '7px', letterSpacing: '0.5px', marginBottom: '1px' }}>ÚLTIMA SINCRONIZACIÓN</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10.5px', whiteSpace: 'nowrap' }}>
             <span className={`status-dot status-dot-aguas ${isSyncServerOffline('Aguas') ? 'offline' : ''}`}></span>
