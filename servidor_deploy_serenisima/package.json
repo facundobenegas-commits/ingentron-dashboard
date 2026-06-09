@@ -1,0 +1,9 @@
+{
+  "name": "ingentron-sync-serenisima",
+  "version": "1.0.0",
+  "description": "Sincronizador Ingentron de base de datos Firebird (La Serenísima) a Render",
+  "main": "sync_serenisima.js",
+  "dependencies": {
+    "node-firebird": "^2.3.2"
+  }
+}
