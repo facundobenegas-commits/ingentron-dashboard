@@ -19,7 +19,7 @@ const NORMALIZED_ACCOUNTS_TO_HIDE = new Set(
 );
 
 const empresaToOrigins: Record<string, string[]> = {
-  'Ingentron': ['Aguas', 'PepsiCo'],
+  'Ingentron': ['Aguas', 'PepsiCo', 'Serenisima'],
   'Gruya': ['Trenque Lauquen', 'Salliquelo']
 };
 
@@ -35,6 +35,7 @@ export default function App() {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>({
     Aguas: null,
     PepsiCo: null,
+    Serenisima: null,
     'Trenque Lauquen': null,
     Salliquelo: null,
     Digip: null
@@ -426,6 +427,7 @@ export default function App() {
       const serverNames: Record<string, string> = {
         'Aguas': 'Calvo (Aguas)',
         'PepsiCo': 'Gescom (PepsiCo)',
+        'Serenisima': 'Calvo (La Serenísima)',
         'Salliquelo': 'Calvo (Salliqueló)',
         'Trenque Lauquen': 'Gescom (T. Lauquen)',
         'Digip': 'Digip WMS (Stock)'
@@ -465,7 +467,7 @@ export default function App() {
   const closeConnectionAlert = () => {
     setConnectionAlertActive(false);
     // Add current offline servers to acknowledged
-    const offlineList = ['Aguas', 'PepsiCo', 'Salliquelo', 'Trenque Lauquen', 'Digip'];
+    const offlineList = ['Aguas', 'PepsiCo', 'Serenisima', 'Salliquelo', 'Trenque Lauquen', 'Digip'];
     offlineList.forEach(k => {
       const val = k === 'Trenque Lauquen' ? syncStatus['Trenque Lauquen'] : (syncStatus as any)[k];
       const isOffline = !val || (Date.now() - new Date(val).getTime() > 5 * 60 * 1000);
@@ -1537,7 +1539,7 @@ export default function App() {
     const clientCodesSet = new Set<string>();
 
     const formatCompanyName = (name: string) => {
-      if (name === 'Aguas' || name === 'PepsiCo' || name === 'Ingentron' || name === 'Ingentron S.R.L.') {
+      if (name === 'Aguas' || name === 'PepsiCo' || name === 'Serenisima' || name === 'Ingentron' || name === 'Ingentron S.R.L.') {
         return 'Ingentron S.R.L.';
       }
       if (name === 'Trenque Lauquen' || name === 'Salliquelo' || name === 'Gruya' || name === 'Gruya S.R.L.') {
@@ -1549,6 +1551,7 @@ export default function App() {
     const formatOriginName = (name: string) => {
       if (name === 'Salliquelo') return 'Salliqueló';
       if (name === 'Trenque Lauquen') return 'Trenque Lauquen';
+      if (name === 'Serenisima') return 'La Serenísima';
       return name;
     };
 
@@ -1877,6 +1880,7 @@ export default function App() {
     if (origin === 'Salliquelo') return 'bg-purple text-white';
     if (origin === 'Trenque Lauquen') return 'bg-green text-white';
     if (origin === 'PepsiCo') return 'bg-red text-white';
+    if (origin === 'Serenisima') return 'bg-pink text-white';
     return 'bg-accent text-white';
   };
 
@@ -1962,7 +1966,7 @@ export default function App() {
   };
 
   const syncPanelHasOffline = useMemo(() => {
-    const serverKeys = ['Aguas', 'PepsiCo', 'Salliquelo', 'Trenque Lauquen', 'Digip'];
+    const serverKeys = ['Aguas', 'PepsiCo', 'Serenisima', 'Salliquelo', 'Trenque Lauquen', 'Digip'];
     return serverKeys.some(k => isSyncServerOffline(k));
   }, [syncStatus]);
 
@@ -2699,6 +2703,10 @@ export default function App() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10.5px', whiteSpace: 'nowrap' }}>
             <span className={`status-dot status-dot-pepsico ${isSyncServerOffline('PepsiCo') ? 'offline' : ''}`}></span>
             <span style={{ opacity: 0.85 }}>Gescom (PepsiCo): <span style={{ fontWeight: 500 }}>{formatSyncDate(syncStatus.PepsiCo)}</span></span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10.5px', whiteSpace: 'nowrap' }}>
+            <span className={`status-dot status-dot-serenisima ${isSyncServerOffline('Serenisima') ? 'offline' : ''}`}></span>
+            <span style={{ opacity: 0.85 }}>Calvo (La Serenísima): <span style={{ fontWeight: 500 }}>{formatSyncDate(syncStatus.Serenisima)}</span></span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10.5px', whiteSpace: 'nowrap' }}>
             <span className={`status-dot status-dot-salliquelo ${isSyncServerOffline('Salliquelo') ? 'offline' : ''}`}></span>

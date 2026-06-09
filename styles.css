@@ -2120,6 +2120,7 @@ th.active-sort .sort-icon {
 .bg-green { background: rgba(16, 185, 129, 0.2) !important; color: #34d399 !important; }
 .bg-purple { background: rgba(139, 92, 246, 0.2) !important; color: #a78bfa !important; }
 .bg-red { background: rgba(239, 68, 68, 0.2) !important; color: #f87171 !important; }
+.bg-pink { background: rgba(244, 63, 94, 0.2) !important; color: #fb7185 !important; }
 .bg-accent { background: rgba(245, 158, 11, 0.2) !important; color: #fbbf24 !important; }
 .bg-dark { background: rgba(30, 41, 59, 0.6) !important; color: #e2e8f0 !important; border-color: rgba(255,255,255,0.2) !important; }
 .font-medium { font-weight: 600; }

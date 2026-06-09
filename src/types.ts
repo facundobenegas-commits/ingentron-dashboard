@@ -27,4 +27,5 @@ export interface SyncStatus {
   'Trenque Lauquen': string | null;
   Salliquelo: string | null;
   Digip: string | null;
+  Serenisima: string | null;
 }
