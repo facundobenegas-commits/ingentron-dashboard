@@ -573,13 +573,16 @@ export default function App() {
     return mostCritical;
   };
 
-  const shouldHideAccount = (clientCode: string, invoice: string) => {
+  const shouldHideAccount = (clientCode: string, invoice: string, origin?: string) => {
     if (!hideCompensar) return false;
     if (invoice && String(invoice).trim().toUpperCase().startsWith('RPX')) {
       return true;
     }
     if (!clientCode) return false;
     const normalized = String(clientCode).trim().replace(/^0+/, '');
+    if (origin === 'Serenisima' && ['90028', '90016', '3000'].includes(normalized)) {
+      return true;
+    }
     return NORMALIZED_ACCOUNTS_TO_HIDE.has(normalized);
   };
 
@@ -621,7 +624,7 @@ export default function App() {
   const availableWeeks = useMemo(() => {
     const weeks = new Set<string>();
     globalData.forEach(item => {
-      if (shouldHideAccount(item.clientCode, item.invoice)) return;
+      if (shouldHideAccount(item.clientCode, item.invoice, item.origin)) return;
       if (empresaFilter !== '') {
         const allowed = empresaToOrigins[empresaFilter] || [];
         if (!allowed.includes(item.origin)) return;
@@ -657,7 +660,7 @@ export default function App() {
     let resolvedLatestWeek = '';
     const weeksSet = new Set<string>();
     globalData.forEach(item => {
-      if (shouldHideAccount(item.clientCode, item.invoice)) return;
+      if (shouldHideAccount(item.clientCode, item.invoice, item.origin)) return;
       if (empresaFilter !== '') {
         const allowed = empresaToOrigins[empresaFilter] || [];
         if (!allowed.includes(item.origin)) return;
@@ -672,7 +675,7 @@ export default function App() {
 
     // Filter raw data
     const filteredRaw = globalData.filter(item => {
-      if (shouldHideAccount(item.clientCode, item.invoice)) return false;
+      if (shouldHideAccount(item.clientCode, item.invoice, item.origin)) return false;
 
       // Filter by Empresa
       if (empresaFilter !== '') {
@@ -857,7 +860,7 @@ export default function App() {
 
     // Group weekly balances for trend chart depending on selected origin/empresa filters
     const trendFilteredData = globalData.filter(item => {
-      if (shouldHideAccount(item.clientCode, item.invoice)) return false;
+      if (shouldHideAccount(item.clientCode, item.invoice, item.origin)) return false;
       if (empresaFilter !== '') {
         const allowed = empresaToOrigins[empresaFilter] || [];
         if (!allowed.includes(item.origin)) return false;
@@ -1852,7 +1855,7 @@ export default function App() {
     // Filter client invoices matching global filters
     const invoices = globalData.filter(item => {
       if (item.client !== clientName) return false;
-      if (shouldHideAccount(item.clientCode, item.invoice)) return false;
+      if (shouldHideAccount(item.clientCode, item.invoice, item.origin)) return false;
 
       // Apply global origin filter
       if (originFilter !== '' && item.origin !== originFilter) return false;
@@ -1860,7 +1863,7 @@ export default function App() {
       // Apply week filter
       if (weekFilter === 'LATEST') {
         const originWeeksSet = new Set(globalData.filter(d => {
-          if (shouldHideAccount(d.clientCode, d.invoice)) return false;
+          if (shouldHideAccount(d.clientCode, d.invoice, d.origin)) return false;
           return d.origin === item.origin;
         }).map(d => d.week));
         const originWeeks = Array.from(originWeeksSet).sort((a, b) => parseWeekEndDate(a).getTime() - parseWeekEndDate(b).getTime());
