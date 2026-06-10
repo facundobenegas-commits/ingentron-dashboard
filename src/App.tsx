@@ -1999,6 +1999,10 @@ export default function App() {
           <div className={`nav-item ${currentView === 'stock-expiration' ? 'active' : ''}`} onClick={() => { navigateToModule('stock-expiration'); setIsSidebarCollapsed(true); }}>
             <i className="fas fa-boxes"></i> <span>Vencimientos Stock</span>
           </div>
+          <div style={{ flex: 1 }}></div>
+          <div className="nav-item stable-link" onClick={() => window.location.href = '/'}>
+            <i className="fas fa-rocket"></i> <span>Versión Estable</span>
+          </div>
         </nav>
       </aside>
 
