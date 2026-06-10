@@ -75,8 +75,8 @@ export default function App() {
   // Logos base64 objects processed
   const logoIngentronObj = useRef<{ dark: string; light: string; width: number; height: number } | null>(null);
   const logoGruyaObj = useRef<{ dark: string; light: string; width: number; height: number } | null>(null);
-  const [logoIngentronSrc, setLogoIngentronSrc] = useState('/logo_ingentron.png');
-  const [logoGruyaSrc, setLogoGruyaSrc] = useState('/logo_gruya.jpg');
+  const [logoIngentronSrc, setLogoIngentronSrc] = useState(`${import.meta.env.BASE_URL}logo_ingentron.png`);
+  const [logoGruyaSrc, setLogoGruyaSrc] = useState(`${import.meta.env.BASE_URL}logo_gruya.jpg`);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [isSyncPanelExpanded, setIsSyncPanelExpanded] = useState(false);
 
@@ -294,11 +294,11 @@ export default function App() {
       };
     };
 
-    processLogo('/logo_ingentron.png', false, (res) => {
+    processLogo(`${import.meta.env.BASE_URL}logo_ingentron.png`, false, (res) => {
       logoIngentronObj.current = res;
       setLogoIngentronSrc(res.dark);
     });
-    processLogo('/logo_gruya.jpg', true, (res) => {
+    processLogo(`${import.meta.env.BASE_URL}logo_gruya.jpg`, true, (res) => {
       logoGruyaObj.current = res;
       setLogoGruyaSrc(res.dark);
     });
@@ -356,7 +356,7 @@ export default function App() {
     if (!silent) setIsCuentasCorrientesLoading(true);
 
     try {
-      const response = await fetch('/api/saldos');
+      const response = await fetch(`${import.meta.env.BASE_URL}api/saldos`);
       if (!response.ok) throw new Error('No se pudo cargar la información de saldos desde el servidor.');
       const data = await response.json();
       setGlobalData(data);
@@ -372,7 +372,7 @@ export default function App() {
     if (!silent) setIsStockLoading(true);
 
     try {
-      const response = await fetch('/api/stock');
+      const response = await fetch(`${import.meta.env.BASE_URL}api/stock`);
       if (response.ok) {
         const data = await response.json();
         let rawList: StockItem[] = [];
@@ -418,7 +418,7 @@ export default function App() {
 
   const loadSyncStatus = async () => {
     try {
-      const res = await fetch('/api/sync-status');
+      const res = await fetch(`${import.meta.env.BASE_URL}api/sync-status`);
       if (!res.ok) return;
       const status = await res.json();
       setSyncStatus(status);
@@ -1990,6 +1990,7 @@ export default function App() {
           <div className="logo-badge" style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', padding: '4px 10px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '32px' }}>
             <img src={logoGruyaSrc} alt="Gruya S.R.L." style={{ maxHeight: '20px', width: 'auto', objectFit: 'contain' }} />
           </div>
+          <span className="beta-badge">Beta</span>
         </div>
         <nav className="nav-menu">
           <div className={`nav-item ${currentView === 'dashboard' ? 'active' : ''}`} onClick={() => { navigateToModule('dashboard'); setIsSidebarCollapsed(true); }}>
@@ -2025,6 +2026,7 @@ export default function App() {
             <div className="logo-badge" style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', padding: '4px 10px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '32px' }}>
               <img src={logoGruyaSrc} alt="Gruya S.R.L." style={{ maxHeight: '20px', width: 'auto', objectFit: 'contain' }} />
             </div>
+            <span className="beta-badge">Beta</span>
           </div>
           <div style={{ width: '40px' }}></div>
         </div>
@@ -2051,6 +2053,7 @@ export default function App() {
               <div className="logo-badge" style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', padding: '4px 10px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '32px' }}>
                 <img src={logoGruyaSrc} alt="Gruya" style={{ maxHeight: '20px', width: 'auto', objectFit: 'contain' }} />
               </div>
+              <span className="beta-badge">Beta</span>
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -2165,18 +2168,21 @@ export default function App() {
           {currentView === 'home' && (
             <div id="home-view" className="view-section" style={{ display: 'flex', minHeight: 'calc(100vh - 100px)', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box' }}>
               <div style={{ maxWidth: '1000px', width: '100%', margin: 'auto', padding: '20px' }}>
-                <div className="home-logos-container" style={{ display: 'flex', alignItems: 'center', gap: '20px', justifyContent: 'center', marginBottom: '56px' }}>
-                  <div className="glowing-logo-badge brand-ingentron">
-                    <div className="glowing-logo-badge-inner">
-                      <img src={logoIngentronSrc} alt="Ingentron" id="home-logo-ingentron" style={{ maxHeight: '44px', width: 'auto', objectFit: 'contain' }} />
+                <div className="home-logos-container" style={{ display: 'flex', alignItems: 'center', gap: '20px', justifyContent: 'center', marginBottom: '56px', flexDirection: 'column' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '20px', justifyContent: 'center' }}>
+                    <div className="glowing-logo-badge brand-ingentron">
+                      <div className="glowing-logo-badge-inner">
+                        <img src={logoIngentronSrc} alt="Ingentron" id="home-logo-ingentron" style={{ maxHeight: '44px', width: 'auto', objectFit: 'contain' }} />
+                      </div>
+                    </div>
+                    <div className="logo-separator" style={{ width: '1px', height: '36px', background: 'rgba(255,255,255,0.15)' }}></div>
+                    <div className="glowing-logo-badge brand-gruya">
+                      <div className="glowing-logo-badge-inner">
+                        <img src={logoGruyaSrc} alt="Gruya" id="home-logo-gruya" style={{ maxHeight: '44px', width: 'auto', objectFit: 'contain' }} />
+                      </div>
                     </div>
                   </div>
-                  <div className="logo-separator" style={{ width: '1px', height: '36px', background: 'rgba(255,255,255,0.15)' }}></div>
-                  <div className="glowing-logo-badge brand-gruya">
-                    <div className="glowing-logo-badge-inner">
-                      <img src={logoGruyaSrc} alt="Gruya" id="home-logo-gruya" style={{ maxHeight: '44px', width: 'auto', objectFit: 'contain' }} />
-                    </div>
-                  </div>
+                  <span className="beta-badge" style={{ fontSize: '12px', padding: '4px 12px', borderRadius: '10px' }}>Versión Beta</span>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 340px))', gap: '24px', justifyContent: 'center', maxWidth: '720px', margin: '0 auto' }}>

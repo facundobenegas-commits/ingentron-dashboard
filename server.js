@@ -11,7 +11,7 @@ const app = express();
 
 // Servir archivos estáticos del dashboard con control de caché estricto para HTML
 const DIST_DIR = path.join(__dirname, 'dist');
-app.use(express.static(DIST_DIR, {
+app.use('/beta', express.static(DIST_DIR, {
     setHeaders: (res, filepath) => {
         if (path.extname(filepath) === '.html') {
             res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -243,7 +243,7 @@ function parseSaldosNuevo(rows, originName) {
 }
 
 // Endpoint para proveer el archivo Excel al frontend de forma segura (Compatible con versión estable)
-app.get('/api/excel', (req, res) => {
+app.get(['/api/excel', '/beta/api/excel'], (req, res) => {
     const excelPath = path.join(__dirname, 'QUERY.xlsx');
     res.sendFile(excelPath);
 });
@@ -252,7 +252,7 @@ app.get('/api/excel', (req, res) => {
 const SYNC_TOKEN = process.env.SYNC_TOKEN || "TokenIngentronSeguro2026";
 
 // Endpoint POST seguro para recibir saldos procesados en tiempo real desde los sincronizadores locales
-app.post('/api/update-saldos', express.json({ limit: '15mb' }), (req, res) => {
+app.post(['/api/update-saldos', '/beta/api/update-saldos'], express.json({ limit: '15mb' }), (req, res) => {
     const clientToken = req.headers['x-sync-token'];
     if (clientToken !== SYNC_TOKEN) {
         console.warn("[Sync] Intento de sincronización no autorizado.");
@@ -323,7 +323,7 @@ app.post('/api/update-saldos', express.json({ limit: '15mb' }), (req, res) => {
 // --- SISTEMA DE CONTROL DE VENCIMIENTOS DE STOCK (DIGIP WMS NUBE) ---
 
 // Endpoint POST para recibir actualizaciones de stock desde el bot rpa
-app.post('/api/update-stock', express.json({ limit: '15mb' }), (req, res) => {
+app.post(['/api/update-stock', '/beta/api/update-stock'], express.json({ limit: '15mb' }), (req, res) => {
     const clientToken = req.headers['x-sync-token'];
     if (clientToken !== SYNC_TOKEN) {
         console.warn("[Stock Sync] Intento de sincronización no autorizado.");
@@ -403,7 +403,7 @@ app.post('/api/update-stock', express.json({ limit: '15mb' }), (req, res) => {
 });
 
 // Endpoint GET para servir el stock consolidado (usado por el dashboard beta)
-app.get('/api/stock', (req, res) => {
+app.get(['/api/stock', '/beta/api/stock'], (req, res) => {
     const cachePath = path.join(DATA_DIR, 'stock_cache.json');
     const historyPath = path.join(DATA_DIR, 'stock_history.json');
     
@@ -430,7 +430,7 @@ app.get('/api/stock', (req, res) => {
 });
 
 // Endpoint para consultar el estado de la última sincronización de los servidores locales
-app.get('/api/sync-status', (req, res) => {
+app.get(['/api/sync-status', '/beta/api/sync-status'], (req, res) => {
     const statusPath = path.join(DATA_DIR, 'sync_status.json');
     let syncStatus = { Aguas: null, PepsiCo: null, 'Trenque Lauquen': null, Salliquelo: null, Digip: null };
     if (fs.existsSync(statusPath)) {
@@ -443,7 +443,7 @@ app.get('/api/sync-status', (req, res) => {
 });
 
 // Endpoint unificado y ultra-rápido en tiempo real (para versión Beta)
-app.get('/api/saldos', async (req, res) => {
+app.get(['/api/saldos', '/beta/api/saldos'], async (req, res) => {
     // 0. Si existe el archivo caché sincronizado (ej. en Render), lo servimos instantáneamente
     const cachePath = path.join(DATA_DIR, 'saldos_cache.json');
     if (fs.existsSync(cachePath)) {
@@ -576,17 +576,25 @@ app.get('/api/saldos', async (req, res) => {
     res.json(globalData);
 });
 
-// Redireccionar antiguas URLs de Beta a la versión estable en la raíz
-app.get(/^\/beta/, (req, res) => {
-    res.redirect('/');
+// Redireccionar la raíz a la versión beta
+app.get('/', (req, res) => {
+    res.redirect('/beta/');
 });
 
-// Catch-all para la versión estable (HTML5 History API)
+// Catch-all para la versión Beta (HTML5 History API)
+app.get(/^\/beta/, (req, res) => {
+    if (req.path.startsWith('/beta/api')) {
+        return res.status(404).json({ error: 'Not Found' });
+    }
+    res.sendFile(path.join(DIST_DIR, 'index.html'));
+});
+
+// Redireccionar cualquier otra ruta a /beta/
 app.get('/*splat', (req, res) => {
     if (req.path.startsWith('/api')) {
         return res.status(404).json({ error: 'Not Found' });
     }
-    res.sendFile(path.join(DIST_DIR, 'index.html'));
+    res.redirect('/beta/');
 });
 
 const PORT = process.env.PORT || 3000;
