@@ -29,3 +29,21 @@ export interface SyncStatus {
   Digip: string | null;
   Serenisima: string | null;
 }
+
+export interface ModulePermissions {
+  visible: boolean;
+  writable: boolean;
+}
+
+export interface UserPermissions {
+  dashboard: ModulePermissions;
+  stockExpiration: ModulePermissions;
+  usersManagement: ModulePermissions;
+}
+
+export interface User {
+  username: string;
+  displayName: string;
+  role: 'admin' | 'custom';
+  permissions: UserPermissions;
+}

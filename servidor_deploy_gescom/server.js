@@ -3,9 +3,106 @@ const path = require('path');
 const fs = require('fs');
 const XLSX = require('xlsx');
 const firebird = require('node-firebird');
+const crypto = require('crypto');
 
 const DATA_DIR = process.env.DATA_DIR || (fs.existsSync('/data') ? '/data' : __dirname);
 console.log(`[Persistence] Usando directorio de persistencia: ${DATA_DIR}`);
+
+const SYNC_TOKEN = process.env.SYNC_TOKEN || "TokenIngentronSeguro2026";
+
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
+
+function hashPassword(password) {
+    return crypto.createHash('sha256').update(password).digest('hex');
+}
+
+function loadUsers() {
+    if (!fs.existsSync(USERS_FILE)) {
+        const defaultUsers = [
+            {
+                username: 'facundo',
+                displayName: 'Facundo',
+                passwordHash: hashPassword('2278389'),
+                role: 'admin',
+                permissions: {
+                    dashboard: { visible: true, writable: true },
+                    stockExpiration: { visible: true, writable: true },
+                    usersManagement: { visible: true, writable: true }
+                }
+            }
+        ];
+        fs.writeFileSync(USERS_FILE, JSON.stringify(defaultUsers, null, 2), 'utf8');
+        return defaultUsers;
+    }
+    try {
+        return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
+    } catch (e) {
+        console.error("Error reading users file, returning empty array:", e);
+        return [];
+    }
+}
+
+function saveUsers(users) {
+    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf8');
+}
+
+// Bootstrap users.json
+loadUsers();
+
+// In-memory active session store: token -> user object
+const activeSessions = new Map();
+
+function authenticateToken(req, res, next) {
+    // Sync bots bypass token verification if they provide a valid x-sync-token
+    const syncToken = req.headers['x-sync-token'];
+    if (syncToken === SYNC_TOKEN) {
+        return next();
+    }
+
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ error: 'Token de sesión requerido.' });
+    }
+
+    const user = activeSessions.get(token);
+    if (!user) {
+        return res.status(403).json({ error: 'Sesión inválida o expirada.' });
+    }
+
+    req.user = user;
+    next();
+}
+
+function requireModulePermission(module, action = 'visible') {
+    return (req, res, next) => {
+        // Sync bots bypass token verification if they provide a valid x-sync-token
+        const syncToken = req.headers['x-sync-token'];
+        if (syncToken === SYNC_TOKEN) {
+            return next();
+        }
+
+        if (!req.user) {
+            return res.status(401).json({ error: 'Token de sesión requerido.' });
+        }
+
+        if (req.user.role === 'admin') {
+            return next();
+        }
+
+        const permissions = req.user.permissions;
+        if (permissions && permissions[module] && permissions[module][action]) {
+            return next();
+        }
+
+        return res.status(403).json({ error: `No tienes permiso para acceder a este recurso.` });
+    };
+}
+
+function requireUserManagementPermission(req, res, next) {
+    return requireModulePermission('usersManagement', 'visible')(req, res, next);
+}
 
 const app = express();
 
@@ -243,13 +340,178 @@ function parseSaldosNuevo(rows, originName) {
 }
 
 // Endpoint para proveer el archivo Excel al frontend de forma segura (Compatible con versión estable)
-app.get(['/api/excel', '/beta/api/excel'], (req, res) => {
+app.get(['/api/excel', '/beta/api/excel'], authenticateToken, requireModulePermission('dashboard', 'visible'), (req, res) => {
     const excelPath = path.join(__dirname, 'QUERY.xlsx');
     res.sendFile(excelPath);
 });
 
+// --- SESIONES Y AUTENTICACIÓN ---
+app.post('/beta/api/login', express.json(), (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password) {
+        return res.status(400).json({ error: 'Usuario y contraseña requeridos.' });
+    }
+
+    const users = loadUsers();
+    const user = users.find(u => u.username === username.toLowerCase());
+
+    if (!user || user.passwordHash !== hashPassword(password)) {
+        return res.status(401).json({ error: 'Usuario o contraseña incorrectos.' });
+    }
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const sessionUser = {
+        username: user.username,
+        displayName: user.displayName,
+        role: user.role,
+        permissions: user.permissions
+    };
+    activeSessions.set(token, sessionUser);
+
+    res.json({ token, user: sessionUser });
+});
+
+app.post('/beta/api/logout', (req, res) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    if (token) {
+        activeSessions.delete(token);
+    }
+    res.json({ success: true });
+});
+
+// --- ADMINISTRACIÓN DE USUARIOS ---
+app.get('/beta/api/users', authenticateToken, requireUserManagementPermission, (req, res) => {
+    const users = loadUsers();
+    const sanitizedUsers = users.map(u => ({
+        username: u.username,
+        displayName: u.displayName,
+        role: u.role,
+        permissions: u.permissions
+    }));
+    res.json(sanitizedUsers);
+});
+
+app.post('/beta/api/users', express.json(), authenticateToken, requireUserManagementPermission, (req, res) => {
+    const { username, displayName, password, role, permissions } = req.body;
+    
+    if (!username || !displayName || !password || !role || !permissions) {
+        return res.status(400).json({ error: 'Faltan campos requeridos.' });
+    }
+
+    if (password.length < 5) {
+        return res.status(400).json({ error: 'La contraseña debe tener al menos 5 caracteres.' });
+    }
+
+    const users = loadUsers();
+    const lowerUsername = username.trim().toLowerCase();
+
+    if (users.some(u => u.username === lowerUsername)) {
+        return res.status(400).json({ error: 'El nombre de usuario ya está registrado.' });
+    }
+
+    const newUser = {
+        username: lowerUsername,
+        displayName: displayName.trim(),
+        passwordHash: hashPassword(password),
+        role,
+        permissions
+    };
+
+    users.push(newUser);
+    saveUsers(users);
+
+    res.status(201).json({
+        username: newUser.username,
+        displayName: newUser.displayName,
+        role: newUser.role,
+        permissions: newUser.permissions
+    });
+});
+
+app.put('/beta/api/users/:username', express.json(), authenticateToken, requireUserManagementPermission, (req, res) => {
+    const targetUsername = req.params.username.toLowerCase();
+    const { role, permissions } = req.body;
+
+    if (!role || !permissions) {
+        return res.status(400).json({ error: 'Faltan campos requeridos.' });
+    }
+
+    const users = loadUsers();
+    const userIndex = users.findIndex(u => u.username === targetUsername);
+
+    if (userIndex === -1) {
+        return res.status(404).json({ error: 'Usuario no encontrado.' });
+    }
+
+    users[userIndex].role = role;
+    users[userIndex].permissions = permissions;
+
+    saveUsers(users);
+
+    for (const [token, sessionUser] of activeSessions.entries()) {
+        if (sessionUser.username === targetUsername) {
+            sessionUser.role = role;
+            sessionUser.permissions = permissions;
+        }
+    }
+
+    res.json({
+        username: users[userIndex].username,
+        displayName: users[userIndex].displayName,
+        role: users[userIndex].role,
+        permissions: users[userIndex].permissions
+    });
+});
+
+app.put('/beta/api/users/:username/password', express.json(), authenticateToken, requireUserManagementPermission, (req, res) => {
+    const targetUsername = req.params.username.toLowerCase();
+    const { password } = req.body;
+
+    if (!password || password.length < 5) {
+        return res.status(400).json({ error: 'La contraseña debe tener al menos 5 caracteres.' });
+    }
+
+    const users = loadUsers();
+    const userIndex = users.findIndex(u => u.username === targetUsername);
+
+    if (userIndex === -1) {
+        return res.status(404).json({ error: 'Usuario no encontrado.' });
+    }
+
+    users[userIndex].passwordHash = hashPassword(password);
+    saveUsers(users);
+
+    res.json({ success: true, message: 'Contraseña actualizada.' });
+});
+
+app.delete('/beta/api/users/:username', authenticateToken, requireUserManagementPermission, (req, res) => {
+    const targetUsername = req.params.username.toLowerCase();
+
+    if (req.user.username === targetUsername) {
+        return res.status(400).json({ error: 'No puedes eliminar tu propio usuario.' });
+    }
+
+    const users = loadUsers();
+    const userIndex = users.findIndex(u => u.username === targetUsername);
+
+    if (userIndex === -1) {
+        return res.status(404).json({ error: 'Usuario no encontrado.' });
+    }
+
+    users.splice(userIndex, 1);
+    saveUsers(users);
+
+    for (const [token, sessionUser] of activeSessions.entries()) {
+        if (sessionUser.username === targetUsername) {
+            activeSessions.delete(token);
+        }
+    }
+
+    res.json({ success: true, message: 'Usuario eliminado.' });
+});
+
 // --- SISTEMA DE SINCRONIZACIÓN SEGURO (BETA NUBE) ---
-const SYNC_TOKEN = process.env.SYNC_TOKEN || "TokenIngentronSeguro2026";
 
 // Endpoint POST seguro para recibir saldos procesados en tiempo real desde los sincronizadores locales
 app.post(['/api/update-saldos', '/beta/api/update-saldos'], express.json({ limit: '15mb' }), (req, res) => {
@@ -403,7 +665,7 @@ app.post(['/api/update-stock', '/beta/api/update-stock'], express.json({ limit: 
 });
 
 // Endpoint GET para servir el stock consolidado (usado por el dashboard beta)
-app.get(['/api/stock', '/beta/api/stock'], (req, res) => {
+app.get(['/api/stock', '/beta/api/stock'], authenticateToken, requireModulePermission('stockExpiration', 'visible'), (req, res) => {
     const cachePath = path.join(DATA_DIR, 'stock_cache.json');
     const historyPath = path.join(DATA_DIR, 'stock_history.json');
     
@@ -430,7 +692,7 @@ app.get(['/api/stock', '/beta/api/stock'], (req, res) => {
 });
 
 // Endpoint para consultar el estado de la última sincronización de los servidores locales
-app.get(['/api/sync-status', '/beta/api/sync-status'], (req, res) => {
+app.get(['/api/sync-status', '/beta/api/sync-status'], authenticateToken, (req, res) => {
     const statusPath = path.join(DATA_DIR, 'sync_status.json');
     let syncStatus = { Aguas: null, PepsiCo: null, 'Trenque Lauquen': null, Salliquelo: null, Digip: null };
     if (fs.existsSync(statusPath)) {
@@ -443,7 +705,7 @@ app.get(['/api/sync-status', '/beta/api/sync-status'], (req, res) => {
 });
 
 // Endpoint unificado y ultra-rápido en tiempo real (para versión Beta)
-app.get(['/api/saldos', '/beta/api/saldos'], async (req, res) => {
+app.get(['/api/saldos', '/beta/api/saldos'], authenticateToken, requireModulePermission('dashboard', 'visible'), async (req, res) => {
     // 0. Si existe el archivo caché sincronizado (ej. en Render), lo servimos instantáneamente
     const cachePath = path.join(DATA_DIR, 'saldos_cache.json');
     if (fs.existsSync(cachePath)) {

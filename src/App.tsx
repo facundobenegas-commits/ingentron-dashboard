@@ -3,7 +3,9 @@ import { Chart, registerables } from 'chart.js';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
-import { Saldo, StockItem, SyncStatus } from './types';
+import { Saldo, StockItem, SyncStatus, User } from './types';
+import { Login } from './components/Login';
+import { UserManagement } from './components/UserManagement';
 
 Chart.register(...registerables);
 
@@ -25,8 +27,61 @@ const empresaToOrigins: Record<string, string[]> = {
 
 export default function App() {
   // Navigation Routing
-  const [currentView, setCurrentView] = useState<'home' | 'dashboard' | 'stock-expiration'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'dashboard' | 'stock-expiration' | 'users-management'>('home');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+
+  // User Authentication State
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string>('');
+  const [isSessionLoading, setIsSessionLoading] = useState(true);
+
+  useEffect(() => {
+    const savedToken = localStorage.getItem('ingentron_token');
+    const savedUser = localStorage.getItem('ingentron_user');
+    if (savedToken && savedUser) {
+      setToken(savedToken);
+      try {
+        setCurrentUser(JSON.parse(savedUser));
+      } catch (e) {
+        localStorage.removeItem('ingentron_token');
+        localStorage.removeItem('ingentron_user');
+      }
+    }
+    setIsSessionLoading(false);
+  }, []);
+
+  const handleLoginSuccess = (user: User, sessionToken: string) => {
+    setCurrentUser(user);
+    setToken(sessionToken);
+    localStorage.setItem('ingentron_token', sessionToken);
+    localStorage.setItem('ingentron_user', JSON.stringify(user));
+  };
+
+  const handleLogout = async () => {
+    if (token) {
+      try {
+        await fetch('/beta/api/logout', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+      } catch (e) {
+        console.error("Error calling logout endpoint:", e);
+      }
+    }
+    setCurrentUser(null);
+    setToken('');
+    localStorage.removeItem('ingentron_token');
+    localStorage.removeItem('ingentron_user');
+    navigateToModule('home');
+  };
+
+  const isModuleVisible = (module: 'dashboard' | 'stockExpiration' | 'usersManagement') => {
+    if (!currentUser) return false;
+    if (currentUser.role === 'admin') return true;
+    return currentUser.permissions[module]?.visible || false;
+  };
 
   // Data State
   const [globalData, setGlobalData] = useState<Saldo[]>([]);
@@ -106,6 +161,8 @@ export default function App() {
         setCurrentView('dashboard');
       } else if (path.includes('/ControlVencimientos')) {
         setCurrentView('stock-expiration');
+      } else if (path.includes('/Configuracion')) {
+        setCurrentView('users-management');
       } else {
         setCurrentView('home');
       }
@@ -116,10 +173,11 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  const navigateToModule = (view: 'home' | 'dashboard' | 'stock-expiration') => {
+  const navigateToModule = (view: 'home' | 'dashboard' | 'stock-expiration' | 'users-management') => {
     let path = '/';
     if (view === 'dashboard') path = '/CuentasCorrientes';
     else if (view === 'stock-expiration') path = '/ControlVencimientos';
+    else if (view === 'users-management') path = '/Configuracion';
     window.history.pushState({ module: view }, '', path);
     setCurrentView(view);
     setShowMobileFilters(false);
@@ -352,11 +410,16 @@ export default function App() {
 
   // --- DATA LOADING ENGINES ---
   const loadCuentasCorrientesData = async (force = false, silent = false) => {
+    if (!token) return;
     if (globalData.length > 0 && !force) return;
     if (!silent) setIsCuentasCorrientesLoading(true);
 
     try {
-      const response = await fetch(`${import.meta.env.BASE_URL}api/saldos`);
+      const response = await fetch(`${import.meta.env.BASE_URL}api/saldos`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (!response.ok) throw new Error('No se pudo cargar la información de saldos desde el servidor.');
       const data = await response.json();
       setGlobalData(data);
@@ -368,11 +431,16 @@ export default function App() {
   };
 
   const loadStockData = async (force = false, silent = false) => {
+    if (!token) return;
     if (isRealStockLoaded && !force) return;
     if (!silent) setIsStockLoading(true);
 
     try {
-      const response = await fetch(`${import.meta.env.BASE_URL}api/stock`);
+      const response = await fetch(`${import.meta.env.BASE_URL}api/stock`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (response.ok) {
         const data = await response.json();
         let rawList: StockItem[] = [];
@@ -417,8 +485,13 @@ export default function App() {
   };
 
   const loadSyncStatus = async () => {
+    if (!token) return;
     try {
-      const res = await fetch(`${import.meta.env.BASE_URL}api/sync-status`);
+      const res = await fetch(`${import.meta.env.BASE_URL}api/sync-status`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (!res.ok) return;
       const status = await res.json();
       setSyncStatus(status);
@@ -1973,6 +2046,18 @@ export default function App() {
     return serverKeys.some(k => isSyncServerOffline(k));
   }, [syncStatus]);
 
+  if (isSessionLoading) {
+    return (
+      <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center', background: '#040406', color: 'var(--text-secondary)' }}>
+        <i className="fas fa-circle-notch fa-spin" style={{ fontSize: '32px', color: 'var(--accent-color)' }}></i>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return <Login onLoginSuccess={handleLoginSuccess} />;
+  }
+
   return (
     <div className={`app-container ${currentView === 'home' ? 'route-home' : ''}`}>
       
@@ -1993,15 +2078,27 @@ export default function App() {
           <span className="beta-badge">Beta</span>
         </div>
         <nav className="nav-menu">
-          <div className={`nav-item ${currentView === 'dashboard' ? 'active' : ''}`} onClick={() => { navigateToModule('dashboard'); setIsSidebarCollapsed(true); }}>
-            <i className="fas fa-wallet"></i> <span>Cuentas Corrientes</span>
-          </div>
-          <div className={`nav-item ${currentView === 'stock-expiration' ? 'active' : ''}`} onClick={() => { navigateToModule('stock-expiration'); setIsSidebarCollapsed(true); }}>
-            <i className="fas fa-boxes"></i> <span>Vencimientos Stock</span>
-          </div>
+          {isModuleVisible('dashboard') && (
+            <div className={`nav-item ${currentView === 'dashboard' ? 'active' : ''}`} onClick={() => { navigateToModule('dashboard'); setIsSidebarCollapsed(true); }}>
+              <i className="fas fa-wallet"></i> <span>Cuentas Corrientes</span>
+            </div>
+          )}
+          {isModuleVisible('stockExpiration') && (
+            <div className={`nav-item ${currentView === 'stock-expiration' ? 'active' : ''}`} onClick={() => { navigateToModule('stock-expiration'); setIsSidebarCollapsed(true); }}>
+              <i className="fas fa-boxes"></i> <span>Vencimientos Stock</span>
+            </div>
+          )}
+          {isModuleVisible('usersManagement') && (
+            <div className={`nav-item ${currentView === 'users-management' ? 'active' : ''}`} onClick={() => { navigateToModule('users-management'); setIsSidebarCollapsed(true); }}>
+              <i className="fas fa-users-cog"></i> <span>Configuración</span>
+            </div>
+          )}
           <div style={{ flex: 1 }}></div>
           <div className="nav-item stable-link" onClick={() => window.location.href = '/'}>
             <i className="fas fa-rocket"></i> <span>Versión Estable</span>
+          </div>
+          <div className="nav-item" onClick={handleLogout} style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '16px', color: 'var(--danger-color)', cursor: 'pointer' }}>
+            <i className="fas fa-sign-out-alt"></i> <span>Cerrar Sesión</span>
           </div>
         </nav>
       </aside>
@@ -2061,13 +2158,43 @@ export default function App() {
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <h2>{currentView === 'dashboard' ? 'Cuentas Corrientes' : 'Vencimientos de Stock'}</h2>
+                <h2>
+                  {currentView === 'dashboard'
+                    ? 'Cuentas Corrientes'
+                    : currentView === 'users-management'
+                    ? 'Configuración de Usuarios'
+                    : 'Vencimientos de Stock'}
+                </h2>
               </div>
-              <p>{currentView === 'dashboard' ? 'Resumen de cuentas corrientes' : 'Módulo de control de caducidades'}</p>
+              <p>
+                {currentView === 'dashboard'
+                  ? 'Resumen de cuentas corrientes'
+                  : currentView === 'users-management'
+                  ? 'Administración de accesos y perfiles'
+                  : 'Módulo de control de caducidades'}
+              </p>
             </div>
           </div>
 
-          <div className="header-actions">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            {currentUser && (
+              <div className="user-profile-badge" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div className="user-profile-text" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{currentUser.displayName}</span>
+                  <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{currentUser.role === 'admin' ? 'Administrador' : 'Operador'}</span>
+                </div>
+                <div style={{
+                  width: '32px', height: '32px', borderRadius: '50%',
+                  background: 'linear-gradient(135deg, var(--accent-color), var(--purple-color))',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#fff', fontWeight: 700, fontSize: '13px', border: '1px solid rgba(255, 255, 255, 0.15)'
+                }}>
+                  {currentUser.displayName.charAt(0).toUpperCase()}
+                </div>
+              </div>
+            )}
+
+            <div className="header-actions">
             {currentView === 'dashboard' && (
               <>
                 <button 
@@ -2164,6 +2291,7 @@ export default function App() {
           </>
         )}
         </div>
+        </div>
         </header>
 
         <div className="content-area">
@@ -2192,43 +2320,82 @@ export default function App() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 340px))', gap: '24px', justifyContent: 'center', maxWidth: '720px', margin: '0 auto' }}>
                   
                   {/* Card: Cuentas Corrientes */}
-                  <div 
-                    className="module-card glass-card" 
-                    onClick={() => navigateToModule('dashboard')} 
-                    style={{ padding: '32px', borderRadius: '20px', cursor: 'pointer', border: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', flexDirection: 'column', gap: '20px', background: 'rgba(255, 255, 255, 0.02)', minHeight: '220px' }}
-                  >
-                    <div className="module-icon-container" style={{ width: '56px', height: '56px', borderRadius: '14px', background: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6', display: 'flex', alignItems: 'center', justifySpace: 'center', justifyContent: 'center', fontSize: '24px' }}>
-                      <i className="fas fa-wallet"></i>
+                  {isModuleVisible('dashboard') && (
+                    <div 
+                      className="module-card glass-card" 
+                      onClick={() => navigateToModule('dashboard')} 
+                      style={{ padding: '32px', borderRadius: '20px', cursor: 'pointer', border: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', flexDirection: 'column', gap: '20px', background: 'rgba(255, 255, 255, 0.02)', minHeight: '220px' }}
+                    >
+                      <div className="module-icon-container" style={{ width: '56px', height: '56px', borderRadius: '14px', background: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6', display: 'flex', alignItems: 'center', justifySpace: 'center', justifyContent: 'center', fontSize: '24px' }}>
+                        <i className="fas fa-wallet"></i>
+                      </div>
+                      <div>
+                        <h3 style={{ fontSize: '20px', fontWeight: 600, color: '#fff', marginBottom: '8px' }}>Cuentas Corrientes</h3>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: 1.5 }}>Monitoreo de saldos de clientes, facturas pendientes y evolución histórica de deudas.</p>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#3b82f6', marginTop: 'auto' }}>
+                        <span>Acceder</span> <i className="fas fa-chevron-right" style={{ fontSize: '10px' }}></i>
+                      </div>
                     </div>
-                    <div>
-                      <h3 style={{ fontSize: '20px', fontWeight: 600, color: '#fff', marginBottom: '8px' }}>Cuentas Corrientes</h3>
-                      <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: 1.5 }}>Monitoreo de saldos de clientes, facturas pendientes y evolución histórica de deudas.</p>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#3b82f6', marginTop: 'auto' }}>
-                      <span>Acceder</span> <i className="fas fa-chevron-right" style={{ fontSize: '10px' }}></i>
-                    </div>
-                  </div>
+                  )}
 
                   {/* Card: Control de Vencimientos */}
-                  <div 
-                    className="module-card glass-card" 
-                    onClick={() => navigateToModule('stock-expiration')} 
-                    style={{ padding: '32px', borderRadius: '20px', cursor: 'pointer', border: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', flexDirection: 'column', gap: '20px', background: 'rgba(255, 255, 255, 0.02)', minHeight: '220px' }}
-                  >
-                    <div className="module-icon-container" style={{ width: '56px', height: '56px', borderRadius: '14px', background: 'rgba(139, 92, 246, 0.12)', color: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>
-                      <i className="fas fa-boxes"></i>
+                  {isModuleVisible('stockExpiration') && (
+                    <div 
+                      className="module-card glass-card" 
+                      onClick={() => navigateToModule('stock-expiration')} 
+                      style={{ padding: '32px', borderRadius: '20px', cursor: 'pointer', border: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', flexDirection: 'column', gap: '20px', background: 'rgba(255, 255, 255, 0.02)', minHeight: '220px' }}
+                    >
+                      <div className="module-icon-container" style={{ width: '56px', height: '56px', borderRadius: '14px', background: 'rgba(139, 92, 246, 0.12)', color: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>
+                        <i className="fas fa-boxes"></i>
+                      </div>
+                      <div>
+                        <h3 style={{ fontSize: '20px', fontWeight: 600, color: '#fff', marginBottom: '8px' }}>Control de Vencimientos</h3>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: 1.5 }}>Gestión de caducidad de artículos sincronizada con DIGIP WMS.</p>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#8b5cf6', marginTop: 'auto' }}>
+                        <span>Acceder</span> <i className="fas fa-chevron-right" style={{ fontSize: '10px' }}></i>
+                      </div>
                     </div>
-                    <div>
-                      <h3 style={{ fontSize: '20px', fontWeight: 600, color: '#fff', marginBottom: '8px' }}>Control de Vencimientos</h3>
-                      <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: 1.5 }}>Gestión de caducidad de artículos sincronizada con DIGIP WMS.</p>
+                  )}
+
+                  {/* Card: Configuración de Usuarios */}
+                  {isModuleVisible('usersManagement') && (
+                    <div 
+                      className="module-card glass-card" 
+                      onClick={() => navigateToModule('users-management')} 
+                      style={{ padding: '32px', borderRadius: '20px', cursor: 'pointer', border: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', flexDirection: 'column', gap: '20px', background: 'rgba(255, 255, 255, 0.02)', minHeight: '220px' }}
+                    >
+                      <div className="module-icon-container" style={{ width: '56px', height: '56px', borderRadius: '14px', background: 'rgba(191, 90, 242, 0.12)', color: 'var(--purple-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>
+                        <i className="fas fa-users-cog"></i>
+                      </div>
+                      <div>
+                        <h3 style={{ fontSize: '20px', fontWeight: 600, color: '#fff', marginBottom: '8px' }}>Administrar Usuarios</h3>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: 1.5 }}>Controlar perfiles, contraseñas y permisos del personal.</p>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: 'var(--purple-color)', marginTop: 'auto' }}>
+                        <span>Acceder</span> <i className="fas fa-chevron-right" style={{ fontSize: '10px' }}></i>
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#8b5cf6', marginTop: 'auto' }}>
-                      <span>Acceder</span> <i className="fas fa-chevron-right" style={{ fontSize: '10px' }}></i>
+                  )}
+
+                  {!isModuleVisible('dashboard') && !isModuleVisible('stockExpiration') && !isModuleVisible('usersManagement') && (
+                    <div className="glass-card" style={{ padding: '40px', textAlign: 'center', gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px' }}>
+                      <i className="fas fa-user-lock" style={{ fontSize: '48px', color: 'var(--danger-color)', marginBottom: '10px' }}></i>
+                      <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#fff' }}>Acceso Restringido</h3>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '13px', maxWidth: '400px', lineHeight: 1.5 }}>No tienes permisos habilitados para acceder a ningún módulo del sistema. Por favor, contacta a un administrador.</p>
                     </div>
-                  </div>
+                  )}
 
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* CONFIGURACIÓN DE USUARIOS VIEW */}
+          {currentView === 'users-management' && isModuleVisible('usersManagement') && (
+            <div id="users-management-view" className="view-section">
+              <UserManagement token={token} currentUser={currentUser} />
             </div>
           )}
 
