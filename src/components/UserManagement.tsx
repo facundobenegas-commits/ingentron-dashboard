@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, UserPermissions } from '../types';
+import { User, UserPermissions, RegistrationRequest } from '../types';
 
 interface UserManagementProps {
   token: string;
@@ -29,6 +29,16 @@ export const UserManagement: React.FC<UserManagementProps> = ({ token, currentUs
   const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null);
   const [newPasswordVal, setNewPasswordVal] = useState('');
 
+  // Registration requests states
+  const [registrationRequests, setRegistrationRequests] = useState<RegistrationRequest[]>([]);
+  const [approvingRequest, setApprovingRequest] = useState<RegistrationRequest | null>(null);
+  const [approveRole, setApproveRole] = useState<'admin' | 'custom'>('custom');
+  const [approvePermissions, setApprovePermissions] = useState<UserPermissions>({
+    dashboard: { visible: true, writable: false },
+    stockExpiration: { visible: true, writable: false },
+    usersManagement: { visible: false, writable: false }
+  });
+
   const fetchUsers = async () => {
     setLoading(true);
     setError('');
@@ -52,7 +62,24 @@ export const UserManagement: React.FC<UserManagementProps> = ({ token, currentUs
 
   useEffect(() => {
     fetchUsers();
+    fetchRegistrationRequests();
   }, [token]);
+
+  const fetchRegistrationRequests = async () => {
+    try {
+      const response = await fetch('/beta/api/registration-requests', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setRegistrationRequests(data);
+      }
+    } catch (err) {
+      // Silently fail - requests section is optional
+    }
+  };
 
   // Flash message helpers
   const triggerSuccess = (msg: string) => {
@@ -253,6 +280,86 @@ export const UserManagement: React.FC<UserManagementProps> = ({ token, currentUs
     setNewPermissions(updated);
   };
 
+  const handleApprovePermissionToggle = (module: keyof UserPermissions, field: 'visible' | 'writable') => {
+    const currentPerm = approvePermissions[module];
+    const updatedVal = !currentPerm[field];
+    
+    const updated = {
+      ...approvePermissions,
+      [module]: {
+        ...currentPerm,
+        [field]: updatedVal
+      }
+    };
+
+    if (field === 'writable' && updatedVal) {
+      updated[module].visible = true;
+    }
+
+    setApprovePermissions(updated);
+  };
+
+  const handleApproveRequest = async (request: RegistrationRequest) => {
+    try {
+      const response = await fetch(`/beta/api/registration-requests/${request.id}/approve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          role: approveRole,
+          permissions: approvePermissions
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al aprobar la solicitud.');
+      }
+
+      triggerSuccess(data.message || `Solicitud de "${request.username}" aprobada.`);
+      setApprovingRequest(null);
+      setApproveRole('custom');
+      setApprovePermissions({
+        dashboard: { visible: true, writable: false },
+        stockExpiration: { visible: true, writable: false },
+        usersManagement: { visible: false, writable: false }
+      });
+      fetchRegistrationRequests();
+      fetchUsers();
+    } catch (err: any) {
+      triggerError(err.message);
+    }
+  };
+
+  const handleRejectRequest = async (request: RegistrationRequest) => {
+    if (!window.confirm(`¿Está seguro de que desea rechazar la solicitud de "${request.firstName} ${request.lastName}"?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/beta/api/registration-requests/${request.id}/reject`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al rechazar la solicitud.');
+      }
+
+      triggerSuccess('Solicitud rechazada correctamente.');
+      fetchRegistrationRequests();
+    } catch (err: any) {
+      triggerError(err.message);
+    }
+  };
+
+  const pendingRequests = registrationRequests.filter(r => r.status === 'pending');
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       
@@ -282,12 +389,203 @@ export const UserManagement: React.FC<UserManagementProps> = ({ token, currentUs
           <h3 style={{ fontSize: '20px', fontWeight: 600 }}><i className="fas fa-users-cog"></i> Configuración de Usuarios</h3>
           <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginTop: '4px' }}>Crea, edita y administra los permisos y roles de los usuarios del sistema.</p>
         </div>
-        {!showAddForm && !editingUser && !resetPasswordUser && (
+      {!showAddForm && !editingUser && !resetPasswordUser && !approvingRequest && (
           <button className="btn-primary" onClick={() => setShowAddForm(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '10px' }}>
             <i className="fas fa-user-plus"></i> Crear Usuario
           </button>
         )}
       </div>
+
+      {/* PENDING REGISTRATION REQUESTS */}
+      {pendingRequests.length > 0 && !approvingRequest && (
+        <div className="glass-card" style={{ padding: '24px', background: 'rgba(255, 149, 0, 0.03)', border: '1px solid rgba(255, 149, 0, 0.15)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+            <i className="fas fa-user-clock" style={{ fontSize: '20px', color: '#ff9500' }}></i>
+            <h4 style={{ fontSize: '16px', fontWeight: 600, color: '#ff9500' }}>Solicitudes de Acceso Pendientes</h4>
+            <span style={{
+              background: 'rgba(255, 149, 0, 0.15)',
+              color: '#ff9500',
+              fontSize: '12px',
+              fontWeight: 700,
+              padding: '3px 10px',
+              borderRadius: '20px',
+              minWidth: '24px',
+              textAlign: 'center'
+            }}>{pendingRequests.length}</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {pendingRequests.map(req => (
+              <div key={req.id} style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '16px 20px',
+                background: 'rgba(255, 255, 255, 0.02)',
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.05)',
+                flexWrap: 'wrap',
+                gap: '12px'
+              }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <i className="fas fa-user-circle" style={{ fontSize: '24px', color: 'var(--text-secondary)' }}></i>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '14px' }}>{req.firstName} {req.lastName}</div>
+                      <div style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>@{req.username}</div>
+                    </div>
+                  </div>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: '11px', marginLeft: '34px' }}>
+                    <i className="fas fa-clock" style={{ marginRight: '4px' }}></i>
+                    {new Date(req.createdAt).toLocaleString('es-AR')}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    className="btn-icon"
+                    title="Configurar y Aprobar"
+                    onClick={() => {
+                      setApprovingRequest(req);
+                      setApproveRole('custom');
+                      setApprovePermissions({
+                        dashboard: { visible: true, writable: false },
+                        stockExpiration: { visible: true, writable: false },
+                        usersManagement: { visible: false, writable: false }
+                      });
+                      setShowAddForm(false);
+                      setEditingUser(null);
+                      setResetPasswordUser(null);
+                    }}
+                    style={{
+                      width: 'auto',
+                      padding: '8px 16px',
+                      background: 'rgba(48, 209, 88, 0.12)',
+                      color: 'var(--success-color)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      borderRadius: '8px'
+                    }}
+                  >
+                    <i className="fas fa-check"></i> Aprobar
+                  </button>
+                  <button
+                    className="btn-icon"
+                    title="Rechazar Solicitud"
+                    onClick={() => handleRejectRequest(req)}
+                    style={{
+                      width: 'auto',
+                      padding: '8px 16px',
+                      background: 'rgba(255, 69, 58, 0.12)',
+                      color: 'var(--danger-color)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      borderRadius: '8px'
+                    }}
+                  >
+                    <i className="fas fa-times"></i> Rechazar
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* APPROVE REQUEST FORM */}
+      {approvingRequest && (
+        <div className="glass-card" style={{ padding: '24px', background: 'rgba(48, 209, 88, 0.03)', border: '1px solid rgba(48, 209, 88, 0.15)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h4 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--success-color)' }}>
+              <i className="fas fa-user-check"></i> Aprobar Solicitud: {approvingRequest.firstName} {approvingRequest.lastName} (@{approvingRequest.username})
+            </h4>
+            <button className="close-modal" onClick={() => setApprovingRequest(null)} style={{ width: '32px', height: '32px' }}><i className="fas fa-times"></i></button>
+          </div>
+
+          <div style={{ background: 'rgba(255,255,255,0.02)', padding: '14px 18px', borderRadius: '10px', marginBottom: '20px', border: '1px solid rgba(255,255,255,0.04)' }}>
+            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Datos del solicitante</div>
+            <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '14px' }}><strong>Nombre:</strong> {approvingRequest.firstName} {approvingRequest.lastName}</span>
+              <span style={{ fontSize: '14px' }}><strong>Usuario:</strong> @{approvingRequest.username}</span>
+              <span style={{ fontSize: '14px' }}><strong>Fecha:</strong> {new Date(approvingRequest.createdAt).toLocaleString('es-AR')}</span>
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '8px', fontStyle: 'italic' }}>
+              <i className="fas fa-shield-alt" style={{ marginRight: '4px' }}></i>
+              La contraseña es confidencial y fue encriptada al momento del registro.
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '240px' }}>
+                <label style={{ color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600 }}>Rol del Usuario</label>
+                <select className="glass-select" value={approveRole} onChange={(e) => setApproveRole(e.target.value as any)}>
+                  <option value="custom">Usuario Personalizado</option>
+                  <option value="admin">Administrador completo</option>
+                </select>
+              </div>
+            </div>
+
+            {approveRole === 'custom' && (
+              <div style={{ background: 'rgba(255,255,255,0.01)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <h5 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: 'var(--text-primary)' }}>Configurar Permisos por Módulo</h5>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '8px' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 500 }}>Cuentas Corrientes</span>
+                    <div style={{ display: 'flex', gap: '20px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={approvePermissions.dashboard.visible} onChange={() => handleApprovePermissionToggle('dashboard', 'visible')} />
+                        Ver
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={approvePermissions.dashboard.writable} onChange={() => handleApprovePermissionToggle('dashboard', 'writable')} />
+                        Modificar
+                      </label>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '8px' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 500 }}>Vencimientos Stock</span>
+                    <div style={{ display: 'flex', gap: '20px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={approvePermissions.stockExpiration.visible} onChange={() => handleApprovePermissionToggle('stockExpiration', 'visible')} />
+                        Ver
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={approvePermissions.stockExpiration.writable} onChange={() => handleApprovePermissionToggle('stockExpiration', 'writable')} />
+                        Modificar
+                      </label>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '4px' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 500 }}>Configuración de Usuarios</span>
+                    <div style={{ display: 'flex', gap: '20px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={approvePermissions.usersManagement.visible} onChange={() => handleApprovePermissionToggle('usersManagement', 'visible')} />
+                        Ver
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={approvePermissions.usersManagement.writable} onChange={() => handleApprovePermissionToggle('usersManagement', 'writable')} />
+                        Modificar
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '12px' }}>
+              <button type="button" className="btn-icon" onClick={() => setApprovingRequest(null)} style={{ width: 'auto', padding: '10px 20px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)' }}>Cancelar</button>
+              <button type="button" className="btn-primary" onClick={() => handleApproveRequest(approvingRequest)} style={{ padding: '10px 24px', background: 'var(--success-color)', boxShadow: '0 4px 12px rgba(48, 209, 88, 0.3)' }}>
+                <i className="fas fa-check" style={{ marginRight: '6px' }}></i>Aprobar y Crear Usuario
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* CREATE NEW USER FORM */}
       {showAddForm && (

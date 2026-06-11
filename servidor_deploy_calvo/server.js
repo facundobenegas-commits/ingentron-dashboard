@@ -11,6 +11,24 @@ console.log(`[Persistence] Usando directorio de persistencia: ${DATA_DIR}`);
 const SYNC_TOKEN = process.env.SYNC_TOKEN || "TokenIngentronSeguro2026";
 
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
+const REGISTRATION_REQUESTS_FILE = path.join(DATA_DIR, 'registration_requests.json');
+
+function loadRegistrationRequests() {
+    if (!fs.existsSync(REGISTRATION_REQUESTS_FILE)) {
+        fs.writeFileSync(REGISTRATION_REQUESTS_FILE, JSON.stringify([], null, 2), 'utf8');
+        return [];
+    }
+    try {
+        return JSON.parse(fs.readFileSync(REGISTRATION_REQUESTS_FILE, 'utf8'));
+    } catch (e) {
+        console.error("Error reading registration requests file:", e);
+        return [];
+    }
+}
+
+function saveRegistrationRequests(requests) {
+    fs.writeFileSync(REGISTRATION_REQUESTS_FILE, JSON.stringify(requests, null, 2), 'utf8');
+}
 
 function hashPassword(password) {
     return crypto.createHash('sha256').update(password).digest('hex');
@@ -509,6 +527,150 @@ app.delete('/beta/api/users/:username', authenticateToken, requireUserManagement
     }
 
     res.json({ success: true, message: 'Usuario eliminado.' });
+});
+
+// --- SOLICITUDES DE REGISTRO ---
+
+// Crear solicitud de registro (público, no requiere autenticación)
+app.post('/beta/api/registration-requests', express.json(), (req, res) => {
+    const { firstName, lastName, username, password } = req.body;
+
+    if (!firstName || !lastName || !username || !password) {
+        return res.status(400).json({ error: 'Todos los campos son requeridos.' });
+    }
+
+    const trimmedFirst = firstName.trim();
+    const trimmedLast = lastName.trim();
+    const lowerUsername = username.trim().toLowerCase();
+
+    if (!trimmedFirst || !trimmedLast || !lowerUsername) {
+        return res.status(400).json({ error: 'Todos los campos son requeridos.' });
+    }
+
+    if (password.length < 5) {
+        return res.status(400).json({ error: 'La contraseña debe tener al menos 5 caracteres.' });
+    }
+
+    // Check if username already exists as a user
+    const users = loadUsers();
+    if (users.some(u => u.username === lowerUsername)) {
+        return res.status(409).json({ error: 'Este nombre de usuario ya está registrado. Por favor, elegí uno diferente.' });
+    }
+
+    // Check if there is already a pending request with the same username
+    const requests = loadRegistrationRequests();
+    if (requests.some(r => r.username === lowerUsername && r.status === 'pending')) {
+        return res.status(409).json({ error: 'Ya existe una solicitud pendiente con este nombre de usuario.' });
+    }
+
+    const newRequest = {
+        id: crypto.randomBytes(16).toString('hex'),
+        firstName: trimmedFirst,
+        lastName: trimmedLast,
+        username: lowerUsername,
+        passwordHash: hashPassword(password),
+        status: 'pending',
+        createdAt: new Date().toISOString()
+    };
+
+    requests.push(newRequest);
+    saveRegistrationRequests(requests);
+
+    res.status(201).json({ success: true, message: 'Solicitud enviada correctamente. Un administrador revisará tu solicitud.' });
+});
+
+// Listar solicitudes de registro (solo administradores) - NO expone passwordHash
+app.get('/beta/api/registration-requests', authenticateToken, requireUserManagementPermission, (req, res) => {
+    const requests = loadRegistrationRequests();
+    const sanitized = requests.map(r => ({
+        id: r.id,
+        firstName: r.firstName,
+        lastName: r.lastName,
+        username: r.username,
+        status: r.status,
+        createdAt: r.createdAt
+    }));
+    res.json(sanitized);
+});
+
+// Aprobar solicitud de registro (solo administradores)
+app.post('/beta/api/registration-requests/:id/approve', express.json(), authenticateToken, requireUserManagementPermission, (req, res) => {
+    const requestId = req.params.id;
+    const requests = loadRegistrationRequests();
+    const requestIndex = requests.findIndex(r => r.id === requestId);
+
+    if (requestIndex === -1) {
+        return res.status(404).json({ error: 'Solicitud no encontrada.' });
+    }
+
+    const request = requests[requestIndex];
+
+    if (request.status !== 'pending') {
+        return res.status(400).json({ error: 'Esta solicitud ya fue procesada.' });
+    }
+
+    // Verify username is still available
+    const users = loadUsers();
+    if (users.some(u => u.username === request.username)) {
+        requests[requestIndex].status = 'rejected';
+        saveRegistrationRequests(requests);
+        return res.status(409).json({ error: 'El nombre de usuario ya está registrado por otro usuario. La solicitud fue rechazada automáticamente.' });
+    }
+
+    // Allow admin to optionally set role and permissions
+    const role = req.body.role || 'custom';
+    const permissions = req.body.permissions || {
+        dashboard: { visible: true, writable: false },
+        stockExpiration: { visible: true, writable: false },
+        usersManagement: { visible: false, writable: false }
+    };
+
+    // Create the user with the hashed password from the request
+    const newUser = {
+        username: request.username,
+        displayName: `${request.firstName} ${request.lastName}`,
+        passwordHash: request.passwordHash,
+        role,
+        permissions
+    };
+
+    users.push(newUser);
+    saveUsers(users);
+
+    // Mark request as approved
+    requests[requestIndex].status = 'approved';
+    saveRegistrationRequests(requests);
+
+    res.json({
+        success: true,
+        message: `Usuario "${request.username}" aprobado y creado correctamente.`,
+        user: {
+            username: newUser.username,
+            displayName: newUser.displayName,
+            role: newUser.role,
+            permissions: newUser.permissions
+        }
+    });
+});
+
+// Rechazar solicitud de registro (solo administradores)
+app.post('/beta/api/registration-requests/:id/reject', authenticateToken, requireUserManagementPermission, (req, res) => {
+    const requestId = req.params.id;
+    const requests = loadRegistrationRequests();
+    const requestIndex = requests.findIndex(r => r.id === requestId);
+
+    if (requestIndex === -1) {
+        return res.status(404).json({ error: 'Solicitud no encontrada.' });
+    }
+
+    if (requests[requestIndex].status !== 'pending') {
+        return res.status(400).json({ error: 'Esta solicitud ya fue procesada.' });
+    }
+
+    requests[requestIndex].status = 'rejected';
+    saveRegistrationRequests(requests);
+
+    res.json({ success: true, message: 'Solicitud rechazada.' });
 });
 
 // --- SISTEMA DE SINCRONIZACIÓN SEGURO (BETA NUBE) ---

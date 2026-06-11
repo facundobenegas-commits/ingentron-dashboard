@@ -47,3 +47,12 @@ export interface User {
   role: 'admin' | 'custom';
   permissions: UserPermissions;
 }
+
+export interface RegistrationRequest {
+  id: string;
+  firstName: string;
+  lastName: string;
+  username: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+}
