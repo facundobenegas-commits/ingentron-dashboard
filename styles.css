@@ -188,7 +188,7 @@ body {
 }
 
 .content-area {
-    padding: 40px;
+    padding: 40px 40px 80px 40px;
     flex: 1;
 }
 
@@ -1136,7 +1136,7 @@ body.route-home .mobile-top-bar,
         flex-basis: auto;
     }
     .content-area {
-        padding: 14px 12px;
+        padding: 14px 12px 80px 12px;
     }
     .kpi-grid {
         grid-template-columns: 1fr;
@@ -1185,6 +1185,17 @@ body.route-home .mobile-top-bar,
     #sync-status-panel {
         right: 12px !important;
         bottom: 12px !important;
+    }
+
+    /* Reposition back-to-top button to avoid overlap with expanded sync panel */
+    .back-to-top {
+        bottom: 140px !important;
+    }
+
+    /* Stack home page logo badges vertically on mobile */
+    .home-logos-row {
+        flex-direction: column !important;
+        align-items: center !important;
     }
 }
 
@@ -1864,6 +1875,7 @@ body.route-home .mobile-top-bar,
 
 /* Transiciones suaves para las imágenes de logos en home */
 #home-logo-ingentron, #home-logo-gruya {
+    max-width: 100%;
     transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), filter 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     will-change: transform, filter;
 }

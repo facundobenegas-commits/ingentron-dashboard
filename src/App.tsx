@@ -2301,7 +2301,7 @@ export default function App() {
             <div id="home-view" className="view-section" style={{ display: 'flex', minHeight: 'calc(100vh - 100px)', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box' }}>
               <div style={{ maxWidth: '1000px', width: '100%', margin: 'auto', padding: '20px' }}>
                 <div className="home-logos-container" style={{ display: 'flex', alignItems: 'center', gap: '20px', justifyContent: 'center', marginBottom: '56px', flexDirection: 'column' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '20px', justifyContent: 'center' }}>
+                  <div className="home-logos-row" style={{ display: 'flex', alignItems: 'center', gap: '20px', justifyContent: 'center' }}>
                     <div className="glowing-logo-badge brand-ingentron">
                       <div className="glowing-logo-badge-inner">
                         <img src={logoIngentronSrc} alt="Ingentron" id="home-logo-ingentron" style={{ maxHeight: '44px', width: 'auto', objectFit: 'contain' }} />
