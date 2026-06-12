@@ -4,6 +4,18 @@ import { Chart, registerables } from 'chart.js';
 // funciones de exportación para mantenerlos fuera del bundle inicial (solo se
 // usan al descargar un PDF/Excel).
 import { Saldo, StockItem, SyncStatus, User } from './types';
+import {
+  parseWeekEndDate,
+  formatDate,
+  parseExcelDate,
+  getDueDateStatus,
+  getClientMostCriticalStatus,
+  formatCurrency,
+  formatAbbreviatedCurrency,
+  getDaysRemaining,
+  formatDateToES,
+  getOriginColorClass,
+} from './utils/format';
 import { Login } from './components/Login';
 import { UserManagement } from './components/UserManagement';
 import { MacSelect } from './components/MacSelect';
@@ -576,101 +588,7 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [connectionAlertActive, isModalActive, activeDropdown]);
 
-  // Helper date parsing and formatting
-  const parseWeekEndDate = (weekStr: string) => {
-    if (!weekStr) return new Date(0);
-    if (weekStr === 'Tiempo Real') return new Date(8640000000000000);
-    const parts = weekStr.split(' al ');
-    let dateStr = parts.length === 2 ? parts[1] : weekStr;
-    dateStr = dateStr.replace(/^[Dd]el\s+/, '').replace(/^[Aa][Ll]\s+/, '').replace(/^SEMANA\s+/, '').trim();
-    const dateParts = dateStr.split('/');
-    if (dateParts.length === 3) {
-      let y = parseInt(dateParts[2]);
-      if (y < 100) y += 2000;
-      return new Date(y, parseInt(dateParts[1]) - 1, parseInt(dateParts[0]));
-    }
-    const parsed = Date.parse(dateStr);
-    if (!isNaN(parsed)) return new Date(parsed);
-    return new Date(0);
-  };
-
-  const formatDate = (excelDate: any) => {
-    if (!excelDate || excelDate === 'N/A') return 'N/A';
-    if (typeof excelDate === 'string') return excelDate;
-    if (typeof excelDate === 'number') {
-      const date = new Date(Math.round((excelDate - 25569) * 86400 * 1000));
-      return date.toLocaleDateString('es-AR');
-    }
-    return excelDate;
-  };
-
-  const parseExcelDate = (excelDate: any): Date | null => {
-    if (!excelDate || excelDate === 'N/A') return null;
-    if (typeof excelDate === 'number') {
-      return new Date(Math.round((excelDate - 25569) * 86400 * 1000));
-    }
-    if (typeof excelDate === 'string') {
-      const parts = excelDate.trim().split('/');
-      if (parts.length === 3) {
-        let day = parseInt(parts[0], 10);
-        let month = parseInt(parts[1], 10) - 1;
-        let year = parseInt(parts[2], 10);
-        if (year < 100) year += 2000;
-        return new Date(year, month, day);
-      }
-    }
-    const d = new Date(excelDate);
-    return isNaN(d.getTime()) ? null : d;
-  };
-
-  const getDueDateStatus = (dueDateExcel: any, dateExcel: any, amount: number) => {
-    let parsedDate = parseExcelDate(dateExcel);
-    if (!parsedDate) {
-      parsedDate = parseExcelDate(dueDateExcel);
-    }
-    if (!parsedDate) {
-      return { text: 'N/A', class: 'bg-dark' };
-    }
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    parsedDate.setHours(0, 0, 0, 0);
-
-    const diffTime = today.getTime() - parsedDate.getTime();
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays <= 7) {
-      return { text: 'No vencido', class: 'bg-green' };
-    } else if (diffDays >= 8 && diffDays <= 30) {
-      return { text: 'Vencido', class: 'bg-accent' };
-    } else {
-      return { text: 'Más de 30 días', class: 'bg-red' };
-    }
-  };
-
-  const getClientMostCriticalStatus = (invoices: Saldo[]) => {
-    if (!invoices || invoices.length === 0) {
-      return { text: 'N/A', class: 'bg-dark' };
-    }
-
-    let maxSeverity = 0;
-    let mostCritical = { text: 'N/A', class: 'bg-dark' };
-
-    invoices.forEach(inv => {
-      const status = getDueDateStatus(inv.dueDate, inv.date, inv.amount);
-      let severity = 0;
-      if (status.text === 'No vencido') severity = 1;
-      else if (status.text === 'Vencido') severity = 2;
-      else if (status.text === 'Más de 30 días') severity = 3;
-
-      if (severity > maxSeverity) {
-        maxSeverity = severity;
-        mostCritical = status;
-      }
-    });
-
-    return mostCritical;
-  };
+  // Date parsing, formatting and status helpers live in ./utils/format (pure functions).
 
   const shouldHideAccount = (clientCode: string, invoice: string, origin?: string) => {
     if (!hideCompensar) return false;
@@ -683,38 +601,6 @@ export default function App() {
       return true;
     }
     return NORMALIZED_ACCOUNTS_TO_HIDE.has(normalized);
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS',
-      minimumFractionDigits: 2
-    }).format(value);
-  };
-
-  const formatAbbreviatedCurrency = (value: number) => {
-    const isNegative = value < 0;
-    const absValue = Math.abs(value);
-    let formatted = '';
-
-    if (absValue >= 1e6) {
-      formatted = new Intl.NumberFormat('es-AR', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 1
-      }).format(absValue / 1e6) + 'M';
-    } else if (absValue >= 1e3) {
-      formatted = new Intl.NumberFormat('es-AR', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 1
-      }).format(absValue / 1e3) + 'K';
-    } else {
-      formatted = new Intl.NumberFormat('es-AR', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2
-      }).format(absValue);
-    }
-    return (isNegative ? '-$ ' : '$ ') + formatted;
   };
 
   // --- FILTERED DATA MEMOIZATIONS ---
@@ -1117,27 +1003,7 @@ export default function App() {
   }, [currentView]);
 
   // --- STOCK MODULE LOGIC ---
-  const getDaysRemaining = (expiryStr: string) => {
-    const localDate = new Date(new Date().getTime() - 3 * 3600 * 1000); // UTC-3
-    const todayStr = localDate.toISOString().split('T')[0];
-    const today = new Date(todayStr + "T00:00:00");
-    const expiry = new Date(expiryStr + "T00:00:00");
-    const diffTime = expiry.getTime() - today.getTime();
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  };
-
-  const getStockStatus = (days: number) => {
-    if (days <= 0) return { text: 'VENCIDO', class: 'badge-expired' };
-    if (days <= 30) return { text: 'ALERTA CRÍTICA', class: 'badge-critical' };
-    if (days <= 90) return { text: 'PRÓXIMO', class: 'badge-upcoming' };
-    return { text: 'EN REGLA', class: 'badge-ok' };
-  };
-
-  const formatDateToES = (dateStr: string) => {
-    const parts = dateStr.split('-');
-    if (parts.length !== 3) return dateStr;
-    return `${parts[2]}/${parts[1]}/${parts[0].slice(2, 4)}`;
-  };
+  // getDaysRemaining, getStockStatus and formatDateToES live in ./utils/format.
 
   // Stock variation calculation engines
   const yesterdayQtyMapMemo = useMemo(() => {
@@ -1980,15 +1846,6 @@ export default function App() {
     setModalInvoices(invoices);
     setModalOriginFilter('ALL');
     setIsModalActive(true);
-  };
-
-  const getOriginColorClass = (origin: string) => {
-    if (origin === 'Aguas') return 'bg-blue text-white';
-    if (origin === 'Salliquelo') return 'bg-purple text-white';
-    if (origin === 'Trenque Lauquen') return 'bg-green text-white';
-    if (origin === 'PepsiCo') return 'bg-red text-white';
-    if (origin === 'Serenisima') return 'bg-pink text-white';
-    return 'bg-accent text-white';
   };
 
   // Dynamic dropdown list elements
