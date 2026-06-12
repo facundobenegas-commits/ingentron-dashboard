@@ -1206,6 +1206,14 @@ body.route-home .mobile-top-bar,
 }
 .sidebar.collapsed {
     transform: translateX(-100%);
+    /* Clip off-canvas content so the logo/Beta badge can't peek past the screen edge while hidden */
+    overflow: hidden;
+}
+
+/* On the Home/landing route there is no sidebar at all; hide it outright so the mobile
+   media query (which forces display:flex) can't reveal the collapsed drawer's edge. */
+.app-container.route-home aside.sidebar {
+    display: none !important;
 }
 .main-content {
     transition: none !important;
@@ -1372,12 +1380,12 @@ body.route-home .mobile-top-bar,
         gap: 6px !important;
     }
     
-    /* Add labels on mobile */
-    .data-table tbody td:nth-child(2)::before { content: "Origen:"; font-weight: 600; color: var(--text-secondary); }
-    .data-table tbody td:nth-child(3)::before { content: "Estado:"; font-weight: 600; color: var(--text-secondary); }
-    .data-table tbody td:nth-child(4)::before { content: "Situación:"; font-weight: 600; color: var(--text-secondary); }
-    .data-table tbody td:nth-child(5)::before { content: "Saldo Total:"; font-weight: 600; color: var(--text-secondary); font-size: 14px; }
-    .data-table tbody td:nth-child(6)::before { content: "Acciones:"; font-weight: 600; color: var(--text-secondary); }
+    /* Add labels on mobile — scoped to the clients table (5 cols: Cliente, Origen, Estado, Saldo Total, Acción).
+       Scoping to #clients-table avoids these labels leaking onto the shared .data-table stock grid. */
+    #clients-table tbody td:nth-child(2)::before { content: "Origen:"; font-weight: 600; color: var(--text-secondary); }
+    #clients-table tbody td:nth-child(3)::before { content: "Estado:"; font-weight: 600; color: var(--text-secondary); }
+    #clients-table tbody td:nth-child(4)::before { content: "Saldo Total:"; font-weight: 600; color: var(--text-secondary); font-size: 14px; }
+    #clients-table tbody td:nth-child(5)::before { content: "Acción:"; font-weight: 600; color: var(--text-secondary); }
 
     /* Client name alignment and size */
     .data-table tbody td:first-child div {
@@ -2101,6 +2109,7 @@ th.active-sort .sort-icon {
 
 .status-dot-aguas { background: #0a84ff; }
 .status-dot-pepsico { background: #bf5af2; }
+.status-dot-serenisima { background: #fb7185; }
 .status-dot-salliquelo { background: #30d158; }
 .status-dot-trenque { background: #ffd60a; }
 .status-dot-digip { background: #ff9f0a; }

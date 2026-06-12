@@ -2326,7 +2326,7 @@ export default function App() {
                       onClick={() => navigateToModule('dashboard')} 
                       style={{ padding: '32px', borderRadius: '20px', cursor: 'pointer', border: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', flexDirection: 'column', gap: '20px', background: 'rgba(255, 255, 255, 0.02)', minHeight: '220px' }}
                     >
-                      <div className="module-icon-container" style={{ width: '56px', height: '56px', borderRadius: '14px', background: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6', display: 'flex', alignItems: 'center', justifySpace: 'center', justifyContent: 'center', fontSize: '24px' }}>
+                      <div className="module-icon-container" style={{ width: '56px', height: '56px', borderRadius: '14px', background: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>
                         <i className="fas fa-wallet"></i>
                       </div>
                       <div>

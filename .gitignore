@@ -32,6 +32,13 @@ stock_cache.json
 stock_history.json
 sync_status.json
 
+# Runtime auth state (contains password hashes — never commit)
+users.json
+registration_requests.json
+
+# Local editor/agent tooling
+.claude/
+
 # Portable tools
 mingit/
 mingit.zip
