@@ -174,10 +174,14 @@ export default function App() {
   }, []);
 
   const navigateToModule = (view: 'home' | 'dashboard' | 'stock-expiration' | 'users-management') => {
-    let path = '/';
-    if (view === 'dashboard') path = '/CuentasCorrientes';
-    else if (view === 'stock-expiration') path = '/ControlVencimientos';
-    else if (view === 'users-management') path = '/Configuracion';
+    // Prefix routes with the app base (e.g. '/beta/') so deep links survive a reload:
+    // in production server.js serves index.html for any '/beta/*' path, but redirects
+    // non-prefixed paths back to the home view.
+    const base = import.meta.env.BASE_URL; // '/beta/'
+    let path = base;
+    if (view === 'dashboard') path = `${base}CuentasCorrientes`;
+    else if (view === 'stock-expiration') path = `${base}ControlVencimientos`;
+    else if (view === 'users-management') path = `${base}Configuracion`;
     window.history.pushState({ module: view }, '', path);
     setCurrentView(view);
     setShowMobileFilters(false);
