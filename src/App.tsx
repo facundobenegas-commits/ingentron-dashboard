@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Chart, registerables } from 'chart.js';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import * as XLSX from 'xlsx';
+// jsPDF, jspdf-autotable y xlsx se cargan con import() dinámico dentro de las
+// funciones de exportación para mantenerlos fuera del bundle inicial (solo se
+// usan al descargar un PDF/Excel).
 import { Saldo, StockItem, SyncStatus, User } from './types';
 import { Login } from './components/Login';
 import { UserManagement } from './components/UserManagement';
@@ -1598,7 +1598,9 @@ export default function App() {
   };
 
   // --- EXCEL & PDF EXPORTS ---
-  const downloadClientPDF = () => {
+  const downloadClientPDF = async () => {
+    const { jsPDF } = await import('jspdf');
+    const autoTable = (await import('jspdf-autotable')).default;
     const activeOrigin = modalOriginFilter;
     const getInvoiceDateValue = (excelDate: any) => {
       const parsed = parseExcelDate(excelDate);
@@ -1826,7 +1828,7 @@ export default function App() {
     doc.save(`Resumen_Cuenta_${cleanClientName}.pdf`);
   };
 
-  const exportStockToPDF = (event: React.MouseEvent) => {
+  const exportStockToPDF = async (event: React.MouseEvent) => {
     event.preventDefault();
     const dataToExport = filteredStock;
     if (dataToExport.length === 0) {
@@ -1834,6 +1836,8 @@ export default function App() {
       return;
     }
 
+    const { jsPDF } = await import('jspdf');
+    const autoTable = (await import('jspdf-autotable')).default;
     const doc = new jsPDF();
     doc.setFont("Helvetica", "bold");
     doc.setFontSize(16);
@@ -1883,7 +1887,7 @@ export default function App() {
     doc.save(`Reporte_Vencimientos_Stock_${new Date().toISOString().slice(0, 10)}.pdf`);
   };
 
-  const exportStockToExcel = (event: React.MouseEvent) => {
+  const exportStockToExcel = async (event: React.MouseEvent) => {
     event.preventDefault();
     const dataToExport = filteredStock;
     if (dataToExport.length === 0) {
@@ -1891,6 +1895,7 @@ export default function App() {
       return;
     }
 
+    const XLSX = await import('xlsx');
     const rows = dataToExport.map(item => {
       const days = getDaysRemaining(item.fechaVencimiento);
       let daysText = '';
