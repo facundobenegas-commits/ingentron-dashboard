@@ -323,7 +323,8 @@ body {
     margin: 2px 2px;
 }
 
-.mac-select-option:hover {
+.mac-select-option:hover,
+.mac-select-option.active-option {
     background: #0a84ff !important;
     color: #ffffff !important;
 }

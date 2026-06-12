@@ -6,6 +6,7 @@ import { Chart, registerables } from 'chart.js';
 import { Saldo, StockItem, SyncStatus, User } from './types';
 import { Login } from './components/Login';
 import { UserManagement } from './components/UserManagement';
+import { MacSelect } from './components/MacSelect';
 
 Chart.register(...registerables);
 
@@ -2237,76 +2238,72 @@ export default function App() {
                 {/* Empresa Filter Custom Dropdown */}
                 <div className="empresa-selector-container">
                   <label htmlFor="empresa-select"><i className="fas fa-industry"></i> Empresa:</label>
-                  <div className="mac-select-wrapper" onClick={(e) => { e.stopPropagation(); setActiveDropdown(activeDropdown === 'empresa' ? null : 'empresa'); }}>
-                    <button type="button" className={`mac-select-trigger ${activeDropdown === 'empresa' ? 'active' : ''}`}>
-                      <span className="mac-select-value">{empresaFilter === '' ? 'Todas las empresas' : empresaFilter}</span>
-                      <i className="fas fa-chevron-down mac-select-arrow"></i>
-                    </button>
-                    {activeDropdown === 'empresa' && (
-                      <div className="mac-select-dropdown show">
-                        <div className={`mac-select-option ${empresaFilter === '' ? 'selected' : ''}`} onClick={() => setEmpresaFilter('')}>Todas las empresas</div>
-                        <div className={`mac-select-option ${empresaFilter === 'Ingentron' ? 'selected' : ''}`} onClick={() => setEmpresaFilter('Ingentron')}>Ingentron</div>
-                        <div className={`mac-select-option ${empresaFilter === 'Gruya' ? 'selected' : ''}`} onClick={() => setEmpresaFilter('Gruya')}>Gruya</div>
-                      </div>
-                    )}
-                  </div>
+                  <MacSelect
+                    id="empresa-select"
+                    label="Empresa"
+                    value={empresaFilter}
+                    options={[
+                      { value: '', label: 'Todas las empresas' },
+                      { value: 'Ingentron', label: 'Ingentron' },
+                      { value: 'Gruya', label: 'Gruya' },
+                    ]}
+                    isOpen={activeDropdown === 'empresa'}
+                    onToggle={() => setActiveDropdown(activeDropdown === 'empresa' ? null : 'empresa')}
+                    onSelect={setEmpresaFilter}
+                  />
                 </div>
 
                 {/* Origin Filter Custom Dropdown */}
                 <div className="origin-selector-container">
                   <label htmlFor="origin-select"><i className="fas fa-building"></i> Unidad:</label>
-                  <div className="mac-select-wrapper" onClick={(e) => { e.stopPropagation(); setActiveDropdown(activeDropdown === 'origin' ? null : 'origin'); }}>
-                    <button type="button" className={`mac-select-trigger ${activeDropdown === 'origin' ? 'active' : ''}`}>
-                      <span className="mac-select-value">{originFilter === '' ? 'Todas las unidades' : originFilter}</span>
-                      <i className="fas fa-chevron-down mac-select-arrow"></i>
-                    </button>
-                    {activeDropdown === 'origin' && (
-                      <div className="mac-select-dropdown show">
-                        <div className={`mac-select-option ${originFilter === '' ? 'selected' : ''}`} onClick={() => setOriginFilter('')}>Todas las unidades</div>
-                        {originOptions.map(org => (
-                          <div key={org} className={`mac-select-option ${originFilter === org ? 'selected' : ''}`} onClick={() => setOriginFilter(org)}>{org}</div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  <MacSelect
+                    id="origin-select"
+                    label="Unidad"
+                    value={originFilter}
+                    options={[
+                      { value: '', label: 'Todas las unidades' },
+                      ...originOptions.map(org => ({ value: org, label: org })),
+                    ]}
+                    isOpen={activeDropdown === 'origin'}
+                    onToggle={() => setActiveDropdown(activeDropdown === 'origin' ? null : 'origin')}
+                    onSelect={setOriginFilter}
+                  />
                 </div>
 
                 {/* Week Filter Custom Dropdown */}
                 <div className="week-selector-container">
                   <label htmlFor="week-select"><i className="fas fa-calendar-week"></i> Semana:</label>
-                  <div className="mac-select-wrapper" onClick={(e) => { e.stopPropagation(); setActiveDropdown(activeDropdown === 'week' ? null : 'week'); }}>
-                    <button type="button" className={`mac-select-trigger ${activeDropdown === 'week' ? 'active' : ''}`}>
-                      <span className="mac-select-value">{weekFilter === 'LATEST' ? 'LATEST' : weekFilter}</span>
-                      <i className="fas fa-chevron-down mac-select-arrow"></i>
-                    </button>
-                    {activeDropdown === 'week' && (
-                      <div className="mac-select-dropdown show">
-                        <div className={`mac-select-option ${weekFilter === 'LATEST' ? 'selected' : ''}`} onClick={() => setWeekFilter('LATEST')}>LATEST</div>
-                        {dropdownWeekOptions.map(week => (
-                          <div key={week} className={`mac-select-option ${weekFilter === week ? 'selected' : ''}`} onClick={() => setWeekFilter(week)}>{week}</div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  <MacSelect
+                    id="week-select"
+                    label="Semana"
+                    value={weekFilter}
+                    options={[
+                      { value: 'LATEST', label: 'LATEST' },
+                      ...dropdownWeekOptions.map(week => ({ value: week, label: week })),
+                    ]}
+                    isOpen={activeDropdown === 'week'}
+                    onToggle={() => setActiveDropdown(activeDropdown === 'week' ? null : 'week')}
+                    onSelect={setWeekFilter}
+                  />
                 </div>
 
                 {/* Status Filter Custom Dropdown */}
                 <div className="status-selector-container" id="status-selector-container">
                   <label htmlFor="status-select"><i className="fas fa-exclamation-circle"></i> Estado:</label>
-                  <div className="mac-select-wrapper" onClick={(e) => { e.stopPropagation(); setActiveDropdown(activeDropdown === 'status' ? null : 'status'); }}>
-                    <button type="button" className={`mac-select-trigger ${activeDropdown === 'status' ? 'active' : ''}`}>
-                      <span className="mac-select-value">{statusFilter === '' ? 'Todos los estados' : statusFilter}</span>
-                      <i className="fas fa-chevron-down mac-select-arrow"></i>
-                    </button>
-                    {activeDropdown === 'status' && (
-                      <div className="mac-select-dropdown show">
-                        <div className={`mac-select-option ${statusFilter === '' ? 'selected' : ''}`} onClick={() => setStatusFilter('')}>Todos los estados</div>
-                        <div className={`mac-select-option ${statusFilter === 'No vencido' ? 'selected' : ''}`} onClick={() => setStatusFilter('No vencido')}>No vencido</div>
-                        <div className={`mac-select-option ${statusFilter === 'Vencido' ? 'selected' : ''}`} onClick={() => setStatusFilter('Vencido')}>Vencido</div>
-                        <div className={`mac-select-option ${statusFilter === 'Más de 30 días' ? 'selected' : ''}`} onClick={() => setStatusFilter('Más de 30 días')}>Más de 30 días</div>
-                      </div>
-                    )}
-                  </div>
+                  <MacSelect
+                    id="status-select"
+                    label="Estado"
+                    value={statusFilter}
+                    options={[
+                      { value: '', label: 'Todos los estados' },
+                      { value: 'No vencido', label: 'No vencido' },
+                      { value: 'Vencido', label: 'Vencido' },
+                      { value: 'Más de 30 días', label: 'Más de 30 días' },
+                    ]}
+                    isOpen={activeDropdown === 'status'}
+                    onToggle={() => setActiveDropdown(activeDropdown === 'status' ? null : 'status')}
+                    onSelect={setStatusFilter}
+                  />
                   <div className="compensar-checkbox-wrapper">
                     <label>
                       <input type="checkbox" id="hide-compensar-checkbox" checked={hideCompensar} onChange={(e) => setHideCompensar(e.target.checked)} />
