@@ -392,7 +392,7 @@ export default function App() {
       clearInterval(syncInterval);
       clearInterval(dataInterval);
     };
-  }, [currentView]);
+  }, [currentView, token]);
 
   // Load Cuentas Corrientes Data dynamically on switching to it
   useEffect(() => {
@@ -401,7 +401,9 @@ export default function App() {
     } else if (currentView === 'stock-expiration') {
       loadStockData();
     }
-  }, [currentView]);
+    // token included so a deep-link reload (where the session token is restored
+    // asynchronously) re-triggers the data load once the token is available.
+  }, [currentView, token]);
 
   // Clean dropdowns when clicking anywhere
   useEffect(() => {
@@ -553,6 +555,22 @@ export default function App() {
       }
     });
   };
+
+  // --- ACCESSIBILITY: close overlays with the Escape key ---
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (connectionAlertActive) {
+        closeConnectionAlert();
+      } else if (isModalActive) {
+        setIsModalActive(false);
+      } else if (activeDropdown) {
+        setActiveDropdown(null);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [connectionAlertActive, isModalActive, activeDropdown]);
 
   // Helper date parsing and formatting
   const parseWeekEndDate = (weekStr: string) => {
@@ -2756,7 +2774,7 @@ export default function App() {
 
       {/* Modal for Invoice Details */}
       {isModalActive && (
-        <div id="invoice-modal" className="modal active" onClick={() => setIsModalActive(false)}>
+        <div id="invoice-modal" className="modal active" role="dialog" aria-modal="true" aria-labelledby="modal-client-name" onClick={() => setIsModalActive(false)}>
           <div className="modal-content glass-card" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header" style={{ alignItems: 'flex-start' }}>
               <div className="modal-header-info" style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
@@ -2858,7 +2876,7 @@ export default function App() {
 
       {/* Modal for Connection Alert */}
       {connectionAlertActive && (
-        <div id="connection-alert-modal" className="modal active">
+        <div id="connection-alert-modal" className="modal active" role="alertdialog" aria-modal="true" aria-label="Servidor Desconectado">
           <div className="modal-content glass-card" style={{ maxWidth: '450px', textAlign: 'center', padding: '32px', gap: '20px', alignItems: 'center' }}>
             <div style={{ fontSize: '52px', color: '#ff9f0a', marginBottom: '8px' }}>
               <i className="fas fa-exclamation-triangle"></i>
