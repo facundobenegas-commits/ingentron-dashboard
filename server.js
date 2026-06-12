@@ -3,9 +3,71 @@ const path = require('path');
 const fs = require('fs');
 const XLSX = require('xlsx');
 const firebird = require('node-firebird');
+const crypto = require('crypto');
 
 const DATA_DIR = process.env.DATA_DIR || (fs.existsSync('/data') ? '/data' : __dirname);
 console.log(`[Persistence] Usando directorio de persistencia: ${DATA_DIR}`);
+
+// --- SISTEMA DE USUARIOS Y AUTENTICACIÓN (para Beta) ---
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
+const REGISTRATION_REQUESTS_FILE = path.join(DATA_DIR, 'registration_requests.json');
+
+function hashPassword(password) {
+    return crypto.createHash('sha256').update(password).digest('hex');
+}
+
+function loadUsers() {
+    if (!fs.existsSync(USERS_FILE)) {
+        const defaultUsers = [
+            {
+                username: 'facundo',
+                displayName: 'Facundo',
+                passwordHash: hashPassword('2278389'),
+                role: 'admin',
+                permissions: {
+                    dashboard: { visible: true, writable: true },
+                    stockExpiration: { visible: true, writable: true },
+                    usersManagement: { visible: true, writable: true }
+                }
+            }
+        ];
+        fs.writeFileSync(USERS_FILE, JSON.stringify(defaultUsers, null, 2), 'utf8');
+        return defaultUsers;
+    }
+    try {
+        return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
+    } catch (e) {
+        console.error("Error reading users file, returning empty array:", e);
+        return [];
+    }
+}
+
+function saveUsers(users) {
+    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf8');
+}
+
+function loadRegistrationRequests() {
+    if (!fs.existsSync(REGISTRATION_REQUESTS_FILE)) {
+        fs.writeFileSync(REGISTRATION_REQUESTS_FILE, JSON.stringify([], null, 2), 'utf8');
+        return [];
+    }
+    try {
+        return JSON.parse(fs.readFileSync(REGISTRATION_REQUESTS_FILE, 'utf8'));
+    } catch (e) {
+        console.error("Error reading registration requests file:", e);
+        return [];
+    }
+}
+
+function saveRegistrationRequests(requests) {
+    fs.writeFileSync(REGISTRATION_REQUESTS_FILE, JSON.stringify(requests, null, 2), 'utf8');
+}
+
+// Bootstrap users.json
+loadUsers();
+
+// In-memory active session store: token -> user object
+const activeSessions = new Map();
 
 const app = express();
 
@@ -576,8 +638,227 @@ app.get('/api/saldos', async (req, res) => {
     res.json(globalData);
 });
 
-// Redireccionar antiguas URLs de Beta a la versión estable en la raíz
+// --- BETA: Servir archivos estáticos y API ---
+const DIST_BETA_DIR = path.join(__dirname, 'dist-beta');
+if (fs.existsSync(DIST_BETA_DIR)) {
+    app.use('/beta', express.static(DIST_BETA_DIR, {
+        setHeaders: (res, filepath) => {
+            if (filepath.endsWith('.html')) {
+                res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+            }
+        }
+    }));
+}
+
+// --- BETA: Middleware de autenticación ---
+const SYNC_TOKEN_BETA = process.env.SYNC_TOKEN || "TokenIngentronSeguro2026";
+
+function authenticateToken(req, res, next) {
+    const syncToken = req.headers['x-sync-token'];
+    if (syncToken === SYNC_TOKEN_BETA) return next();
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    if (!token) return res.status(401).json({ error: 'Token de sesión requerido.' });
+    const user = activeSessions.get(token);
+    if (!user) return res.status(403).json({ error: 'Sesión inválida o expirada.' });
+    req.user = user;
+    next();
+}
+
+function requireModulePermission(module, action = 'visible') {
+    return (req, res, next) => {
+        const syncToken = req.headers['x-sync-token'];
+        if (syncToken === SYNC_TOKEN_BETA) return next();
+        if (!req.user) return res.status(401).json({ error: 'Token de sesión requerido.' });
+        if (req.user.role === 'admin') return next();
+        const permissions = req.user.permissions;
+        if (permissions && permissions[module] && permissions[module][action]) return next();
+        return res.status(403).json({ error: 'No tienes permiso para acceder a este recurso.' });
+    };
+}
+
+function requireUserManagementPermission(req, res, next) {
+    return requireModulePermission('usersManagement', 'visible')(req, res, next);
+}
+
+// --- BETA API: Login/Logout ---
+app.post('/beta/api/login', express.json(), (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password) return res.status(400).json({ error: 'Usuario y contraseña requeridos.' });
+    const users = loadUsers();
+    const user = users.find(u => u.username === username.toLowerCase());
+    if (!user || user.passwordHash !== hashPassword(password)) return res.status(401).json({ error: 'Usuario o contraseña incorrectos.' });
+    const token = crypto.randomBytes(32).toString('hex');
+    const sessionUser = { username: user.username, displayName: user.displayName, role: user.role, permissions: user.permissions };
+    activeSessions.set(token, sessionUser);
+    res.json({ token, user: sessionUser });
+});
+
+app.post('/beta/api/logout', (req, res) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    if (token) activeSessions.delete(token);
+    res.json({ success: true });
+});
+
+// --- BETA API: Administración de usuarios ---
+app.get('/beta/api/users', authenticateToken, requireUserManagementPermission, (req, res) => {
+    const users = loadUsers();
+    res.json(users.map(u => ({ username: u.username, displayName: u.displayName, role: u.role, permissions: u.permissions })));
+});
+
+app.post('/beta/api/users', express.json(), authenticateToken, requireUserManagementPermission, (req, res) => {
+    const { username, displayName, password, role, permissions } = req.body;
+    if (!username || !displayName || !password || !role || !permissions) return res.status(400).json({ error: 'Faltan campos requeridos.' });
+    if (password.length < 5) return res.status(400).json({ error: 'La contraseña debe tener al menos 5 caracteres.' });
+    const users = loadUsers();
+    const lowerUsername = username.trim().toLowerCase();
+    if (users.some(u => u.username === lowerUsername)) return res.status(400).json({ error: 'El nombre de usuario ya está registrado.' });
+    const newUser = { username: lowerUsername, displayName: displayName.trim(), passwordHash: hashPassword(password), role, permissions };
+    users.push(newUser);
+    saveUsers(users);
+    res.status(201).json({ username: newUser.username, displayName: newUser.displayName, role: newUser.role, permissions: newUser.permissions });
+});
+
+app.put('/beta/api/users/:username', express.json(), authenticateToken, requireUserManagementPermission, (req, res) => {
+    const targetUsername = req.params.username.toLowerCase();
+    const { role, permissions } = req.body;
+    if (!role || !permissions) return res.status(400).json({ error: 'Faltan campos requeridos.' });
+    const users = loadUsers();
+    const userIndex = users.findIndex(u => u.username === targetUsername);
+    if (userIndex === -1) return res.status(404).json({ error: 'Usuario no encontrado.' });
+    users[userIndex].role = role;
+    users[userIndex].permissions = permissions;
+    saveUsers(users);
+    for (const [token, sessionUser] of activeSessions.entries()) {
+        if (sessionUser.username === targetUsername) { sessionUser.role = role; sessionUser.permissions = permissions; }
+    }
+    res.json({ username: users[userIndex].username, displayName: users[userIndex].displayName, role: users[userIndex].role, permissions: users[userIndex].permissions });
+});
+
+app.put('/beta/api/users/:username/password', express.json(), authenticateToken, requireUserManagementPermission, (req, res) => {
+    const targetUsername = req.params.username.toLowerCase();
+    const { password } = req.body;
+    if (!password || password.length < 5) return res.status(400).json({ error: 'La contraseña debe tener al menos 5 caracteres.' });
+    const users = loadUsers();
+    const userIndex = users.findIndex(u => u.username === targetUsername);
+    if (userIndex === -1) return res.status(404).json({ error: 'Usuario no encontrado.' });
+    users[userIndex].passwordHash = hashPassword(password);
+    saveUsers(users);
+    res.json({ success: true, message: 'Contraseña actualizada.' });
+});
+
+app.delete('/beta/api/users/:username', authenticateToken, requireUserManagementPermission, (req, res) => {
+    const targetUsername = req.params.username.toLowerCase();
+    if (req.user.username === targetUsername) return res.status(400).json({ error: 'No puedes eliminar tu propio usuario.' });
+    const users = loadUsers();
+    const userIndex = users.findIndex(u => u.username === targetUsername);
+    if (userIndex === -1) return res.status(404).json({ error: 'Usuario no encontrado.' });
+    users.splice(userIndex, 1);
+    saveUsers(users);
+    for (const [token, sessionUser] of activeSessions.entries()) {
+        if (sessionUser.username === targetUsername) activeSessions.delete(token);
+    }
+    res.json({ success: true, message: 'Usuario eliminado.' });
+});
+
+// --- BETA API: Solicitudes de registro ---
+app.post('/beta/api/registration-requests', express.json(), (req, res) => {
+    const { firstName, lastName, username, password } = req.body;
+    if (!firstName || !lastName || !username || !password) return res.status(400).json({ error: 'Todos los campos son requeridos.' });
+    const trimmedFirst = firstName.trim(); const trimmedLast = lastName.trim(); const lowerUsername = username.trim().toLowerCase();
+    if (!trimmedFirst || !trimmedLast || !lowerUsername) return res.status(400).json({ error: 'Todos los campos son requeridos.' });
+    if (password.length < 5) return res.status(400).json({ error: 'La contraseña debe tener al menos 5 caracteres.' });
+    const users = loadUsers();
+    if (users.some(u => u.username === lowerUsername)) return res.status(409).json({ error: 'Este nombre de usuario ya está registrado. Por favor, elegí uno diferente.' });
+    const requests = loadRegistrationRequests();
+    if (requests.some(r => r.username === lowerUsername && r.status === 'pending')) return res.status(409).json({ error: 'Ya existe una solicitud pendiente con este nombre de usuario.' });
+    const newRequest = { id: crypto.randomBytes(16).toString('hex'), firstName: trimmedFirst, lastName: trimmedLast, username: lowerUsername, passwordHash: hashPassword(password), status: 'pending', createdAt: new Date().toISOString() };
+    requests.push(newRequest);
+    saveRegistrationRequests(requests);
+    res.status(201).json({ success: true, message: 'Solicitud enviada correctamente. Un administrador revisará tu solicitud.' });
+});
+
+app.get('/beta/api/registration-requests', authenticateToken, requireUserManagementPermission, (req, res) => {
+    const requests = loadRegistrationRequests();
+    res.json(requests.map(r => ({ id: r.id, firstName: r.firstName, lastName: r.lastName, username: r.username, status: r.status, createdAt: r.createdAt })));
+});
+
+app.post('/beta/api/registration-requests/:id/approve', express.json(), authenticateToken, requireUserManagementPermission, (req, res) => {
+    const requestId = req.params.id;
+    const requests = loadRegistrationRequests();
+    const requestIndex = requests.findIndex(r => r.id === requestId);
+    if (requestIndex === -1) return res.status(404).json({ error: 'Solicitud no encontrada.' });
+    const request = requests[requestIndex];
+    if (request.status !== 'pending') return res.status(400).json({ error: 'Esta solicitud ya fue procesada.' });
+    const users = loadUsers();
+    if (users.some(u => u.username === request.username)) { requests[requestIndex].status = 'rejected'; saveRegistrationRequests(requests); return res.status(409).json({ error: 'El nombre de usuario ya está registrado. La solicitud fue rechazada automáticamente.' }); }
+    const role = req.body.role || 'custom';
+    const permissions = req.body.permissions || { dashboard: { visible: true, writable: false }, stockExpiration: { visible: true, writable: false }, usersManagement: { visible: false, writable: false } };
+    const newUser = { username: request.username, displayName: `${request.firstName} ${request.lastName}`, passwordHash: request.passwordHash, role, permissions };
+    users.push(newUser); saveUsers(users);
+    requests[requestIndex].status = 'approved'; saveRegistrationRequests(requests);
+    res.json({ success: true, message: `Usuario "${request.username}" aprobado y creado correctamente.`, user: { username: newUser.username, displayName: newUser.displayName, role: newUser.role, permissions: newUser.permissions } });
+});
+
+app.post('/beta/api/registration-requests/:id/reject', authenticateToken, requireUserManagementPermission, (req, res) => {
+    const requestId = req.params.id;
+    const requests = loadRegistrationRequests();
+    const requestIndex = requests.findIndex(r => r.id === requestId);
+    if (requestIndex === -1) return res.status(404).json({ error: 'Solicitud no encontrada.' });
+    if (requests[requestIndex].status !== 'pending') return res.status(400).json({ error: 'Esta solicitud ya fue procesada.' });
+    requests[requestIndex].status = 'rejected'; saveRegistrationRequests(requests);
+    res.json({ success: true, message: 'Solicitud rechazada.' });
+});
+
+// --- BETA API: Datos protegidos por autenticación ---
+app.get('/beta/api/excel', authenticateToken, requireModulePermission('dashboard', 'visible'), (req, res) => {
+    const excelPath = path.join(__dirname, 'QUERY.xlsx');
+    res.sendFile(excelPath);
+});
+
+app.get('/beta/api/saldos', authenticateToken, requireModulePermission('dashboard', 'visible'), async (req, res) => {
+    // Reuse the same data loading logic from /api/saldos
+    const saldosCache = path.join(DATA_DIR, 'saldos_cache.json');
+    if (fs.existsSync(saldosCache)) {
+        try {
+            const data = JSON.parse(fs.readFileSync(saldosCache, 'utf8'));
+            return res.json(data);
+        } catch(e) {}
+    }
+    res.json([]);
+});
+
+app.get('/beta/api/stock', authenticateToken, requireModulePermission('stockExpiration', 'visible'), (req, res) => {
+    const cachePath = path.join(DATA_DIR, 'stock_cache.json');
+    if (fs.existsSync(cachePath)) {
+        try {
+            const data = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+            return res.json(data);
+        } catch(e) {}
+    }
+    res.json([]);
+});
+
+app.get('/beta/api/sync-status', authenticateToken, (req, res) => {
+    const statusFile = path.join(DATA_DIR, 'sync_status.json');
+    if (fs.existsSync(statusFile)) {
+        try {
+            return res.json(JSON.parse(fs.readFileSync(statusFile, 'utf8')));
+        } catch(e) {}
+    }
+    res.json({});
+});
+
+// --- Catch-all para la versión Beta (HTML5 History API) ---
 app.get(/^\/beta/, (req, res) => {
+    if (req.path.startsWith('/beta/api')) {
+        return res.status(404).json({ error: 'Not Found' });
+    }
+    const betaIndex = path.join(DIST_BETA_DIR, 'index.html');
+    if (fs.existsSync(betaIndex)) {
+        return res.sendFile(betaIndex);
+    }
     res.redirect('/');
 });
 
@@ -596,6 +877,7 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`======================================================`);
     console.log(`\nEl dashboard está disponible en tu computadora local en:`);
     console.log(`-> http://localhost:${PORT}`);
+    console.log(`-> http://localhost:${PORT}/beta/ (versión Beta)`);
     console.log(`\nPara que otras computadoras lo vean, dales la IP de esta PC.`);
     console.log(`(Asegúrate de no cerrar esta ventana mientras quieras que el sistema funcione)`);
 });
