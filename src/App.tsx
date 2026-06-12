@@ -7,6 +7,8 @@ import { Saldo, StockItem, SyncStatus, User } from './types';
 import { Login } from './components/Login';
 import { UserManagement } from './components/UserManagement';
 import { MacSelect } from './components/MacSelect';
+import { SyncStatusPanel } from './components/SyncStatusPanel';
+import { ConnectionAlertModal } from './components/ConnectionAlertModal';
 
 Chart.register(...registerables);
 
@@ -2054,21 +2056,6 @@ export default function App() {
     return diff > 5 * 60 * 1000;
   };
 
-  const formatSyncDate = (isoStr: string | null) => {
-    if (!isoStr) return 'Sin conexión!';
-    const d = new Date(isoStr);
-    if (isNaN(d.getTime())) return 'Sin conexión!';
-
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = String(d.getFullYear()).slice(-2);
-    const hour = String(d.getHours()).padStart(2, '0');
-    const minute = String(d.getMinutes()).padStart(2, '0');
-    const second = String(d.getSeconds()).padStart(2, '0');
-
-    return `${day}/${month}/${year} ${hour}:${minute}:${second}`;
-  };
-
   const syncPanelHasOffline = useMemo(() => {
     const serverKeys = ['Aguas', 'PepsiCo', 'Serenisima', 'Salliquelo', 'Trenque Lauquen', 'Digip'];
     return serverKeys.some(k => isSyncServerOffline(k));
@@ -2873,58 +2860,18 @@ export default function App() {
 
       {/* Modal for Connection Alert */}
       {connectionAlertActive && (
-        <div id="connection-alert-modal" className="modal active" role="alertdialog" aria-modal="true" aria-label="Servidor Desconectado">
-          <div className="modal-content glass-card" style={{ maxWidth: '450px', textAlign: 'center', padding: '32px', gap: '20px', alignItems: 'center' }}>
-            <div style={{ fontSize: '52px', color: '#ff9f0a', marginBottom: '8px' }}>
-              <i className="fas fa-exclamation-triangle"></i>
-            </div>
-            <h3 style={{ fontSize: '20px', fontWeight: 700, margin: 0, color: '#fff' }}>Servidor Desconectado</h3>
-            <p id="connection-alert-message" style={{ fontSize: '14.5px', opacity: 0.85, margin: 0, lineHeight: 1.6, color: '#f2f2f7' }} dangerouslySetInnerHTML={{ __html: connectionAlertMessage }}></p>
-            <button 
-              id="connection-alert-btn" 
-              className="glass-btn" 
-              onClick={closeConnectionAlert}
-              style={{ background: '#ff9f0a', border: 'none', borderRadius: '12px', padding: '12px 28px', color: '#000', fontWeight: 700, fontSize: '14px', cursor: 'pointer', marginTop: '8px', boxShadow: '0 4px 12px rgba(255, 159, 10, 0.25)' }}
-            >
-              Aceptar
-            </button>
-          </div>
-        </div>
+        <ConnectionAlertModal message={connectionAlertMessage} onAccept={closeConnectionAlert} />
       )}
 
       {/* Sync Status Panel */}
       {currentView !== 'home' && (
-        <div 
-          id="sync-status-panel" 
-          className={`glass-card ${isSyncPanelExpanded ? 'expanded' : ''} ${syncPanelHasOffline ? 'has-offline' : ''}`}
+        <SyncStatusPanel
+          syncStatus={syncStatus}
+          isExpanded={isSyncPanelExpanded}
+          hasOffline={syncPanelHasOffline}
+          isOffline={isSyncServerOffline}
           onClick={handleSyncPanelClick}
-        >
-          <div style={{ fontWeight: 600, opacity: 0.5, textTransform: 'uppercase', fontSize: '7px', letterSpacing: '0.5px', marginBottom: '1px' }}>ÚLTIMA SINCRONIZACIÓN</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10.5px', whiteSpace: 'nowrap' }}>
-            <span className={`status-dot status-dot-aguas ${isSyncServerOffline('Aguas') ? 'offline' : ''}`}></span>
-            <span style={{ opacity: 0.85 }}>Calvo (Aguas): <span style={{ fontWeight: 500 }}>{formatSyncDate(syncStatus.Aguas)}</span></span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10.5px', whiteSpace: 'nowrap' }}>
-            <span className={`status-dot status-dot-pepsico ${isSyncServerOffline('PepsiCo') ? 'offline' : ''}`}></span>
-            <span style={{ opacity: 0.85 }}>Gescom (PepsiCo): <span style={{ fontWeight: 500 }}>{formatSyncDate(syncStatus.PepsiCo)}</span></span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10.5px', whiteSpace: 'nowrap' }}>
-            <span className={`status-dot status-dot-serenisima ${isSyncServerOffline('Serenisima') ? 'offline' : ''}`}></span>
-            <span style={{ opacity: 0.85 }}>Calvo (La Serenísima): <span style={{ fontWeight: 500 }}>{formatSyncDate(syncStatus.Serenisima)}</span></span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10.5px', whiteSpace: 'nowrap' }}>
-            <span className={`status-dot status-dot-salliquelo ${isSyncServerOffline('Salliquelo') ? 'offline' : ''}`}></span>
-            <span style={{ opacity: 0.85 }}>Calvo (Salliqueló): <span style={{ fontWeight: 500 }}>{formatSyncDate(syncStatus.Salliquelo)}</span></span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10.5px', whiteSpace: 'nowrap' }}>
-            <span className={`status-dot status-dot-trenque ${isSyncServerOffline('Trenque Lauquen') ? 'offline' : ''}`}></span>
-            <span style={{ opacity: 0.85 }}>Gescom (T. Lauquen): <span style={{ fontWeight: 500 }}>{formatSyncDate(syncStatus['Trenque Lauquen'])}</span></span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10.5px', whiteSpace: 'nowrap' }}>
-            <span className={`status-dot status-dot-digip ${isSyncServerOffline('Digip') ? 'offline' : ''}`}></span>
-            <span style={{ opacity: 0.85 }}>Digip WMS (Stock): <span style={{ fontWeight: 500 }}>{formatSyncDate(syncStatus.Digip)}</span></span>
-          </div>
-        </div>
+        />
       )}
 
       {/* Back to top button */}
