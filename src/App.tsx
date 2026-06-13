@@ -94,6 +94,16 @@ export default function App() {
     navigateToModule('home');
   };
 
+  // Called when the server rejects our token (401/403), e.g. after a redeploy/restart
+  // wiped the in-memory sessions. Clears the stale session so the app shows the Login
+  // screen instead of an empty dashboard with everything "disconnected".
+  const handleSessionExpired = () => {
+    setCurrentUser(null);
+    setToken('');
+    localStorage.removeItem('ingentron_token');
+    localStorage.removeItem('ingentron_user');
+  };
+
   const isModuleVisible = (module: 'dashboard' | 'stockExpiration' | 'usersManagement') => {
     if (!currentUser) return false;
     if (currentUser.role === 'admin') return true;
@@ -443,6 +453,7 @@ export default function App() {
           'Authorization': `Bearer ${token}`
         }
       });
+      if (response.status === 401 || response.status === 403) { handleSessionExpired(); return; }
       if (!response.ok) throw new Error('No se pudo cargar la información de saldos desde el servidor.');
       const data = await response.json();
       setGlobalData(data);
@@ -464,6 +475,7 @@ export default function App() {
           'Authorization': `Bearer ${token}`
         }
       });
+      if (response.status === 401 || response.status === 403) { handleSessionExpired(); return; }
       if (response.ok) {
         const data = await response.json();
         let rawList: StockItem[] = [];
@@ -515,6 +527,7 @@ export default function App() {
           'Authorization': `Bearer ${token}`
         }
       });
+      if (res.status === 401 || res.status === 403) { handleSessionExpired(); return; }
       if (!res.ok) return;
       const status = await res.json();
       setSyncStatus(status);
