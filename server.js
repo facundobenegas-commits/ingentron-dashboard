@@ -831,13 +831,16 @@ app.get('/beta/api/saldos', authenticateToken, requireModulePermission('dashboar
 
 app.get('/beta/api/stock', authenticateToken, requireModulePermission('stockExpiration', 'visible'), (req, res) => {
     const cachePath = path.join(DATA_DIR, 'stock_cache.json');
+    const historyPath = path.join(DATA_DIR, 'stock_history.json');
+    let current = [];
+    let history = {};
     if (fs.existsSync(cachePath)) {
-        try {
-            const data = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
-            return res.json(data);
-        } catch(e) {}
+        try { current = JSON.parse(fs.readFileSync(cachePath, 'utf8')) || []; } catch(e) {}
     }
-    res.json([]);
+    if (fs.existsSync(historyPath)) {
+        try { history = JSON.parse(fs.readFileSync(historyPath, 'utf8')) || {}; } catch(e) {}
+    }
+    res.json({ current, history });
 });
 
 app.get('/beta/api/sync-status', authenticateToken, (req, res) => {
