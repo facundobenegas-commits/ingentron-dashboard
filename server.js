@@ -16,55 +16,112 @@ function hashPassword(password) {
     return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-function loadUsers() {
-    if (!fs.existsSync(USERS_FILE)) {
-        const defaultUsers = [
-            {
-                username: 'facundo',
-                displayName: 'Facundo',
-                passwordHash: hashPassword('2278389'),
-                role: 'admin',
-                permissions: {
-                    dashboard: { visible: true, writable: true },
-                    stockExpiration: { visible: true, writable: true },
-                    usersManagement: { visible: true, writable: true }
-                }
-            }
-        ];
-        fs.writeFileSync(USERS_FILE, JSON.stringify(defaultUsers, null, 2), 'utf8');
-        return defaultUsers;
+const DEFAULT_USERS = [
+    {
+        username: 'facundo',
+        displayName: 'Facundo',
+        passwordHash: hashPassword('2278389'),
+        role: 'admin',
+        permissions: {
+            dashboard: { visible: true, writable: true },
+            stockExpiration: { visible: true, writable: true },
+            usersManagement: { visible: true, writable: true }
+        }
     }
+];
+
+// Persistencia: Postgres (Neon) si hay DATABASE_URL, con fallback a archivo.
+// Se mantiene una copia en memoria (usersCache / requestsCache) para que loadUsers/saveUsers
+// sigan siendo SÍNCRONAS (los handlers no cambian); cada save persiste en segundo plano.
+// Esto evita que los usuarios se pierdan en cada redeploy/spin-down del filesystem efímero
+// de Render (plan Free), que antes reseteaba users.json al admin por defecto.
+const DATABASE_URL = process.env.DATABASE_URL;
+let pgPool = null;
+let usePostgres = false;
+let usersCache = null;
+let requestsCache = null;
+
+function kvGet(pool, key) {
+    return pool.query('SELECT value FROM kv_store WHERE key = $1', [key])
+        .then(r => (r.rows.length ? r.rows[0].value : null));
+}
+function kvSet(pool, key, value) {
+    return pool.query(
+        'INSERT INTO kv_store (key, value) VALUES ($1, $2::jsonb) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value',
+        [key, JSON.stringify(value)]
+    );
+}
+
+function readFileJson(file, fallback) {
     try {
-        return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
+        if (fs.existsSync(file)) return JSON.parse(fs.readFileSync(file, 'utf8'));
     } catch (e) {
-        console.error("Error reading users file, returning empty array:", e);
-        return [];
+        console.error(`Error leyendo ${file}:`, e.message);
     }
+    return fallback;
+}
+
+async function initStore() {
+    if (DATABASE_URL) {
+        try {
+            const { Pool } = require('pg');
+            pgPool = new Pool({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: false }, max: 3 });
+            await pgPool.query('CREATE TABLE IF NOT EXISTS kv_store (key TEXT PRIMARY KEY, value JSONB NOT NULL)');
+            usersCache = await kvGet(pgPool, 'users');
+            requestsCache = await kvGet(pgPool, 'registration_requests');
+            if (!Array.isArray(usersCache) || usersCache.length === 0) {
+                usersCache = DEFAULT_USERS;
+                await kvSet(pgPool, 'users', usersCache);
+            }
+            if (!Array.isArray(requestsCache)) {
+                requestsCache = [];
+                await kvSet(pgPool, 'registration_requests', requestsCache);
+            }
+            usePostgres = true;
+            console.log(`[Persistence] Usuarios en Postgres (Neon). usuarios=${usersCache.length}, solicitudes=${requestsCache.length}`);
+            return;
+        } catch (e) {
+            console.error('[Persistence] No se pudo inicializar Postgres; usando archivo como fallback:', e.message);
+            usePostgres = false;
+            pgPool = null;
+        }
+    }
+    // Fallback a archivo (comportamiento original)
+    usersCache = readFileJson(USERS_FILE, null);
+    if (!Array.isArray(usersCache) || usersCache.length === 0) {
+        usersCache = DEFAULT_USERS;
+        try { fs.writeFileSync(USERS_FILE, JSON.stringify(usersCache, null, 2), 'utf8'); } catch (e) {}
+    }
+    requestsCache = readFileJson(REGISTRATION_REQUESTS_FILE, []);
+    if (!Array.isArray(requestsCache)) requestsCache = [];
+    console.log(`[Persistence] Usuarios en archivo (${DATABASE_URL ? 'fallback' : 'sin DATABASE_URL'}). usuarios=${usersCache.length}`);
+}
+
+function loadUsers() {
+    return usersCache || DEFAULT_USERS;
 }
 
 function saveUsers(users) {
-    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf8');
+    usersCache = users;
+    if (usePostgres && pgPool) {
+        kvSet(pgPool, 'users', users).catch(e => console.error('[Persistence] Error guardando usuarios en Postgres:', e.message));
+    } else {
+        try { fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf8'); } catch (e) { console.error(e); }
+    }
 }
 
 function loadRegistrationRequests() {
-    if (!fs.existsSync(REGISTRATION_REQUESTS_FILE)) {
-        fs.writeFileSync(REGISTRATION_REQUESTS_FILE, JSON.stringify([], null, 2), 'utf8');
-        return [];
-    }
-    try {
-        return JSON.parse(fs.readFileSync(REGISTRATION_REQUESTS_FILE, 'utf8'));
-    } catch (e) {
-        console.error("Error reading registration requests file:", e);
-        return [];
-    }
+    return requestsCache || [];
 }
 
 function saveRegistrationRequests(requests) {
-    fs.writeFileSync(REGISTRATION_REQUESTS_FILE, JSON.stringify(requests, null, 2), 'utf8');
+    requestsCache = requests;
+    if (usePostgres && pgPool) {
+        kvSet(pgPool, 'registration_requests', requests).catch(e => console.error('[Persistence] Error guardando solicitudes en Postgres:', e.message));
+    } else {
+        try { fs.writeFileSync(REGISTRATION_REQUESTS_FILE, JSON.stringify(requests, null, 2), 'utf8'); } catch (e) { console.error(e); }
+    }
 }
-
-// Bootstrap users.json
-loadUsers();
 
 // In-memory active session store: token -> user object
 const activeSessions = new Map();
@@ -874,13 +931,20 @@ app.get('/*splat', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`\n======================================================`);
-    console.log(`🚀 SERVIDOR INGENTRON INICIADO (DASHBOARD ACTIVO)`);
-    console.log(`======================================================`);
-    console.log(`\nEl dashboard está disponible en tu computadora local en:`);
-    console.log(`-> http://localhost:${PORT}`);
-    console.log(`-> http://localhost:${PORT}/beta/ (versión Beta)`);
-    console.log(`\nPara que otras computadoras lo vean, dales la IP de esta PC.`);
-    console.log(`(Asegúrate de no cerrar esta ventana mientras quieras que el sistema funcione)`);
-});
+function startServer() {
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(`\n======================================================`);
+        console.log(`🚀 SERVIDOR INGENTRON INICIADO (DASHBOARD ACTIVO)`);
+        console.log(`======================================================`);
+        console.log(`\nEl dashboard está disponible en tu computadora local en:`);
+        console.log(`-> http://localhost:${PORT}`);
+        console.log(`-> http://localhost:${PORT}/beta/ (versión Beta)`);
+        console.log(`\nPara que otras computadoras lo vean, dales la IP de esta PC.`);
+        console.log(`(Asegúrate de no cerrar esta ventana mientras quieras que el sistema funcione)`);
+    });
+}
+// Inicializa el almacenamiento (Postgres o archivo) y luego arranca el server.
+// initStore captura sus propios errores; .finally garantiza que el server arranque igual.
+initStore()
+    .catch(err => console.error('[Persistence] initStore falló inesperadamente:', err && err.message))
+    .finally(startServer);
